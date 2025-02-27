@@ -12,9 +12,15 @@ dependencyResolutionManagement {
         google()
         mavenCentral()
         jcenter()
-        maven {
-            url("https://api.xposed.info/")
+
+        // cat ~/.m2/repository/com/github/lukkass222/virtual-joystick-android/maven-metadata-local.xml
+        mavenLocal {
+            content {
+                includeGroup("com.github.lukkass222")
+            }
         }
+        
+        maven { url "https://api.xposed.info/" }
         maven { url 'https://jitpack.io' }
 
     }
