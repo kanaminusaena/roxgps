@@ -35,7 +35,7 @@
             android:title="Add Joystick"
             android:key="isJoyStickEnable"
             android:icon="@drawable/outline_joystick"
-            android:summary="%s"
+            android:summary="Add a joystick to the map"
             android:defaultValue="false"/>
 
 

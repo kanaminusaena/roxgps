@@ -31,15 +31,15 @@
             android:layout_width="match_parent"/>
 
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/favourite"
+            android:id="@+id/favorite"
             style="@style/Widget.Material3.Button.TonalButton"
-            android:layout_width="45dp"
-            android:layout_height="45dp"
-            android:layout_marginStart="8dp"
-            android:layout_marginEnd="8dp"
-            android:layout_marginTop="@dimen/padding_8"
-            android:layout_alignParentEnd="true"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
             android:layout_below="@id/getlocation_container"
+            android:layout_alignParentEnd="true"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="@dimen/padding_8"
+            android:layout_marginEnd="8dp"
             android:alpha="0.95"
             android:elevation="10dp"
             android:insetLeft="0dp"
@@ -47,16 +47,16 @@
             android:insetRight="0dp"
             android:insetBottom="0dp"
             app:backgroundTint="@color/background"
-            app:icon="@drawable/ic_baseline_favourite"
+            app:icon="@drawable/ic_baseline_favorite"
             app:iconGravity="textStart"
             app:iconPadding="0dp"
-            app:iconSize="24dp" />
+            app:iconSize="32dp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/getlocation_container"
             style="@style/Widget.Material3.Button.TonalButton"
-            android:layout_width="45dp"
-            android:layout_height="45dp"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
             android:layout_alignParentEnd="true"
             android:layout_centerVertical="true"
             android:layout_marginStart="8dp"
@@ -67,12 +67,11 @@
             android:insetTop="0dp"
             android:insetRight="0dp"
             android:insetBottom="0dp"
-            android:rotation="30"
             app:backgroundTint="@color/background"
             app:icon="@drawable/ic_baseline_my_location_24"
             app:iconGravity="textStart"
             app:iconPadding="0dp"
-            app:iconSize="24dp" />
+            app:iconSize="32dp" />
 
     </RelativeLayout>
 
