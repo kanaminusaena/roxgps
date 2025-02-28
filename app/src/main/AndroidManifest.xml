@@ -11,8 +11,6 @@
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
     <uses-permission android:name="android.permission.ACTION_MANAGE_OVERLAY_PERMISSION" />
 
-
-
     <application
         android:name=".App"
         android:allowBackup="true"
@@ -46,6 +44,13 @@
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="${MAPS_API_KEY}" />
+
+        <meta-data
+            android:name="com.maplibre.TestEventsServer"
+            android:value="api-events-staging.tilestream.net" />
+        <meta-data
+            android:name="com.maplibre.TestEventsAccessToken"
+            android:value="pk.eyJ1IjoiYmxzdGFnaW5nIiwiYSI6ImNpdDF3OHpoaTAwMDcyeXA5Y3Z0Nmk2dzEifQ.0IfB7v5Qbm2MGVYt8Kb8fg" /> 
 
         <provider
             android:name="androidx.core.content.FileProvider"

@@ -44,14 +44,6 @@ import io.github.jqssun.gpssetter.utils.NotificationsChannel
 import io.github.jqssun.gpssetter.utils.PrefManager
 import io.github.jqssun.gpssetter.utils.ext.*
 import com.google.android.gms.location.*
-import com.google.android.gms.maps.CameraUpdateFactory
-import com.google.android.gms.maps.GoogleMap
-import com.google.android.gms.maps.OnMapReadyCallback
-import com.google.android.gms.maps.SupportMapFragment
-import com.google.android.gms.maps.model.BitmapDescriptorFactory
-import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.Marker
-import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.elevation.ElevationOverlayProvider
@@ -72,11 +64,29 @@ import android.graphics.Color
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
 
+// import com.google.android.gms.maps.CameraUpdateFactory
+// import com.google.android.gms.maps.MapLibreMap
+// import com.google.android.gms.maps.OnMapReadyCallback
+// import com.google.android.gms.maps.SupportMapFragment
+// import com.google.android.gms.maps.model.BitmapDescriptorFactory
+// import com.google.android.gms.maps.model.LatLng
+// import com.google.android.gms.maps.model.Marker
+// import com.google.android.gms.maps.model.MarkerOptions
+
+import org.maplibre.android.MapLibre
+import org.maplibre.android.camera.CameraUpdateFactory
+import org.maplibre.android.maps.MapLibreMap
+import org.maplibre.android.maps.OnMapReadyCallback
+import org.maplibre.android.maps.SupportMapFragment
+import org.maplibre.android.geometry.LatLng
+import org.maplibre.android.annotations.Marker
+import org.maplibre.android.annotations.MarkerOptions
+
 @AndroidEntryPoint
-class MapActivity: AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClickListener {
+class MapActivity: AppCompatActivity(), OnMapReadyCallback, MapLibreMap.OnMapClickListener {
 
     private val binding by lazy { ActivityMapBinding.inflate(layoutInflater) }
-    private lateinit var mMap: GoogleMap
+    private lateinit var mMap: MapLibreMap
     private val viewModel by viewModels<MainViewModel>()
     private val update by lazy { viewModel.getAvailableUpdate() }
     private val notificationsChannel by lazy { NotificationsChannel() }
@@ -144,9 +154,14 @@ class MapActivity: AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClick
         binding.startButton.setOnClickListener {
             viewModel.update(true, lat, lon)
             mLatLng.let {
-                mMarker?.position = it!!
-            }
-            mMarker?.isVisible = true
+                if (mMarker == null) {
+                    mMarker = mMap.addMarker(
+                        MarkerOptions().position(it)
+                    )
+                } else {
+                    mMarker?.position = it!!
+                }
+            } // mMarker?.isVisible = true
             binding.startButton.visibility = View.GONE
             binding.stopButton.visibility = View.VISIBLE
             lifecycleScope.launch {
@@ -162,7 +177,8 @@ class MapActivity: AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClick
             mLatLng.let {
                 viewModel.update(false, it!!.latitude, it.longitude)
             }
-            mMarker?.isVisible = false
+            mMarker?.remove() // mMarker?.isVisible = false
+            mMarker = null
             binding.stopButton.visibility = View.GONE
             binding.startButton.visibility = View.VISIBLE
             cancelNotification()
@@ -277,6 +293,8 @@ class MapActivity: AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClick
     }
 
     private fun initializeMap() {
+        MapLibre.getInstance(this)
+
         val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment?
         mapFragment?.getMapAsync(this)
     }
@@ -298,54 +316,61 @@ class MapActivity: AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClick
 
     }
 
-    override fun onMapReady(googleMap: GoogleMap) {
-        mMap = googleMap
+    override fun onMapReady(mapLibreMap: MapLibreMap) {
+        mMap = mapLibreMap
         with(mMap){
-            mapType = viewModel.mapType
+            setStyle("https://demotiles.maplibre.org/style.json")
+            // TODO: mapType = viewModel.mapType
+
             val zoom = 12.0f
             lat = viewModel.getLat
             lon  = viewModel.getLng
             mLatLng = LatLng(lat, lon)
             mLatLng.let {
                 mMarker = addMarker(
-                    MarkerOptions().position(it!!).draggable(false)
-                        .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)).visible(false)
-                )
-                mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(it, zoom))
+                    MarkerOptions().position(it!!)
+                        // TODO:
+                        // .draggable(false)
+                        // .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)
+                        )
+                        // .visible(false)
+                mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(it, zoom.toDouble()))
             }
             setPadding(0,80,0,170)
-            setOnMapClickListener(this@MapActivity)
+            addOnMapClickListener(this@MapActivity)
             if (viewModel.isStarted){
                 mMarker?.let {
-                    it.isVisible = true
-                    it.showInfoWindow()
+                    // TODO:
+                    // it.isVisible = true
+                    // it.showInfoWindow()
                 }
             }
         }
     }
 
-    override fun onMapClick(latLng: LatLng) {
+    override fun onMapClick(latLng: LatLng): Boolean {
         mLatLng = latLng
         mMarker?.let { marker ->
             mLatLng.let {
-                marker.position = it!!
-                marker.isVisible = true
+                marker.position = it!! // marker.isVisible = true
                 mMap.animateCamera(CameraUpdateFactory.newLatLng(it))
                 lat = it.latitude
                 lon = it.longitude
             }
         }
+        return true
     }
 
     private fun moveMapToNewLocation(moveNewLocation: Boolean) {
         if (moveNewLocation) {
             mLatLng = LatLng(lat, lon)
             mLatLng.let { latLng ->
-                mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng!!, 12.0f))
+                mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng!!, 12.0f.toDouble()))
                 mMarker?.apply {
                     position = latLng
-                    isVisible = true
-                    showInfoWindow()
+                    // TODO:
+                    // isVisible = true
+                    // showInfoWindow()
                 }
             }
         }
@@ -379,7 +404,8 @@ class MapActivity: AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClick
             setTitle(getString(R.string.add_fav_dialog_title))
             setPositiveButton(getString(R.string.dialog_button_add)) { _, _ ->
                 val s = editText.text.toString()
-                if (!mMarker?.isVisible!!){
+                // TODO: if (!mMarker?.isVisible!!){
+                if (mMarker != null){
                   showToast(getString(R.string.location_not_select))
                 }else{
                     viewModel.storeFavorite(s, lat, lon)
