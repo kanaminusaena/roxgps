@@ -92,7 +92,6 @@ class MapActivity: AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClick
     private val PERMISSION_ID = 42
 
 
-
     private val elevationOverlayProvider by lazy {
         ElevationOverlayProvider(this)
     }
@@ -103,7 +102,6 @@ class MapActivity: AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClick
         )
     }
     // override val applyBackgroundColorToWindow = true
-
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -339,7 +337,6 @@ class MapActivity: AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClick
         }
     }
 
-
     private fun moveMapToNewLocation(moveNewLocation: Boolean) {
         if (moveNewLocation) {
             mLatLng = LatLng(lat, lon)
@@ -355,21 +352,18 @@ class MapActivity: AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClick
 
     }
 
-
     override fun onResume() {
         super.onResume()
         viewModel.updateXposedState()
     }
 
-
-
     private fun aboutDialog(){
         alertDialog = MaterialAlertDialogBuilder(this)
         layoutInflater.inflate(R.layout.about,null).apply {
-            val  tittle = findViewById<TextView>(R.id.design_about_title)
+            val  titlele = findViewById<TextView>(R.id.design_about_title)
             val  version = findViewById<TextView>(R.id.design_about_version)
             val  info = findViewById<TextView>(R.id.design_about_info)
-            tittle.text = getString(R.string.app_name)
+            titlele.text = getString(R.string.app_name)
             version.text = BuildConfig.VERSION_NAME
             info.text = getString(R.string.about_info)
         }.run {
@@ -377,8 +371,6 @@ class MapActivity: AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClick
             alertDialog.show()
         }
     }
-
-
 
     private fun addFavoriteDialog(){
         alertDialog =  MaterialAlertDialogBuilder(this).apply {
@@ -401,7 +393,6 @@ class MapActivity: AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClick
         }
 
     }
-
 
     private fun openFavoriteListDialog() {
         getAllUpdatedFavList()
@@ -429,7 +420,6 @@ class MapActivity: AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClick
 
     }
 
-
     private fun getAllUpdatedFavList(){
         lifecycleScope.launch {
             lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED){
@@ -441,7 +431,6 @@ class MapActivity: AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClick
         }
 
     }
-
 
     private fun updateDialog(){
         alertDialog = MaterialAlertDialogBuilder(this)
@@ -510,7 +499,6 @@ class MapActivity: AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClick
         }
     }
 
-
     private suspend fun getSearchAddress(address: String) = callbackFlow {
         withContext(Dispatchers.IO){
             trySend(SearchProgress.Progress)
@@ -555,11 +543,9 @@ class MapActivity: AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClick
         }
     }
 
-
     private fun cancelNotification(){
         notificationsChannel.cancelAllNotifications(this)
     }
-
 
     // Get current location
     @SuppressLint("MissingPermission")
@@ -586,7 +572,6 @@ class MapActivity: AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClick
             requestPermissions()
         }
     }
-
 
     @SuppressLint("MissingPermission")
     private fun requestNewLocationData() {
@@ -646,12 +631,6 @@ class MapActivity: AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClick
             getLastLocation()
         }
     }
-
-
-
-
-
-
 }
 
 sealed class SearchProgress {

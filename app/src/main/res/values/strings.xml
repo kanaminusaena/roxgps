@@ -27,15 +27,10 @@
     <string name="error_xposed_module_missing_desc">Enable this module in LSPosed Manager</string>
     <string name="error_missing_root">No root access</string>
     <string name="error_missing_root_desc">Root access is necessary in order for this app to work properly</string>
-
-
-
-
-
     <!-- About -->
 
     <string name="about">About</string>
-    <string name="about_tittle">GPS Setter</string>
+    <string name="about_titlele">GPS Setter</string>
     <string name="about_info">A module to set your GPS location without enabling mock location.</string>
 
     <!-- Update -->
