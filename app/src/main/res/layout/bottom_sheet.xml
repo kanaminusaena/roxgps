@@ -4,11 +4,12 @@
     android:id="@+id/bottom_sheet"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@drawable/bottom_sheet_background"
     android:orientation="vertical"
     app:behavior_hideable="false"
     android:paddingBottom="15dp"
+    android:background="@drawable/bottom_sheet_background" 
     app:layout_behavior="com.google.android.material.bottomsheet.BottomSheetBehavior" >
+    <!-- android:background="@drawable/bottom_sheet_background" -->
 
     <RelativeLayout
         android:id="@+id/search_layout"
@@ -36,46 +37,10 @@
             android:lines="1"
             android:padding="8dp"
             android:paddingStart="8dp"
-            android:textColor="@color/black"
             android:textSize="18sp"
-            android:id="@+id/search" />
-
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/start_spoofing"
-            style="@style/Widget.Material3.Button.TonalButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_below="@id/search"
-            android:layout_alignParentEnd="true"
-            android:layout_marginStart="4dp"
-            android:layout_marginTop="8dp"
-            android:layout_marginEnd="18dp"
-            android:layout_marginBottom="8dp"
-            android:gravity="center"
-            android:lines="1"
-            android:text="@string/start_spoofing"
-            android:visibility="gone"
-            app:icon="@drawable/ic_play"
-            app:iconGravity="textStart" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/stop_button"
-            style="@style/Widget.Material3.Button.TonalButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_below="@id/search"
-            android:layout_alignParentEnd="true"
-            android:layout_marginStart="4dp"
-            android:layout_marginTop="8dp"
-            android:layout_marginEnd="18dp"
-            android:layout_marginBottom="8dp"
-            android:gravity="center"
-            android:lines="1"
-            android:text="@string/stop"
-            android:visibility="visible"
-            app:icon="@drawable/ic_stop"
-            app:iconGravity="textStart" />
+            android:id="@+id/search"
+        />
+        <!-- android:textColor="@color/black" -->
     </RelativeLayout>
 
 </LinearLayout>

@@ -131,7 +131,6 @@ class MainViewModel @Inject constructor(
 
 
     // Got idea from https://github.com/KieronQuinn/DarQ for Check Update
-
     fun startDownload(context: Context, update: UpdateChecker.Update) {
         if(_downloadState.value is State.Idle) {
             downloadUpdate(context, update.assetUrl, update.assetName)

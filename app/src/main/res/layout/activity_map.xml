@@ -31,29 +31,7 @@
             android:layout_width="match_parent"/>
 
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/favorite"
-            style="@style/Widget.Material3.Button.TonalButton"
-            android:layout_width="64dp"
-            android:layout_height="64dp"
-            android:layout_below="@id/getlocation_container"
-            android:layout_alignParentEnd="true"
-            android:layout_marginStart="8dp"
-            android:layout_marginTop="@dimen/padding_8"
-            android:layout_marginEnd="8dp"
-            android:alpha="0.95"
-            android:elevation="10dp"
-            android:insetLeft="0dp"
-            android:insetTop="0dp"
-            android:insetRight="0dp"
-            android:insetBottom="0dp"
-            app:backgroundTint="@color/background"
-            app:icon="@drawable/ic_baseline_favorite"
-            app:iconGravity="textStart"
-            app:iconPadding="0dp"
-            app:iconSize="32dp" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/getlocation_container"
+            android:id="@+id/getlocation"
             style="@style/Widget.Material3.Button.TonalButton"
             android:layout_width="64dp"
             android:layout_height="64dp"
@@ -67,11 +45,87 @@
             android:insetTop="0dp"
             android:insetRight="0dp"
             android:insetBottom="0dp"
-            app:backgroundTint="@color/background"
             app:icon="@drawable/ic_baseline_my_location_24"
             app:iconGravity="textStart"
             app:iconPadding="0dp"
             app:iconSize="32dp" />
+            <!-- app:backgroundTint="@color/background" -->
+        
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/addfavorite"
+            style="@style/Widget.Material3.Button.TonalButton"
+            android:layout_below="@id/getlocation"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:layout_alignParentEnd="true"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="@dimen/padding_8"
+            android:layout_marginEnd="8dp"
+            android:alpha="0.95"
+            android:elevation="10dp"
+            android:insetLeft="0dp"
+            android:insetTop="0dp"
+            android:insetRight="0dp"
+            android:insetBottom="0dp"
+            app:icon="@drawable/ic_baseline_favorite"
+            app:iconGravity="textStart"
+            app:iconPadding="0dp"
+            app:iconSize="32dp" />
+        
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/start_button"
+            style="@style/Widget.Material3.Button.TonalButton"
+            android:layout_below="@id/addfavorite"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:layout_alignParentEnd="true"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="@dimen/padding_8"
+            android:layout_marginEnd="8dp"
+            android:alpha="0.95"
+            android:elevation="10dp"
+            android:insetLeft="0dp"
+            android:insetTop="0dp"
+            android:insetRight="0dp"
+            android:insetBottom="0dp"
+            app:icon="@drawable/ic_play" 
+            app:iconGravity="textStart"
+            app:iconPadding="0dp"
+            app:iconSize="32dp" 
+
+            android:visibility="gone" />
+        <!--
+            android:lines="1"
+            android:text="@string/start_button"
+        -->
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/stop_button"
+            style="@style/Widget.Material3.Button.TonalButton"
+            android:layout_below="@id/addfavorite"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:layout_alignParentEnd="true"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="@dimen/padding_8"
+            android:layout_marginEnd="8dp"
+            android:alpha="0.95"
+            android:elevation="10dp"
+            android:insetLeft="0dp"
+            android:insetTop="0dp"
+            android:insetRight="0dp"
+            android:insetBottom="0dp"
+            app:icon="@drawable/ic_stop"
+            app:iconGravity="textStart"
+            app:iconPadding="0dp"
+            app:iconSize="32dp" 
+
+            android:visibility="visible" />
+        
+        <!--
+            android:lines="1"
+            android:text="@string/stop_button"
+        -->
 
     </RelativeLayout>
 

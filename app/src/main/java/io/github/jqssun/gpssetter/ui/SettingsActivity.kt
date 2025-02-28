@@ -27,13 +27,13 @@ import io.github.jqssun.gpssetter.utils.JoystickService
 import io.github.jqssun.gpssetter.utils.PrefManager
 import io.github.jqssun.gpssetter.utils.ext.showToast
 import com.highcapable.yukihookapi.hook.xposed.prefs.ui.ModulePreferenceFragment
-import com.kieronquinn.monetcompat.app.MonetCompatActivity
 
+import androidx.appcompat.app.AppCompatActivity
 import android.graphics.Color
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
 
-class SettingsActivity : MonetCompatActivity() {
+class SettingsActivity : AppCompatActivity() {
 
 
     private val binding by lazy {

@@ -77,7 +77,7 @@
     <string name="drawer_open">Open</string>
     <string name="drawer_close">Close</string>
     <string name="stop">Stop</string>
-    <string name="start_spoofing">Set location</string>
+    <string name="start_button">Set location</string>
     <string name="app_update_failed">Update failed</string>
     <string name="dark_theme">Dark theme</string>
 

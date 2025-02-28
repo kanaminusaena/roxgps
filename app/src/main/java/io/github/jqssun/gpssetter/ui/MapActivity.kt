@@ -56,7 +56,7 @@ import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.elevation.ElevationOverlayProvider
 import com.google.android.material.progressindicator.LinearProgressIndicator
-import com.kieronquinn.monetcompat.app.MonetCompatActivity
+// import com.kieronquinn.monetcompat.app.MonetCompatActivity
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.awaitClose
@@ -66,12 +66,14 @@ import java.util.regex.Matcher
 import java.util.regex.Pattern
 import kotlin.properties.Delegates
 
+// import androidx.core.content.ContextCompat
+import androidx.appcompat.app.AppCompatActivity
 import android.graphics.Color
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
 
 @AndroidEntryPoint
-class MapActivity :  MonetCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClickListener {
+class MapActivity: AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapClickListener {
 
     private val binding by lazy { ActivityMapBinding.inflate(layoutInflater) }
     private lateinit var mMap: GoogleMap
@@ -100,7 +102,7 @@ class MapActivity :  MonetCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapC
             resources.getDimension(R.dimen.bottom_sheet_elevation)
         )
     }
-    override val applyBackgroundColorToWindow = true
+    // override val applyBackgroundColorToWindow = true
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -109,7 +111,7 @@ class MapActivity :  MonetCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapC
 
         WindowCompat.setDecorFitsSystemWindows(window, false)
         lifecycleScope.launchWhenCreated {
-            monet.awaitMonetReady()
+            // monet.awaitMonetReady()
             setContentView(binding.root)
         }
         setSupportActionBar(binding.toolbar)
@@ -118,7 +120,6 @@ class MapActivity :  MonetCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapC
         updateChecker()
         setBottomSheet()
         setUpNavigationView()
-        setupMonet()
         setupButton()
         setDrawer()
         if (PrefManager.isJoyStickEnable){
@@ -130,26 +131,26 @@ class MapActivity :  MonetCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapC
 
     @SuppressLint("MissingPermission")
     private fun setupButton(){
-        binding.favorite.setOnClickListener {
+        binding.addfavorite.setOnClickListener {
             addFavoriteDialog()
         }
-        binding.getlocationContainer.setOnClickListener {
+        binding.getlocation.setOnClickListener {
             getLastLocation()
         }
 
         if (viewModel.isStarted) {
-            binding.bottomSheetContainer.startSpoofing.visibility = View.GONE
-            binding.bottomSheetContainer.stopButton.visibility = View.VISIBLE
+            binding.startButton.visibility = View.GONE
+            binding.stopButton.visibility = View.VISIBLE
         }
 
-        binding.bottomSheetContainer.startSpoofing.setOnClickListener {
+        binding.startButton.setOnClickListener {
             viewModel.update(true, lat, lon)
             mLatLng.let {
                 mMarker?.position = it!!
             }
             mMarker?.isVisible = true
-            binding.bottomSheetContainer.startSpoofing.visibility = View.GONE
-            binding.bottomSheetContainer.stopButton.visibility = View.VISIBLE
+            binding.startButton.visibility = View.GONE
+            binding.stopButton.visibility = View.VISIBLE
             lifecycleScope.launch {
                 mLatLng?.getAddress(this@MapActivity)?.let { address ->
                     address.collect{ value ->
@@ -159,13 +160,13 @@ class MapActivity :  MonetCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapC
             }
             showToast(getString(R.string.location_set))
         }
-        binding.bottomSheetContainer.stopButton.setOnClickListener {
+        binding.stopButton.setOnClickListener {
             mLatLng.let {
                 viewModel.update(false, it!!.latitude, it.longitude)
             }
             mMarker?.isVisible = false
-            binding.bottomSheetContainer.stopButton.visibility = View.GONE
-            binding.bottomSheetContainer.startSpoofing.visibility = View.VISIBLE
+            binding.stopButton.visibility = View.GONE
+            binding.startButton.visibility = View.VISIBLE
             cancelNotification()
             showToast(getString(R.string.location_unset))
         }
@@ -196,8 +197,8 @@ class MapActivity :  MonetCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapC
     }
 
     private fun setBottomSheet(){
-        //val progress = binding.bottomSheetContainer.search.searchProgress
 
+        val progress = binding.bottomSheetContainer.search.searchProgress
         val bottom = BottomSheetBehavior.from(binding.bottomSheetContainer.bottomSheet)
         with(binding.bottomSheetContainer){
 
@@ -207,21 +208,22 @@ class MapActivity :  MonetCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapC
 
                     if (isNetworkConnected()) {
                         lifecycleScope.launch(Dispatchers.Main) {
-                            val  getInput = v.text.toString()
+                            val getInput = v.text.toString()
                             if (getInput.isNotEmpty()){
                                 getSearchAddress(getInput).let {
                                     it.collect { result ->
                                         when(result) {
                                             is SearchProgress.Progress -> {
-                                               // progress.visibility = View.VISIBLE
+                                               progress.visibility = View.VISIBLE
                                             }
                                             is SearchProgress.Complete -> {
+                                                progress.visibility = View.GONE
                                                 lat = result.lat
                                                 lon = result.lon
                                                 moveMapToNewLocation(true)
                                             }
-
                                             is SearchProgress.Fail -> {
+                                                progress.visibility = View.GONE
                                                 showToast(result.error!!)
                                             }
                                         }
@@ -239,10 +241,6 @@ class MapActivity :  MonetCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapC
 
         }
 
-
-
-
-
         binding.mapContainer.map.setOnApplyWindowInsetsListener { _, insets ->
 
             val topInset: Int = insets.systemWindowInsetTop
@@ -259,19 +257,6 @@ class MapActivity :  MonetCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapC
         bottom.state = BottomSheetBehavior.STATE_COLLAPSED
 
     }
-
-    private fun setupMonet() {
-        val secondaryBackground = monet.getBackgroundColorSecondary(this)
-        val background = monet.getBackgroundColor(this)
-        binding.bottomSheetContainer.search.searchBox.backgroundTintList = ColorStateList.valueOf(secondaryBackground!!)
-        val root =  binding.bottomSheetContainer.root.background as GradientDrawable
-        root.setColor(ColorUtils.setAlphaComponent(headerBackground,235))
-        binding.getlocationContainer.backgroundTintList = ColorStateList.valueOf(background)
-        binding.favorite.backgroundTintList = ColorStateList.valueOf(background)
-
-    }
-
-
 
     private fun setUpNavigationView() {
         binding.navView.setNavigationItemSelectedListener {
@@ -292,7 +277,6 @@ class MapActivity :  MonetCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapC
         }
 
     }
-
 
     private fun initializeMap() {
         val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment?
@@ -315,8 +299,6 @@ class MapActivity :  MonetCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapC
         }
 
     }
-
-
 
     override fun onMapReady(googleMap: GoogleMap) {
         mMap = googleMap
@@ -571,7 +553,6 @@ class MapActivity :  MonetCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapC
             it.setCategory(Notification.CATEGORY_EVENT)
             it.priority = NotificationCompat.PRIORITY_HIGH
         }
-
     }
 
 
@@ -672,7 +653,6 @@ class MapActivity :  MonetCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapC
 
 
 }
-
 
 sealed class SearchProgress {
     object Progress : SearchProgress()

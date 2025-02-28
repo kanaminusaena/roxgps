@@ -25,6 +25,7 @@ object PrefManager   {
     private const val MAP_TYPE = "map_type"
     private const val DARK_THEME = "dark_theme"
     private const val DISABLE_UPDATE = "disable_update"
+    private const val ENABLE_JOYSTICK = "isJoyStickEnable"
 
 
     private val pref: SharedPreferences by lazy {
@@ -79,10 +80,8 @@ object PrefManager   {
         set(value) = pref.edit().putBoolean(DISABLE_UPDATE, value).apply()
 
     var isJoyStickEnable: Boolean
-    get() = pref.getBoolean("isJoyStickEnable",false)
-    set(value) = pref.edit().putBoolean("isJoyStickEnable",value).apply()
-
-
+        get() = pref.getBoolean(ENABLE_JOYSTICK, false)
+        set(value) = pref.edit().putBoolean(ENABLE_JOYSTICK, value).apply()
 
     fun update(start:Boolean, la: Double, ln: Double) {
         runInBackground {

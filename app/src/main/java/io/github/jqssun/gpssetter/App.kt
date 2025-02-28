@@ -3,7 +3,6 @@ package io.github.jqssun.gpssetter
 import androidx.appcompat.app.AppCompatDelegate
 import io.github.jqssun.gpssetter.utils.PrefManager
 import com.highcapable.yukihookapi.hook.xposed.application.ModuleApplication
-import com.kieronquinn.monetcompat.core.MonetCompat
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -28,10 +27,7 @@ class App : ModuleApplication() {
         super.onCreate()
         gsApp = this
         commonInit()
-        MonetCompat.enablePaletteCompat()
+        // MonetCompat.enablePaletteCompat()
         AppCompatDelegate.setDefaultNightMode(PrefManager.darkTheme)
-
     }
-
-
 }
