@@ -9,7 +9,8 @@ import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import rikka.material.app.DayNightDelegate
+
+import androidx.appcompat.app.AppCompatDelegate
 
 
 @SuppressLint("WorldReadableFiles")
@@ -70,7 +71,7 @@ object PrefManager   {
         set(value) { pref.edit().putInt(MAP_TYPE,value).apply()}
 
     var darkTheme: Int
-        get() = pref.getInt(DARK_THEME, DayNightDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
+        get() = pref.getInt(DARK_THEME, AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
         set(value) = pref.edit().putInt(DARK_THEME, value).apply()
 
     var disableUpdate: Boolean

@@ -14,7 +14,6 @@ import io.github.controlwear.virtual.joystick.android.JoystickView
 import kotlin.math.cos
 import kotlin.math.sin
 
-
 class JoystickService : Service(),View.OnTouchListener,View.OnClickListener {
 
 
@@ -24,8 +23,6 @@ class JoystickService : Service(),View.OnTouchListener,View.OnClickListener {
     private var mJoystickLayoutParams: WindowManager.LayoutParams? = null
     private var lat : Double = PrefManager.getLat
     private var lon : Double = PrefManager.getLng
-
-
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate() {
@@ -53,15 +50,13 @@ class JoystickService : Service(),View.OnTouchListener,View.OnClickListener {
             try {
                 val factorX: Double = cos(radians) / 100000.0 * (strength / 30)
                 val factorY: Double = sin(radians) / 100000.0 * (strength / 30)
-                lat = PrefManager.getLat + factorX
-                lon = PrefManager.getLng + factorY
+                lon = PrefManager.getLng + factorX
+                lat = PrefManager.getLat + factorY
                 updateLocation(lat, lon)
 
             }catch (e : Exception){
                 e.printStackTrace()
             }
-
-
         }
         mJoystickLayoutParams = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
@@ -75,9 +70,7 @@ class JoystickService : Service(),View.OnTouchListener,View.OnClickListener {
         }
 
         wm!!.addView(mJoystickContainerView,mJoystickLayoutParams)
-
     }
-
 
     override fun onBind(intent: Intent?): IBinder? {
         return null
@@ -85,7 +78,6 @@ class JoystickService : Service(),View.OnTouchListener,View.OnClickListener {
 
     override fun onTouch(v: View?, event: MotionEvent?): Boolean {
         TODO("Not yet implemented")
-
     }
 
     override fun onClick(v: View?) {
@@ -98,8 +90,6 @@ class JoystickService : Service(),View.OnTouchListener,View.OnClickListener {
             this.wm!!.removeView(mJoystickContainerView);
             this.mJoystickContainerView = null;
         }
-
-
     }
 
     private fun updateLocation(lat : Double,lon : Double){

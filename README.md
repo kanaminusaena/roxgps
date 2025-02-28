@@ -1,14 +1,13 @@
 # GPS Setter
 
-![GitHub release (latest by date)](https://img.shields.io/github/v/release/Android1500/GpsSetter)
-[![Github All Releases](https://img.shields.io/github/downloads/Android1500/GpsSetter/total?label=Release)]()
-[![Blank](https://img.shields.io/github/downloads/Xposed-Modules-Repo/com.android1500.gpssetter/total?label=LSPosed%20Repo&logo=Android&style=flat&labelColor=F48FB1&logoColor=ffffff)](https://github.com/Xposed-Modules-Repo/com.android1500.gpssetter/releases)
-[![GitHub stars](https://img.shields.io/github/stars/Android1500/GpsSetter)](https://github.com/Android1500/GpsSetter/stargazers)
-[![GitHub issues](https://img.shields.io/github/issues/Android1500/GpsSetter)](https://github.com/Android1500/GpsSetter/issues)
-[![GitHub license](https://img.shields.io/github/license/Android1500/GpsSetter)](https://github.com/Android1500/GpsSetter/blob/master/LICENSE)
+![GitHub release](https://img.shields.io/github/v/release/jqssun/android-gps-setter)
+[![Github downloads](https://img.shields.io/github/downloads/jqssun/android-gps-setter/total?label=Release)]()
+[![GitHub stars](https://img.shields.io/github/stars/jqssun/android-gps-setter)](https://github.com/jqssun/android-gps-setter/stargazers)
+[![GitHub issues](https://img.shields.io/github/issues/jqssun/android-gps-setter)](https://github.com/jqssun/android-gps-setter/issues)
+[![GitHub license](https://img.shields.io/github/license/jqssun/android-gps-setter)](https://github.com/jqssun/android-gps-setter/blob/master/LICENSE)
+[![Blank](https://img.shields.io/github/downloads/Xposed-Modules-Repo/com.jqssun.android-gps-setter/total?label=LSPosed%20Repo&logo=Android&style=flat&labelColor=F48FB1&logoColor=ffffff)](https://github.com/Xposed-Modules-Repo/com.jqssun.android-gps-setter/releases)
 
-
-![](https://github.com/Xposed-Modules-Repo/com.android1500.gpssetter/blob/main/banner.png) 
+<!-- ![](https://github.com/Xposed-Modules-Repo/io.github.jqssun.gps-setter/blob/main/banner.png) -->
 
 ### Support/Discussion: [XDA thread](https://forum.xda-developers.com/t/app-xposed-8-1-12x-gps-setter-set-device-location.4454879/)
 
@@ -53,14 +52,3 @@ This Module will Support Android 8.1 +
 -> MVVM Architecture
 
 -> Retrofit
-
-## Support :-
-
-As you know this project does not have advertising anymore so it's hard to alive this project if you want to support further development of this project you can donate by BTC. This form of support is meant to compensate for my time dedicated to the community.
-
-You can support the project by donating to below addresses.
-| Type  | Address |
-| ------------- | ------------- |
-| <img src="https://en.bitcoin.it/w/images/en/2/29/BC_Logo_.png" alt="Bitcoin" width="50"/>  | 12eai5UkUtBe1gzNYvBvjTNTDvqVBFbQzy  |
-
-

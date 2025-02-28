@@ -61,13 +61,14 @@ dependencies {
 
     implementation 'androidx.core:core-ktx:1.9.0'
     implementation 'androidx.appcompat:appcompat:1.7.0-alpha01'
-    implementation 'com.google.android.material:material:1.9.0-alpha01'
     implementation 'androidx.activity:activity-ktx:1.6.1'
     implementation 'com.google.android.gms:play-services-maps:18.1.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.2.0-alpha05'
     implementation 'androidx.preference:preference:1.2.0'
     implementation 'androidx.datastore:datastore-preferences:1.0.0'
     implementation "androidx.drawerlayout:drawerlayout:1.2.0-alpha01"
+
+    implementation "com.google.android.material:material:1.12.0"
     implementation 'com.google.android.gms:play-services-location:21.0.1'
 
     // testImplementation 'junit:junit:4.13.2'
@@ -99,11 +100,6 @@ dependencies {
     // Retrofit
     implementation 'com.squareup.retrofit2:retrofit:2.9.0'
     implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
-
-    implementation ("dev.rikka.rikkax.material:material-preference:2.0.0") {
-        exclude group: "dev.rikka.rikkax.appcompat", module: "appcompat"
-        //exclude group: "androidx.lifecycle", module: "lifecycle-viewmodel-ktx"
-    }
 
     implementation 'com.highcapable.yukihookapi:api:1.2.1'
     ksp 'com.highcapable.yukihookapi:ksp-xposed:1.2.1'

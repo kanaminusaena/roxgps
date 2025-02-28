@@ -20,6 +20,7 @@ import androidx.core.content.ContextCompat.getSystemService
 import androidx.preference.EditTextPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceDataStore
+import androidx.preference.DropDownPreference
 import io.github.jqssun.gpssetter.R
 import io.github.jqssun.gpssetter.databinding.SettingsActivityBinding
 import io.github.jqssun.gpssetter.utils.JoystickService
@@ -27,11 +28,12 @@ import io.github.jqssun.gpssetter.utils.PrefManager
 import io.github.jqssun.gpssetter.utils.ext.showToast
 import com.highcapable.yukihookapi.hook.xposed.prefs.ui.ModulePreferenceFragment
 import com.kieronquinn.monetcompat.app.MonetCompatActivity
-import rikka.preference.SimpleMenuPreference
 
+import android.graphics.Color
+import androidx.activity.SystemBarStyle
+import androidx.activity.enableEdgeToEdge
 
 class SettingsActivity : MonetCompatActivity() {
-
 
 
     private val binding by lazy {
@@ -78,15 +80,12 @@ class SettingsActivity : MonetCompatActivity() {
         }
     }
 
-
-
-
-
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge(navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT))
+
         setContentView(binding.root)
-        theme.applyStyle(rikka.material.preference.R.style.ThemeOverlay_Rikka_Material3_Preference, true);
+        theme.applyStyle(com.google.android.material.R.style.Theme_Material3_DynamicColors_DayNight_NoActionBar, true)
         setSupportActionBar(binding.toolbar)
         if (savedInstanceState == null) {
             supportFragmentManager
@@ -121,12 +120,12 @@ class SettingsActivity : MonetCompatActivity() {
 
         override fun onCreatePreferencesInModuleApp(savedInstanceState: Bundle?, rootKey: String?) {
             preferenceManager?.preferenceDataStore = SettingPreferenceDataStore()
-            setPreferencesFromResource(R.xml.setting, rootKey)
+            setPreferencesFromResource(R.xml.preferences, rootKey)
 
 
 
             findPreference<EditTextPreference>("accuracy_settings")?.let {
-                it.summary = "${PrefManager.accuracy} m."
+                it.summary = "${PrefManager.accuracy} m"
                 it.setOnBindEditTextListener { editText ->
                     editText.inputType = InputType.TYPE_CLASS_NUMBER;
                     editText.keyListener = DigitsKeyListener.getInstance("0123456789.,");
@@ -136,7 +135,7 @@ class SettingsActivity : MonetCompatActivity() {
                 it.setOnPreferenceChangeListener { preference, newValue ->
                     try {
                         newValue as String?
-                        preference.summary = "$newValue  m."
+                        preference.summary = "$newValue m"
                     } catch (n: NumberFormatException) {
                         n.printStackTrace()
                         Toast.makeText(
@@ -149,7 +148,7 @@ class SettingsActivity : MonetCompatActivity() {
                 }
             }
 
-            findPreference<SimpleMenuPreference>("darkTheme")?.setOnPreferenceChangeListener { _, newValue ->
+            findPreference<DropDownPreference>("darkTheme")?.setOnPreferenceChangeListener { _, newValue ->
                 val newMode = (newValue as String).toInt()
                 if (PrefManager.darkTheme != newMode) {
                     AppCompatDelegate.setDefaultNightMode(newMode)
@@ -161,23 +160,19 @@ class SettingsActivity : MonetCompatActivity() {
             findPreference<Preference>("isJoyStickEnable")?.let {
                 it.setOnPreferenceClickListener {
                     if (askOverlayPermission()){
-                        if (isJoystickRunning()){
+                        if (isJoystickRunning()) {
                             requireContext().stopService(Intent(context,JoystickService::class.java))
-                            it.summary = "Joystick running"
-                        }else if (PrefManager.isStarted){
+                            it.summary = "Joystick disabled"
+                        } else if (PrefManager.isStarted) {
                             requireContext().startService(Intent(context,JoystickService::class.java))
-                            it.summary = "Joystick not running"
-                        }else {
+                            it.summary = "Joystick enabled"
+                        } else {
                             requireContext().showToast(requireContext().getString(R.string.location_not_select))
                         }
                     }
                     true
                 }
-
             }
-
-
-
         }
 
         private fun isJoystickRunning(): Boolean {
