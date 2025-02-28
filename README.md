@@ -1,54 +1,48 @@
 # GPS Setter
 
-![GitHub release](https://img.shields.io/github/v/release/jqssun/android-gps-setter)
-[![Github downloads](https://img.shields.io/github/downloads/jqssun/android-gps-setter/total?label=Release)]()
-[![GitHub stars](https://img.shields.io/github/stars/jqssun/android-gps-setter)](https://github.com/jqssun/android-gps-setter/stargazers)
-[![GitHub issues](https://img.shields.io/github/issues/jqssun/android-gps-setter)](https://github.com/jqssun/android-gps-setter/issues)
-[![GitHub license](https://img.shields.io/github/license/jqssun/android-gps-setter)](https://github.com/jqssun/android-gps-setter/blob/master/LICENSE)
-[![Blank](https://img.shields.io/github/downloads/Xposed-Modules-Repo/com.jqssun.android-gps-setter/total?label=LSPosed%20Repo&logo=Android&style=flat&labelColor=F48FB1&logoColor=ffffff)](https://github.com/Xposed-Modules-Repo/com.jqssun.android-gps-setter/releases)
-
-<!-- ![](https://github.com/Xposed-Modules-Repo/io.github.jqssun.gps-setter/blob/main/banner.png) -->
-
-### Support/Discussion: [XDA thread](https://forum.xda-developers.com/t/app-xposed-8-1-12x-gps-setter-set-device-location.4454879/)
-
-
-As most of GPS spoof app not working anymore coz some are old and some are not proper implement with current OS so i made myself a GPS setter which called GPS Setter it will help you set location where you want from malicious app coz some bad apps collect user location for advertisement purpose or other purpose.... who knows?? so in such case this app will work like charm for prevent current location## . Its still in beta stage coz its still have some bugs which will be fixed in upcoming updates.
-
-
-
-
-## Disclaimer:
-
-The Author and Contributors of Gps Setter take no responsibility for any loss of data or damage to your device or any other consequences that arise as a result of using this application Use it your own Risk.  
-
-## Compatibility:  
-
-This Module will Support Android 8.1 +  
-
-## Features:
-
--> Spoof gps location. 
-
--> Material Design 2
-
--> Add Favorite Place
-
-
- ## REQUIREMENT 
+[![GitHub release](https://img.shields.io/github/v/release/jqssun/android-gps-setter)]()
+[![Github downloads](https://img.shields.io/github/downloads/jqssun/android-gps-setter/total)]()
   
- -> Rooted Device 
- 
- -> Xposed Framework Installed **(Lsposed or Edxposed)**
- 
+[![GitHub license](https://img.shields.io/github/license/jqssun/android-gps-setter)](https://github.com/jqssun/android-gps-setter/blob/master/LICENSE)
+[![GitHub issues](https://img.shields.io/github/issues/jqssun/android-gps-setter)](https://github.com/jqssun/android-gps-setter/issues)
+[![GitHub stars](https://img.shields.io/github/stars/jqssun/android-gps-setter)](https://github.com/jqssun/android-gps-setter/stargazers)
 
-## Component Use :-
+<!-- 
+[![LSPosed](https://img.shields.io/github/downloads/Xposed-Modules-Repo/com.jqssun.android-gps-setter/total?label=LSPosed%20Repo&logo=Android&style=flat&labelColor=F48FB1&logoColor=ffffff)](https://github.com/Xposed-Modules-Repo/com.jqssun.android-gps-setter/releases)
+[![Github downloads](https://img.shields.io/github/downloads/jqssun/android-gps-setter/total?label=Release)]()
+![](https://github.com/Xposed-Modules-Repo/io.github.jqssun.gps-setter/blob/main/banner.png) 
+-->
 
--> Hilt
+## Motivation
 
--> Room DataBase
+An increasing number of apps are abusing the location permission for tracking purposes, preventing the user from using the app without granting the permission. Traditionally on Android, modifying the response from android server is done using the mock location provider - however, the availability of this feature is device dependent. Additionally, some apps have started explicitly checking for signals regarding whether the location provided is reliable. This module aims to mitigate this by providing an ability to either,
+1. hook the app itself to modify the location it receives, or
+2. hook the system server if the app explicitly checks for whether itself is being hooked
 
--> ViewModel
+Specifically, in the case of hooking just the app, it intercepts [`android.location.Location`](https://developer.android.com/reference/android/location/Location) and [`android.location.LocationManager`](https://developer.android.com/reference/android/location/LocationManager) methods including
+- [`getLatitude()`](https://developer.android.com/reference/android/location/Location#getLatitude())
+- [`getLongitude()`](https://developer.android.com/reference/android/location/Location#getLongitude())
+- [`getAccuracy()`](https://developer.android.com/reference/android/location/Location#getAccuracy())
+- [`getLastKnownLocation(java.lang.String)`](https://developer.android.com/reference/android/location/LocationManager#getLastKnownLocation(java.lang.String))
 
--> MVVM Architecture
+## Changes
 
--> Retrofit
+This module inherits from the original GpsSetter project with the following changes:
+- added support for new location APIs in system server from Android 14+
+- added support for dynamically adjusting the location via a joystick overlay
+- added ability to only depend on FOSS libraries
+- updated UI to work with latest Material Design
+- updated custom designed resource bundles
+- newer dependencies
+
+## Compatibility
+
+- Android 8.1+ (tested up to Android 15)
+- Rooted devices with Xposed framework installed (e.g. LSPosed)
+- Unrooted devices with LSPatch (with manually embedded specified location)
+
+## Credits
+
+- [Android1500](https://github.com/Android1500/GpsSetter)
+- [MapLibre](https://github.com/maplibre/maplibre-native)
+- [microG](https://github.com/microg/GmsCore)
