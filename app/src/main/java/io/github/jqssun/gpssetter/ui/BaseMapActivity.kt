@@ -64,43 +64,22 @@ import android.graphics.Color
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
 
-// import com.google.android.gms.maps.CameraUpdateFactory
-// import com.google.android.gms.maps.MapLibreMap
-// import com.google.android.gms.maps.OnMapReadyCallback
-// import com.google.android.gms.maps.SupportMapFragment
-// import com.google.android.gms.maps.model.BitmapDescriptorFactory
-// import com.google.android.gms.maps.model.LatLng
-// import com.google.android.gms.maps.model.Marker
-// import com.google.android.gms.maps.model.MarkerOptions
-
-import org.maplibre.android.MapLibre
-import org.maplibre.android.camera.CameraUpdateFactory
-import org.maplibre.android.maps.MapLibreMap
-import org.maplibre.android.maps.OnMapReadyCallback
-import org.maplibre.android.maps.SupportMapFragment
-import org.maplibre.android.geometry.LatLng
-import org.maplibre.android.annotations.Marker
-import org.maplibre.android.annotations.MarkerOptions
-
 @AndroidEntryPoint
-class MapActivity: AppCompatActivity(), OnMapReadyCallback, MapLibreMap.OnMapClickListener {
+abstract class BaseMapActivity: AppCompatActivity() {
 
-    private val binding by lazy { ActivityMapBinding.inflate(layoutInflater) }
-    private lateinit var mMap: MapLibreMap
-    private val viewModel by viewModels<MainViewModel>()
-    private val update by lazy { viewModel.getAvailableUpdate() }
+    protected var lat by Delegates.notNull<Double>()
+    protected var lon by Delegates.notNull<Double>()
+    protected val viewModel by viewModels<MainViewModel>()
+    protected val binding by lazy { ActivityMapBinding.inflate(layoutInflater) }
+    protected lateinit var alertDialog: MaterialAlertDialogBuilder
+    protected lateinit var dialog: AlertDialog
+    protected val update by lazy { viewModel.getAvailableUpdate() }
+
     private val notificationsChannel by lazy { NotificationsChannel() }
     private var favListAdapter: FavListAdapter = FavListAdapter()
-    private var mMarker: Marker? = null
-    private var mLatLng: LatLng? = null
-    private var lat by Delegates.notNull<Double>()
-    private var lon by Delegates.notNull<Double>()
     private var xposedDialog: AlertDialog? = null
-    private lateinit var alertDialog: MaterialAlertDialogBuilder
-    private lateinit var dialog: AlertDialog
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private val PERMISSION_ID = 42
-
 
     private val elevationOverlayProvider by lazy {
         ElevationOverlayProvider(this)
@@ -112,6 +91,16 @@ class MapActivity: AppCompatActivity(), OnMapReadyCallback, MapLibreMap.OnMapCli
         )
     }
     // override val applyBackgroundColorToWindow = true
+
+    protected abstract fun getActivityInstance(): BaseMapActivity
+    protected abstract fun hasMarker(): Boolean
+    protected open fun initializeMap() {
+    }
+    protected open fun setupButton() {
+    }
+    protected open fun moveMapToNewLocation(moveNewLocation: Boolean) {
+    }
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -132,57 +121,6 @@ class MapActivity: AppCompatActivity(), OnMapReadyCallback, MapLibreMap.OnMapCli
         setDrawer()
         if (PrefManager.isJoyStickEnable){
             startService(Intent(this, JoystickService::class.java))
-        }
-
-    }
-
-
-    @SuppressLint("MissingPermission")
-    private fun setupButton(){
-        binding.addfavorite.setOnClickListener {
-            addFavoriteDialog()
-        }
-        binding.getlocation.setOnClickListener {
-            getLastLocation()
-        }
-
-        if (viewModel.isStarted) {
-            binding.startButton.visibility = View.GONE
-            binding.stopButton.visibility = View.VISIBLE
-        }
-
-        binding.startButton.setOnClickListener {
-            viewModel.update(true, lat, lon)
-            mLatLng.let {
-                if (mMarker == null) {
-                    mMarker = mMap.addMarker(
-                        MarkerOptions().position(it)
-                    )
-                } else {
-                    mMarker?.position = it!!
-                }
-            } // mMarker?.isVisible = true
-            binding.startButton.visibility = View.GONE
-            binding.stopButton.visibility = View.VISIBLE
-            lifecycleScope.launch {
-                mLatLng?.getAddress(this@MapActivity)?.let { address ->
-                    address.collect{ value ->
-                        showStartNotification(value)
-                    }
-                }
-            }
-            showToast(getString(R.string.location_set))
-        }
-        binding.stopButton.setOnClickListener {
-            mLatLng.let {
-                viewModel.update(false, it!!.latitude, it.longitude)
-            }
-            mMarker?.remove() // mMarker?.isVisible = false
-            mMarker = null
-            binding.stopButton.visibility = View.GONE
-            binding.startButton.visibility = View.VISIBLE
-            cancelNotification()
-            showToast(getString(R.string.location_unset))
         }
 
     }
@@ -292,13 +230,6 @@ class MapActivity: AppCompatActivity(), OnMapReadyCallback, MapLibreMap.OnMapCli
 
     }
 
-    private fun initializeMap() {
-        MapLibre.getInstance(this)
-
-        val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment?
-        mapFragment?.getMapAsync(this)
-    }
-
     private fun isModuleEnable(){
         viewModel.isXposed.observe(this) { isXposed ->
             xposedDialog?.dismiss()
@@ -316,73 +247,12 @@ class MapActivity: AppCompatActivity(), OnMapReadyCallback, MapLibreMap.OnMapCli
 
     }
 
-    override fun onMapReady(mapLibreMap: MapLibreMap) {
-        mMap = mapLibreMap
-        with(mMap){
-            setStyle("https://demotiles.maplibre.org/style.json")
-            // TODO: mapType = viewModel.mapType
-
-            val zoom = 12.0f
-            lat = viewModel.getLat
-            lon  = viewModel.getLng
-            mLatLng = LatLng(lat, lon)
-            mLatLng.let {
-                mMarker = addMarker(
-                    MarkerOptions().position(it!!)
-                        // TODO:
-                        // .draggable(false)
-                        // .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)
-                        )
-                        // .visible(false)
-                mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(it, zoom.toDouble()))
-            }
-            setPadding(0,80,0,170)
-            addOnMapClickListener(this@MapActivity)
-            if (viewModel.isStarted){
-                mMarker?.let {
-                    // TODO:
-                    // it.isVisible = true
-                    // it.showInfoWindow()
-                }
-            }
-        }
-    }
-
-    override fun onMapClick(latLng: LatLng): Boolean {
-        mLatLng = latLng
-        mMarker?.let { marker ->
-            mLatLng.let {
-                marker.position = it!! // marker.isVisible = true
-                mMap.animateCamera(CameraUpdateFactory.newLatLng(it))
-                lat = it.latitude
-                lon = it.longitude
-            }
-        }
-        return true
-    }
-
-    private fun moveMapToNewLocation(moveNewLocation: Boolean) {
-        if (moveNewLocation) {
-            mLatLng = LatLng(lat, lon)
-            mLatLng.let { latLng ->
-                mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng!!, 12.0f.toDouble()))
-                mMarker?.apply {
-                    position = latLng
-                    // TODO:
-                    // isVisible = true
-                    // showInfoWindow()
-                }
-            }
-        }
-
-    }
-
     override fun onResume() {
         super.onResume()
         viewModel.updateXposedState()
     }
 
-    private fun aboutDialog(){
+    protected fun aboutDialog(){
         alertDialog = MaterialAlertDialogBuilder(this)
         layoutInflater.inflate(R.layout.about,null).apply {
             val  titlele = findViewById<TextView>(R.id.design_about_title)
@@ -397,19 +267,18 @@ class MapActivity: AppCompatActivity(), OnMapReadyCallback, MapLibreMap.OnMapCli
         }
     }
 
-    private fun addFavoriteDialog(){
+    protected fun addFavoriteDialog() {
         alertDialog =  MaterialAlertDialogBuilder(this).apply {
             val view = layoutInflater.inflate(R.layout.dialog_layout,null)
             val editText = view.findViewById<EditText>(R.id.search_edittxt)
             setTitle(getString(R.string.add_fav_dialog_title))
             setPositiveButton(getString(R.string.dialog_button_add)) { _, _ ->
                 val s = editText.text.toString()
-                // TODO: if (!mMarker?.isVisible!!){
-                if (mMarker != null){
+                if (hasMarker()){
                   showToast(getString(R.string.location_not_select))
                 }else{
                     viewModel.storeFavorite(s, lat, lon)
-                    viewModel.response.observe(this@MapActivity){
+                    viewModel.response.observe(getActivityInstance()){
                         if (it == (-1).toLong()) showToast(getString(R.string.cant_save)) else showToast(getString(R.string.save))
                     }
                 }
@@ -417,7 +286,6 @@ class MapActivity: AppCompatActivity(), OnMapReadyCallback, MapLibreMap.OnMapCli
             setView(view)
             show()
         }
-
     }
 
     private fun openFavoriteListDialog() {
@@ -425,7 +293,7 @@ class MapActivity: AppCompatActivity(), OnMapReadyCallback, MapLibreMap.OnMapCli
         alertDialog = MaterialAlertDialogBuilder(this)
         alertDialog.setTitle(getString(R.string.favorites))
         val view = layoutInflater.inflate(R.layout.fav,null)
-        val  rcv = view.findViewById<RecyclerView>(R.id.favorites_list)
+        val rcv = view.findViewById<RecyclerView>(R.id.favorites_list)
         rcv.layoutManager = LinearLayoutManager(this)
         rcv.adapter = favListAdapter
         favListAdapter.onItemClick = {
@@ -458,6 +326,16 @@ class MapActivity: AppCompatActivity(), OnMapReadyCallback, MapLibreMap.OnMapCli
 
     }
 
+    private fun updateChecker(){
+        lifecycleScope.launchWhenResumed {
+            viewModel.update.collect{
+                if (it!= null){
+                    updateDialog()
+                }
+            }
+        }
+    }
+
     private fun updateDialog(){
         alertDialog = MaterialAlertDialogBuilder(this)
         alertDialog.setTitle(R.string.update_available)
@@ -469,7 +347,7 @@ class MapActivity: AppCompatActivity(), OnMapReadyCallback, MapLibreMap.OnMapCli
                 val cancel = view.findViewById<AppCompatButton>(R.id.update_download_cancel)
                 setView(view)
                 cancel.setOnClickListener {
-                    viewModel.cancelDownload(this@MapActivity)
+                    viewModel.cancelDownload(getActivityInstance())
                     dialog.dismiss()
                 }
                 lifecycleScope.launch {
@@ -482,14 +360,14 @@ class MapActivity: AppCompatActivity(), OnMapReadyCallback, MapLibreMap.OnMapCli
                                 }
                             }
                             is MainViewModel.State.Done -> {
-                                viewModel.openPackageInstaller(this@MapActivity, it.fileUri)
+                                viewModel.openPackageInstaller(getActivityInstance(), it.fileUri)
                                 viewModel.clearUpdate()
                                 dialog.dismiss()
                             }
 
                             is MainViewModel.State.Failed -> {
                                 Toast.makeText(
-                                    this@MapActivity,
+                                    getActivityInstance(),
                                     R.string.bs_update_download_failed,
                                     Toast.LENGTH_LONG
                                 ).show()
@@ -501,7 +379,7 @@ class MapActivity: AppCompatActivity(), OnMapReadyCallback, MapLibreMap.OnMapCli
                     }
                 }
                 update?.let { it ->
-                    viewModel.startDownload(this@MapActivity, it)
+                    viewModel.startDownload(getActivityInstance(), it)
                 } ?: run {
                     dialog.dismiss()
                 }
@@ -512,17 +390,6 @@ class MapActivity: AppCompatActivity(), OnMapReadyCallback, MapLibreMap.OnMapCli
         }
         dialog = alertDialog.create()
         dialog.show()
-
-    }
-
-    private fun updateChecker(){
-        lifecycleScope.launchWhenResumed {
-            viewModel.update.collect{
-                if (it!= null){
-                    updateDialog()
-                }
-            }
-        }
     }
 
     private suspend fun getSearchAddress(address: String) = callbackFlow {
@@ -535,7 +402,7 @@ class MapActivity: AppCompatActivity(), OnMapReadyCallback, MapLibreMap.OnMapCli
                 delay(3000)
                 trySend(SearchProgress.Complete(matcher.group().split(",")[0].toDouble(),matcher.group().split(",")[1].toDouble()))
             }else {
-                val geocoder = Geocoder(this@MapActivity)
+                val geocoder = Geocoder(getActivityInstance())
                 val addressList: List<Address>? = geocoder.getFromLocationName(address,3)
 
                 try {
@@ -551,14 +418,10 @@ class MapActivity: AppCompatActivity(), OnMapReadyCallback, MapLibreMap.OnMapCli
                 }
             }
         }
-
         awaitClose { this.cancel() }
     }
 
-
-
-
-    private fun showStartNotification(address: String){
+    protected fun showStartNotification(address: String){
         notificationsChannel.showNotification(this){
             it.setSmallIcon(R.drawable.ic_stop)
             it.setContentTitle(getString(R.string.location_set))
@@ -569,13 +432,13 @@ class MapActivity: AppCompatActivity(), OnMapReadyCallback, MapLibreMap.OnMapCli
         }
     }
 
-    private fun cancelNotification(){
+    protected fun cancelNotification(){
         notificationsChannel.cancelAllNotifications(this)
     }
 
     // Get current location
     @SuppressLint("MissingPermission")
-    private fun getLastLocation() {
+    protected fun getLastLocation() {
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         if (checkPermissions()) {
             if (isLocationEnabled()) {

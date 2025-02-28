@@ -23,7 +23,6 @@ android {
 
     signingConfigs {
         release {
-
             def keystorePropertiesFile = rootProject.file("local.properties")
             def keystoreProperties = new Properties()
             keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
@@ -37,9 +36,13 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled false
+            minifyEnabled true
+            // shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             signingConfig signingConfigs.release
+        }
+        debug {
+            minifyEnabled false
         }
     }
     compileOptions {
@@ -53,10 +56,27 @@ android {
         viewBinding true
         buildConfig true
     }
+
+    flavorDimensions += "version"
+    productFlavors {
+        foss {
+            dimension "version"
+            versionNameSuffix "-foss"
+            isDefault true
+        }
+        full {
+            dimension "version"
+            versionNameSuffix "-full"
+        }
+    }
+
     namespace 'io.github.jqssun.gpssetter'
 }
 
 dependencies {
+
+    fossImplementation 'org.maplibre.gl:android-sdk:11.8.2'
+    fullImplementation 'com.google.android.gms:play-services-maps:18.1.0'
 
     implementation 'androidx.core:core-ktx:1.9.0'
     implementation 'androidx.appcompat:appcompat:1.7.0-alpha01'
@@ -74,9 +94,6 @@ dependencies {
 
     implementation "com.google.android.material:material:1.12.0"
     implementation 'com.google.android.gms:play-services-location:21.0.1'
-
-    // implementation 'com.google.android.gms:play-services-maps:18.1.0'
-    implementation 'org.maplibre.gl:android-sdk:11.8.2'
 
     implementation "com.google.dagger:hilt-android:2.55"
     ksp "com.google.dagger:hilt-compiler:2.55"
