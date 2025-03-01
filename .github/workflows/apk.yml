@@ -9,7 +9,7 @@ on:
     branches:
       - 'release/**'
     tags:
-      - '*.*.*'
+      - 'v*.*.*'
   workflow_dispatch:
     inputs:
       version:
@@ -26,7 +26,7 @@ jobs:
       - name: Set TAG
         if: github.event_name == 'push'
         run: |
-          echo "version=$(echo '${{ github.ref_name }}')" >> $GITHUB_ENV
+          echo "version=$(echo '${{ github.ref_name }}' | awk -F 'v' '{print $2}')" >> $GITHUB_ENV
 
       - name: Set TAG
         if: github.event_name == 'workflow_dispatch'
@@ -63,8 +63,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ env.version }}
-          release_name: ${{ env.version }}
+          tag_name: v${{ env.version }}
+          release_name: v${{ env.version }}
           draft: false # true
           prerelease: false
        
