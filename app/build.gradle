@@ -7,7 +7,7 @@ plugins {
     id 'com.google.devtools.ksp'
 }
 
-def tagName = '0.1'
+def tagName = '0.0.1'
 
 android {
     compileSdk 34
@@ -75,6 +75,10 @@ android {
 
 dependencies {
 
+    // temporary foss xposed fix from https://github.com/deltazefiro/Amarok-Hider/issues/160
+    // compileOnly 'de.robv.android.xposed:api:82'
+    compileOnly 'com.github.deltazefiro:XposedBridge:main-SNAPSHOT'
+
     fossImplementation 'org.maplibre.gl:android-sdk:11.8.2'
     fossImplementation 'org.microg.gms:play-services-location:0.3.6.244735'
     fullImplementation 'com.google.android.gms:play-services-maps:18.1.0'
@@ -100,7 +104,6 @@ dependencies {
     ksp "com.google.dagger:hilt-compiler:2.55"
 
     implementation 'org.lsposed.hiddenapibypass:hiddenapibypass:4.3'
-    compileOnly 'de.robv.android.xposed:api:82'
 
     // timber
     implementation 'com.jakewharton.timber:timber:5.0.1'

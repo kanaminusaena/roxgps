@@ -1,0 +1,33 @@
+Categories:
+  - Connectivity
+  - Development
+  - Navigation
+  - Security
+  - System
+License: GPL-3.0-only
+AuthorName: jqssun
+SourceCode: https://github.com/jqssun/android-gps-setter
+IssueTracker: https://github.com/jqssun/android-gps-setter/issues
+Changelog: https://github.com/jqssun/android-gps-setter/releases
+Donate: https://jqssun.github.io/donate/
+
+Description: A GPS setter based on the Xposed framework.
+
+RepoType: git
+Repo: https://github.com/jqssun/android-gps-setter.git
+
+Builds:
+  - versionName: 0.0.1
+    versionCode: 1
+    commit: 0.0.1
+    subdir: app
+    gradle:
+      - foss
+    prebuild:
+      - echo "MAPS_API_KEY=/" > local.properties
+      - echo "storeFile=/" >> local.properties
+
+AutoUpdateMode: Version
+UpdateCheckMode: Tags
+CurrentVersion: 0.0.1
+CurrentVersionCode: 1

@@ -9,11 +9,11 @@ on:
     branches:
       - 'release/**'
     tags:
-      - 'v*.**'
+      - '*.*.*'
   workflow_dispatch:
     inputs:
-      tags:
-        description: 'v*.**'
+      version:
+        description: 'v*.*.*'
         required: true
         type: string
 
@@ -26,12 +26,12 @@ jobs:
       - name: Set TAG
         if: github.event_name == 'push'
         run: |
-          echo "version=$(echo '${{ github.ref_name }}' | awk -F 'v' '{print $2}')" >> $GITHUB_ENV
+          echo "version=$(echo '${{ github.ref_name }}')" >> $GITHUB_ENV
 
       - name: Set TAG
         if: github.event_name == 'workflow_dispatch'
         run: |
-          echo "version=$(echo '${{ inputs.tags }}' | awk -F 'v' '{print $2}')" >> $GITHUB_ENV
+          echo "version=$(echo '${{ inputs.version }}' | awk -F 'v' '{print $2}')" >> $GITHUB_ENV
 
       - name: Set ENV
         run: | 
@@ -50,7 +50,7 @@ jobs:
           echo "MAPS_API_KEY=/" > local.properties;
           echo "storeFile=/" >> local.properties;
           chmod +x ./gradlew;
-          ./gradlew assembleDebug
+          ./gradlew assembleDebug --stacktrace
 
       - name: Upload
         uses: actions/upload-artifact@v4
@@ -64,9 +64,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: v${{ env.version }}
-          release_name: v${{ env.version }}
-          draft: true
+          tag_name: ${{ env.version }}
+          release_name: ${{ env.version }}
+          draft: false # true
           prerelease: false
        
       - name: Publish FOSS
