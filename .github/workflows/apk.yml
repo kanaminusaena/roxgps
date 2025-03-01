@@ -47,7 +47,6 @@ jobs:
 
       - name: Build
         run: |
-          echo "MAPS_API_KEY=/" > local.properties;
           echo "storeFile=/" >> local.properties;
           chmod +x ./gradlew;
           ./gradlew assembleDebug --stacktrace

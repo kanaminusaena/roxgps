@@ -24,8 +24,7 @@ Builds:
     gradle:
       - foss
     prebuild:
-      - echo "MAPS_API_KEY=/" > local.properties
-      - echo "storeFile=/" >> local.properties
+      - echo "storeFile=/" > local.properties
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags
