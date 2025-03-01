@@ -59,6 +59,7 @@ jobs:
           path: ${{ env.main_project_module }}/build/outputs/apk/
 
       - name: Draft
+        id: create_release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -68,7 +69,7 @@ jobs:
           draft: true
           prerelease: false
        
-      - name: Publish
+      - name: Publish FOSS
         uses: actions/upload-release-asset@v1.0.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -76,4 +77,14 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ${{ env.main_project_module }}/build/outputs/apk/foss/debug/app-foss-debug.apk
           asset_name: app-foss-debug.apk
+          asset_content_type: application/zip
+
+      - name: Publish
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ env.main_project_module }}/build/outputs/apk/full/debug/app-full-debug.apk
+          asset_name: app-full-debug.apk
           asset_content_type: application/zip
