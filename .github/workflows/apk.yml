@@ -1,4 +1,5 @@
 # https://github.com/marketplace/actions/automated-build-android-app-with-github-action
+# https://github.com/marketplace/actions/publish-release
 
 name: Generate APK
 env:
@@ -10,6 +11,11 @@ on:
     tags:
       - 'v*.**'
   workflow_dispatch:
+    inputs:
+      tags:
+        description: 'v*.**'
+        required: true
+        type: string
 
 jobs:
   build:
@@ -17,11 +23,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set current date as env variable
-        run: echo "date_today=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
+      - name: Set TAG
+        if: github.event_name == 'push'
+        run: |
+          echo "version=$(echo '${{ github.ref_name }}' | awk -F 'v' '{print $2}')" >> $GITHUB_ENV
 
-      - name: Set repository name as env variable
-        run: echo "repository_name=$(echo '${{ github.repository }}' | awk -F '/' '{print $2}')" >> $GITHUB_ENV
+      - name: Set TAG
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          echo "version=$(echo '${{ inputs.tags }}' | awk -F 'v' '{print $2}')" >> $GITHUB_ENV
+
+      - name: Set ENV
+        run: | 
+          echo "date_today=$(date +'%Y-%m-%d')" >> $GITHUB_ENV;
+          echo "repository_name=$(echo '${{ github.repository }}' | awk -F '/' '{print $2}')" >> $GITHUB_ENV
 
       - name: Use JDK
         uses: actions/setup-java@v4
@@ -30,20 +45,35 @@ jobs:
           java-version: '21' # java version
           cache: 'gradle'
 
-      - name: Change wrapper permissions
-        run: chmod +x ./gradlew
+      - name: Build
+        run: |
+          echo "MAPS_API_KEY=/" > local.properties;
+          echo "storeFile=/" >> local.properties;
+          chmod +x ./gradlew;
+          ./gradlew assembleDebug
 
-      - name: Build debug
-        run: ./gradlew assembleDebug
-
-      - name: Upload debug apk (foss)
+      - name: Upload
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.repository_name }} - ${{ env.date_today }}
-          path: ${{ env.main_project_module }}/build/outputs/apk/foss/debug/
+          path: ${{ env.main_project_module }}/build/outputs/apk/
 
-      - name: Upload debug apk (full)
-        uses: actions/upload-artifact@v4
+      - name: Draft
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          name: ${{ env.repository_name }} - ${{ env.date_today }}
-          path: ${{ env.main_project_module }}/build/outputs/apk/full/debug/
+          tag_name: v${{ env.version }}
+          release_name: v${{ env.version }}
+          draft: true
+          prerelease: false
+       
+      - name: Publish
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ env.main_project_module }}/build/outputs/apk/foss/debug/app-foss-debug.apk
+          asset_name: app-foss-debug.apk
+          asset_content_type: application/zip
