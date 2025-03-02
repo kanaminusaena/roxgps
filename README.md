@@ -6,11 +6,16 @@
 [![license](https://img.shields.io/github/license/jqssun/android-gps-setter)](https://github.com/jqssun/android-gps-setter/blob/master/LICENSE)
 [![issues](https://img.shields.io/github/issues/jqssun/android-gps-setter)](https://github.com/jqssun/android-gps-setter/issues)
 [![stars](https://img.shields.io/github/stars/jqssun/android-gps-setter)](https://github.com/jqssun/android-gps-setter/stargazers)
+  
+[<img src="https://raw.githubusercontent.com/NeoApplications/Neo-Backup/refs/heads/main/badge_github.png" alt="Get it on GitHub" height="80">](https://github.com/jqssun/android-gps-setter/releases)
 
 <!-- 
-[![LSPosed](https://img.shields.io/github/downloads/Xposed-Modules-Repo/com.jqssun.android-gps-setter/total?label=LSPosed%20Repo&logo=Android&style=flat&labelColor=F48FB1&logoColor=ffffff)](https://github.com/Xposed-Modules-Repo/com.jqssun.android-gps-setter/releases)
+[![LSPosed](https://img.shields.io/github/downloads/Xposed-Modules-Repo/com.jqssun.android-gps-setter/total?label=LSPosed&logo=Android&style=flat&labelColor=F48FB1&logoColor=ffffff)](https://github.com/Xposed-Modules-Repo/com.jqssun.android-gps-setter/releases)
 [![Github downloads](https://img.shields.io/github/downloads/jqssun/android-gps-setter/total?label=Release)]()
-![](https://github.com/Xposed-Modules-Repo/io.github.jqssun.gps-setter/blob/main/banner.png) 
+![](https://github.com/Xposed-Modules-Repo/io.github.jqssun.gpssetter/blob/main/banner.png) 
+
+[<img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" alt="Get it on F-Droid" height="80">]()
+[<img src="https://gitlab.com/IzzyOnDroid/repo/-/raw/master/assets/IzzyOnDroid.png" height="80">]()
 -->
 
 ## Motivation
@@ -28,12 +33,12 @@ Specifically, in the case of hooking just the app, it intercepts [`android.locat
 ## Changes
 
 This module inherits from the original GpsSetter project with the following changes:
-- added support for new location APIs in system server from Android 14+
-- added support for dynamically adjusting the location via a joystick overlay
-- added ability to only depend on FOSS libraries
-- updated UI to work with latest Material Design
-- updated custom designed resource bundles
-- newer dependencies
+- Added support for new location APIs in system server from Android 14+
+- Added support for dynamically adjusting the location via a joystick overlay
+- Added ability to only depend on FOSS libraries
+- Updated UI to work with latest Material Design
+- Updated custom designed resource bundles
+- Newer dependencies
 
 ## Compatibility
 
