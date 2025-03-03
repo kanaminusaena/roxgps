@@ -26,6 +26,6 @@ gsed -i "/CurrentVersion: /c\CurrentVersion: $VERSION_NAME-foss" .fdroid.yml
 gsed -i "/CurrentVersionCode: /c\CurrentVersionCode: $VERSION_CODE" .fdroid.yml
 
 git commit -am "bump version"
-
 git tag $VERSION_STRING
+git push
 git push origin $VERSION_STRING
