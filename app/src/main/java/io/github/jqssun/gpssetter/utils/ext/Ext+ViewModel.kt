@@ -1,13 +1,10 @@
 package io.github.jqssun.gpssetter.utils.ext
 
-import android.content.Context
-import android.location.Geocoder
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import java.util.*
 
 fun ViewModel.onIO(body: suspend () -> Unit): Job {
     return viewModelScope.launch(Dispatchers.IO) {

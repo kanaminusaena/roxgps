@@ -1,8 +1,8 @@
 package io.github.jqssun.gpssetter.xposed
-import io.github.jqssun.gpssetter.BuildConfig
 import de.robv.android.xposed.XSharedPreferences
+import io.github.jqssun.gpssetter.BuildConfig
 
- class Xshare {
+class Xshare {
 
     private var xPref: XSharedPreferences? = null
 

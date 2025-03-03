@@ -2,16 +2,11 @@ package io.github.jqssun.gpssetter.xposed
 
 import android.annotation.SuppressLint
 import android.app.AndroidAppHelper
-import android.app.PendingIntent
 import android.content.Context
 import android.location.Location
-import android.location.LocationListener
 import android.location.LocationManager
 import android.location.LocationRequest
 import android.os.Build
-import io.github.jqssun.gpssetter.BuildConfig
-import io.github.jqssun.gpssetter.gsApp
-import io.github.jqssun.gpssetter.xposed.LocationHook.hook
 import com.highcapable.yukihookapi.hook.entity.YukiBaseHooker
 import com.highcapable.yukihookapi.hook.log.loggerW
 import com.highcapable.yukihookapi.hook.type.java.BooleanType
@@ -19,10 +14,7 @@ import com.highcapable.yukihookapi.hook.type.java.DoubleType
 import com.highcapable.yukihookapi.hook.type.java.FloatType
 import com.highcapable.yukihookapi.hook.type.java.UnitType
 import de.robv.android.xposed.XposedBridge
-import de.robv.android.xposed.XposedHelpers
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
+import io.github.jqssun.gpssetter.BuildConfig
 import org.lsposed.hiddenapibypass.HiddenApiBypass
 import timber.log.Timber
 import java.util.*

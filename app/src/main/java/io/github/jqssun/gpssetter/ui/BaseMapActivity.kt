@@ -1,13 +1,15 @@
 package io.github.jqssun.gpssetter.ui
 
+// import com.kieronquinn.monetcompat.app.MonetCompatActivity
+
+// import androidx.core.content.ContextCompat
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Notification
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.content.res.ColorStateList
-import android.graphics.drawable.GradientDrawable
+import android.graphics.Color
 import android.location.Address
 import android.location.Geocoder
 import android.location.Location
@@ -16,24 +18,30 @@ import android.os.Bundle
 import android.os.Looper
 import android.provider.Settings
 import android.view.View
-import android.view.ViewGroup.MarginLayoutParams
 import android.view.inputmethod.EditorInfo
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.SystemBarStyle
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.AppCompatButton
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
-import androidx.core.graphics.ColorUtils
 import androidx.core.view.*
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.gms.location.*
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.elevation.ElevationOverlayProvider
+import com.google.android.material.progressindicator.LinearProgressIndicator
+import dagger.hilt.android.AndroidEntryPoint
 import io.github.jqssun.gpssetter.BuildConfig
 import io.github.jqssun.gpssetter.R
 import io.github.jqssun.gpssetter.adapter.FavListAdapter
@@ -43,13 +51,6 @@ import io.github.jqssun.gpssetter.utils.JoystickService
 import io.github.jqssun.gpssetter.utils.NotificationsChannel
 import io.github.jqssun.gpssetter.utils.PrefManager
 import io.github.jqssun.gpssetter.utils.ext.*
-import com.google.android.gms.location.*
-import com.google.android.material.bottomsheet.BottomSheetBehavior
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.android.material.elevation.ElevationOverlayProvider
-import com.google.android.material.progressindicator.LinearProgressIndicator
-// import com.kieronquinn.monetcompat.app.MonetCompatActivity
-import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.callbackFlow
@@ -57,12 +58,6 @@ import java.io.IOException
 import java.util.regex.Matcher
 import java.util.regex.Pattern
 import kotlin.properties.Delegates
-
-// import androidx.core.content.ContextCompat
-import androidx.appcompat.app.AppCompatActivity
-import android.graphics.Color
-import androidx.activity.SystemBarStyle
-import androidx.activity.enableEdgeToEdge
 
 @AndroidEntryPoint
 abstract class BaseMapActivity: AppCompatActivity() {

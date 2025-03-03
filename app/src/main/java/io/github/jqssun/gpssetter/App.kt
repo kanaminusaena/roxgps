@@ -1,9 +1,9 @@
 package io.github.jqssun.gpssetter
 
 import androidx.appcompat.app.AppCompatDelegate
-import io.github.jqssun.gpssetter.utils.PrefManager
 import com.highcapable.yukihookapi.hook.xposed.application.ModuleApplication
 import dagger.hilt.android.HiltAndroidApp
+import io.github.jqssun.gpssetter.utils.PrefManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import timber.log.Timber

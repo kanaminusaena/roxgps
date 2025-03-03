@@ -6,11 +6,9 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.PixelFormat
 import android.os.IBinder
-import android.util.Log
 import android.view.*
-import io.github.jqssun.gpssetter.R
-import io.github.jqssun.gpssetter.utils.ext.showToast
 import io.github.controlwear.virtual.joystick.android.JoystickView
+import io.github.jqssun.gpssetter.R
 import kotlin.math.cos
 import kotlin.math.sin
 

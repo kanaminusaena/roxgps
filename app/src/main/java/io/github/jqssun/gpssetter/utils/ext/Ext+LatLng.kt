@@ -2,13 +2,11 @@ package io.github.jqssun.gpssetter.utils.ext
 
 import android.content.Context
 import android.location.Geocoder
-import androidx.lifecycle.lifecycleScope
+import io.github.jqssun.gpssetter.ui.CustomLatLng
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.callbackFlow
 import java.util.*
-
-import io.github.jqssun.gpssetter.ui.CustomLatLng
 
 suspend fun CustomLatLng.getAddress(context: Context) = callbackFlow {
     withContext(Dispatchers.IO){

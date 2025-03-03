@@ -1,42 +1,29 @@
 package io.github.jqssun.gpssetter.ui
 
+
+import android.Manifest
 import android.annotation.SuppressLint
-import android.os.Bundle
+import android.content.pm.PackageManager
 import android.view.View
-import androidx.fragment.app.FragmentManager
-import androidx.fragment.app.FragmentTransaction
-
-
-import androidx.activity.viewModels
-import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
 import androidx.lifecycle.lifecycleScope
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import dagger.hilt.android.AndroidEntryPoint
 import io.github.jqssun.gpssetter.R
-import io.github.jqssun.gpssetter.databinding.ActivityMapBinding
-import io.github.jqssun.gpssetter.ui.viewmodel.MainViewModel
 import io.github.jqssun.gpssetter.utils.ext.getAddress
 import io.github.jqssun.gpssetter.utils.ext.showToast
 import kotlinx.coroutines.launch
-
 import org.maplibre.android.MapLibre
-import org.maplibre.android.camera.CameraUpdateFactory
-import org.maplibre.android.maps.MapLibreMap
-import org.maplibre.android.maps.OnMapReadyCallback
-import org.maplibre.android.maps.SupportMapFragment
-import org.maplibre.android.geometry.LatLng
+import org.maplibre.android.WellKnownTileServer
 import org.maplibre.android.annotations.Marker
 import org.maplibre.android.annotations.MarkerOptions
 import org.maplibre.android.camera.CameraPosition
-
-import org.maplibre.android.WellKnownTileServer
-import org.maplibre.android.location.LocationComponent
+import org.maplibre.android.camera.CameraUpdateFactory
+import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.location.LocationComponentActivationOptions
 import org.maplibre.android.location.modes.CameraMode
 import org.maplibre.android.location.modes.RenderMode
-import android.content.pm.PackageManager
-import android.Manifest
-import androidx.core.app.ActivityCompat
+import org.maplibre.android.maps.MapLibreMap
+import org.maplibre.android.maps.OnMapReadyCallback
+import org.maplibre.android.maps.SupportMapFragment
 
 typealias CustomLatLng = LatLng
 
