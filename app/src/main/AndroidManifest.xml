@@ -21,7 +21,7 @@
         android:theme="@style/Theme.GPSSetter"
         tools:targetApi="34">
         <activity
-            android:name=".ui.SettingsActivity"
+            android:name=".ui.ActivitySettings"
             android:exported="false"
             android:label="@string/title_activity_settings"
             android:launchMode="singleTop">
@@ -45,11 +45,9 @@
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyDJHl2fdyya0PuEY-LRFUZM71pijfZN6IE" />
         <meta-data
-            android:name="com.maplibre.TestEventsServer"
-            android:value="api-events-staging.tilestream.net" />
-        <meta-data
-            android:name="com.maplibre.TestEventsAccessToken"
-            android:value="pk.eyJ1IjoiYmxzdGFnaW5nIiwiYSI6ImNpdDF3OHpoaTAwMDcyeXA5Y3Z0Nmk2dzEifQ.0IfB7v5Qbm2MGVYt8Kb8fg" /> 
+            android:name="com.maplibre.AccessToken"
+            android:value="pk.eyJ1IjoiZGVsdGFjaGF0IiwiYSI6ImNqc3c1aWczMzBjejY0M28wZmU0a3cwMzMifQ.ZPTH9dFJaav06RAu4rTYHw" />
+
 
         <provider
             android:name="androidx.core.content.FileProvider"

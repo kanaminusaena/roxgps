@@ -27,6 +27,11 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
+import com.google.android.gms.maps.model.CameraPosition
+
+import android.content.pm.PackageManager
+import android.Manifest
+import androidx.core.app.ActivityCompat
 
 typealias CustomLatLng = LatLng
 
@@ -59,7 +64,21 @@ class MapActivity: BaseMapActivity(), OnMapReadyCallback, GoogleMap.OnMapClickLi
     override fun onMapReady(googleMap: GoogleMap) {
         mMap = googleMap
         with(mMap){
+
+            
+            // gms custom ui
+            if (ActivityCompat.checkSelfPermission(this@MapActivity, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) { 
+                setMyLocationEnabled(true); 
+            } else {
+                ActivityCompat.requestPermissions(this@MapActivity, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), 99);
+            }
+            setTrafficEnabled(true)
+            uiSettings.isMyLocationButtonEnabled = false
+            uiSettings.isZoomControlsEnabled = false
+            uiSettings.isCompassEnabled = false
+            setPadding(0,80,0,0)
             mapType = viewModel.mapType
+
 
             val zoom = 12.0f
             lat = viewModel.getLat
@@ -67,12 +86,12 @@ class MapActivity: BaseMapActivity(), OnMapReadyCallback, GoogleMap.OnMapClickLi
             mLatLng = LatLng(lat, lon)
             mLatLng.let {
                 mMarker = addMarker(
-                    MarkerOptions().position(it!!).draggable(false)
-                        .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)).visible(false)
+                    MarkerOptions().position(it!!).draggable(false).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)).visible(false)
                 )
                 mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(it, zoom))
             }
-            setPadding(0,80,0,170)
+
+            
             setOnMapClickListener(this@MapActivity)
             if (viewModel.isStarted){
                 mMarker?.let {
@@ -99,7 +118,14 @@ class MapActivity: BaseMapActivity(), OnMapReadyCallback, GoogleMap.OnMapClickLi
         if (moveNewLocation) {
             mLatLng = LatLng(lat, lon)
             mLatLng.let { latLng ->
-                mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng!!, 12.0f))
+                mMap.animateCamera(CameraUpdateFactory.newCameraPosition(
+                        CameraPosition.Builder()
+                        .target(latLng!!)
+                        .zoom(12.0f)
+                        .bearing(0f)
+                        .tilt(0f)
+                        .build()
+                ))
                 mMarker?.apply {
                     position = latLng
                     isVisible = true
@@ -109,14 +135,12 @@ class MapActivity: BaseMapActivity(), OnMapReadyCallback, GoogleMap.OnMapClickLi
         }
     }
 
-
-
     override fun getActivityInstance(): BaseMapActivity {
         return this@MapActivity
     }
 
     @SuppressLint("MissingPermission")
-    override fun setupButton(){
+    override fun setupButtons(){
         binding.addfavorite.setOnClickListener {
             addFavoriteDialog()
         }

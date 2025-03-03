@@ -7,7 +7,6 @@
     android:orientation="vertical"
     android:fitsSystemWindows="false">
 
-
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent">
@@ -20,9 +19,22 @@
             android:elevation="1dp"
             app:navigationIcon="@drawable/ic_baseline_menu_24"/>
 
-
-
-
+        <include
+            android:id="@+id/search"
+            layout="@layout/include_search"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentTop="true"
+            android:layout_marginStart="18dp"
+            android:layout_marginTop="72dp"
+            android:layout_marginEnd="18dp"
+            android:layout_marginBottom="72dp"
+            android:gravity="center_vertical"
+            android:lines="1"
+            android:padding="8dp"
+            android:paddingStart="8dp"
+            android:textSize="18sp"
+        />
 
         <include
             android:id="@+id/map_container"
@@ -33,12 +45,16 @@
         <com.google.android.material.button.MaterialButton
             android:id="@+id/getlocation"
             style="@style/Widget.Material3.Button.TonalButton"
+            android:contentDescription="@string/getlocation_desc"
             android:layout_width="64dp"
             android:layout_height="64dp"
+            android:layout_alignParentBottom="true"
             android:layout_alignParentEnd="true"
             android:layout_centerVertical="true"
-            android:layout_marginStart="8dp"
-            android:layout_marginEnd="8dp"
+            android:layout_marginStart="32dp"
+            android:layout_marginEnd="32dp"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="96dp"
             android:alpha="0.95"
             android:elevation="10dp"
             android:insetLeft="0dp"
@@ -54,13 +70,14 @@
         <com.google.android.material.button.MaterialButton
             android:id="@+id/addfavorite"
             style="@style/Widget.Material3.Button.TonalButton"
-            android:layout_below="@id/getlocation"
+            android:contentDescription="@string/addfavorite_desc"
+            android:layout_above="@id/getlocation"
             android:layout_width="64dp"
             android:layout_height="64dp"
             android:layout_alignParentEnd="true"
-            android:layout_marginStart="8dp"
-            android:layout_marginTop="@dimen/padding_8"
-            android:layout_marginEnd="8dp"
+            android:layout_marginStart="32dp"
+            android:layout_marginEnd="32dp"
+            android:layout_marginTop="16dp"
             android:alpha="0.95"
             android:elevation="10dp"
             android:insetLeft="0dp"
@@ -74,14 +91,14 @@
         
         <com.google.android.material.button.MaterialButton
             android:id="@+id/start_button"
+            android:contentDescription="@string/location_set"
             style="@style/Widget.Material3.Button.TonalButton"
-            android:layout_below="@id/addfavorite"
+            android:layout_above="@id/addfavorite"
             android:layout_width="64dp"
             android:layout_height="64dp"
             android:layout_alignParentEnd="true"
-            android:layout_marginStart="8dp"
-            android:layout_marginTop="@dimen/padding_8"
-            android:layout_marginEnd="8dp"
+            android:layout_marginStart="32dp"
+            android:layout_marginEnd="32dp"
             android:alpha="0.95"
             android:elevation="10dp"
             android:insetLeft="0dp"
@@ -93,22 +110,18 @@
             app:iconPadding="0dp"
             app:iconSize="32dp" 
 
-            android:visibility="gone" />
-        <!--
-            android:lines="1"
-            android:text="@string/start_button"
-        -->
+            android:visibility="visible" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/stop_button"
+             android:contentDescription="@string/location_unset"
             style="@style/Widget.Material3.Button.TonalButton"
-            android:layout_below="@id/addfavorite"
+            android:layout_above="@id/addfavorite"
             android:layout_width="64dp"
             android:layout_height="64dp"
             android:layout_alignParentEnd="true"
-            android:layout_marginStart="8dp"
-            android:layout_marginTop="@dimen/padding_8"
-            android:layout_marginEnd="8dp"
+            android:layout_marginStart="32dp"
+            android:layout_marginEnd="32dp"
             android:alpha="0.95"
             android:elevation="10dp"
             android:insetLeft="0dp"
@@ -120,28 +133,9 @@
             app:iconPadding="0dp"
             app:iconSize="32dp" 
 
-            android:visibility="visible" />
-        
-        <!--
-            android:lines="1"
-            android:text="@string/stop_button"
-        -->
+            android:visibility="gone" />
 
     </RelativeLayout>
-
-
-    <androidx.coordinatorlayout.widget.CoordinatorLayout
-        android:id="@+id/coordinator"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent">
-
-        <include
-            android:id="@+id/bottom_sheet_container"
-            layout="@layout/bottom_sheet" />
-
-
-    </androidx.coordinatorlayout.widget.CoordinatorLayout>
-
 
     <com.google.android.material.navigation.NavigationView
         android:id="@+id/nav_view"
@@ -150,9 +144,6 @@
         android:layout_gravity="start"
         app:headerLayout="@layout/drawer_header"
         app:menu="@menu/main_menu">
-
     </com.google.android.material.navigation.NavigationView>
-
-
 
 </androidx.drawerlayout.widget.DrawerLayout>

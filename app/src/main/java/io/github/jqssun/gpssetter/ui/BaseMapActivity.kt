@@ -90,17 +90,12 @@ abstract class BaseMapActivity: AppCompatActivity() {
             resources.getDimension(R.dimen.bottom_sheet_elevation)
         )
     }
-    // override val applyBackgroundColorToWindow = true
 
     protected abstract fun getActivityInstance(): BaseMapActivity
     protected abstract fun hasMarker(): Boolean
-    protected open fun initializeMap() {
-    }
-    protected open fun setupButton() {
-    }
-    protected open fun moveMapToNewLocation(moveNewLocation: Boolean) {
-    }
-
+    protected abstract fun initializeMap()
+    protected abstract fun setupButtons()
+    protected abstract fun moveMapToNewLocation(moveNewLocation: Boolean)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -108,26 +103,23 @@ abstract class BaseMapActivity: AppCompatActivity() {
 
         WindowCompat.setDecorFitsSystemWindows(window, false)
         lifecycleScope.launchWhenCreated {
-            // monet.awaitMonetReady()
             setContentView(binding.root)
         }
         setSupportActionBar(binding.toolbar)
         initializeMap()
-        isModuleEnable()
-        updateChecker()
-        setBottomSheet()
-        setUpNavigationView()
-        setupButton()
-        setDrawer()
+        checkModuleEnabled()
+        checkUpdates()
+        setupNavView()
+        setupButtons()
+        setupDrawer()
         if (PrefManager.isJoyStickEnable){
             startService(Intent(this, JoystickService::class.java))
         }
-
     }
 
-    private fun setDrawer() {
+    private fun setupDrawer() {
         supportActionBar?.setDisplayShowTitleEnabled(false)
-       val mDrawerToggle = object : ActionBarDrawerToggle(
+        val mDrawerToggle = object : ActionBarDrawerToggle(
             this,
             binding.container,
             binding.toolbar,
@@ -145,80 +137,60 @@ abstract class BaseMapActivity: AppCompatActivity() {
             }
         }
         binding.container.setDrawerListener(mDrawerToggle)
-
     }
 
-    private fun setBottomSheet(){
+    private fun setupNavView() {
 
-        val progress = binding.bottomSheetContainer.search.searchProgress
-        val bottom = BottomSheetBehavior.from(binding.bottomSheetContainer.bottomSheet)
-        with(binding.bottomSheetContainer){
+        binding.mapContainer.map.setOnApplyWindowInsetsListener { _, insets ->
+            val topInset: Int = insets.systemWindowInsetTop
+            val bottomInset: Int = insets.systemWindowInsetBottom
+            binding.navView.setPadding(0,topInset,0,0)
+            insets.consumeSystemWindowInsets()
+        }
 
-            search.searchBox.setOnEditorActionListener { v, actionId, _ ->
-
-                if (actionId == EditorInfo.IME_ACTION_SEARCH) {
-
-                    if (isNetworkConnected()) {
-                        lifecycleScope.launch(Dispatchers.Main) {
-                            val getInput = v.text.toString()
-                            if (getInput.isNotEmpty()){
-                                getSearchAddress(getInput).let {
-                                    it.collect { result ->
-                                        when(result) {
-                                            is SearchProgress.Progress -> {
-                                               progress.visibility = View.VISIBLE
-                                            }
-                                            is SearchProgress.Complete -> {
-                                                progress.visibility = View.GONE
-                                                lat = result.lat
-                                                lon = result.lon
-                                                moveMapToNewLocation(true)
-                                            }
-                                            is SearchProgress.Fail -> {
-                                                progress.visibility = View.GONE
-                                                showToast(result.error!!)
-                                            }
+        val progress = binding.search.searchProgress
+        binding.search.searchBox.setOnEditorActionListener { v, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_SEARCH) {
+                if (isNetworkConnected()) {
+                    lifecycleScope.launch(Dispatchers.Main) {
+                        val getInput = v.text.toString()
+                        if (getInput.isNotEmpty()){
+                            getSearchAddress(getInput).let {
+                                it.collect { result ->
+                                    when(result) {
+                                        is SearchProgress.Progress -> {
+                                            progress.visibility = View.VISIBLE
+                                        }
+                                        is SearchProgress.Complete -> {
+                                            progress.visibility = View.GONE
+                                            lat = result.lat
+                                            lon = result.lon
+                                            moveMapToNewLocation(true)
+                                        }
+                                        is SearchProgress.Fail -> {
+                                            progress.visibility = View.GONE
+                                            showToast(result.error!!)
                                         }
                                     }
                                 }
                             }
                         }
-                    } else {
-                        showToast(getString(R.string.no_internet))
                     }
-                    return@setOnEditorActionListener true
+                } else {
+                    showToast(getString(R.string.no_internet))
                 }
-                return@setOnEditorActionListener false
+                return@setOnEditorActionListener true
             }
-
+            return@setOnEditorActionListener false
         }
 
-        binding.mapContainer.map.setOnApplyWindowInsetsListener { _, insets ->
-
-            val topInset: Int = insets.systemWindowInsetTop
-            val bottomInset: Int = insets.systemWindowInsetBottom
-            bottom.peekHeight = binding.bottomSheetContainer.searchLayout.measuredHeight + bottomInset
-
-            val searchParams = binding.bottomSheetContainer.searchLayout.layoutParams as MarginLayoutParams
-            searchParams.bottomMargin  = bottomInset + searchParams.bottomMargin
-            binding.navView.setPadding(0,topInset,0,0)
-
-            insets.consumeSystemWindowInsets()
-        }
-
-        bottom.state = BottomSheetBehavior.STATE_COLLAPSED
-
-    }
-
-    private fun setUpNavigationView() {
         binding.navView.setNavigationItemSelectedListener {
             when(it.itemId){
-
                 R.id.get_favorite -> {
                     openFavoriteListDialog()
                 }
                 R.id.settings -> {
-                    startActivity(Intent(this,SettingsActivity::class.java))
+                    startActivity(Intent(this,ActivitySettings::class.java))
                 }
                 R.id.about -> {
                     aboutDialog()
@@ -227,10 +199,9 @@ abstract class BaseMapActivity: AppCompatActivity() {
             binding.container.closeDrawer(GravityCompat.START)
             true
         }
-
     }
 
-    private fun isModuleEnable(){
+    private fun checkModuleEnabled(){
         viewModel.isXposed.observe(this) { isXposed ->
             xposedDialog?.dismiss()
             xposedDialog = null
@@ -242,9 +213,7 @@ abstract class BaseMapActivity: AppCompatActivity() {
                     show()
                 }
             }
-
         }
-
     }
 
     override fun onResume() {
@@ -269,7 +238,7 @@ abstract class BaseMapActivity: AppCompatActivity() {
 
     protected fun addFavoriteDialog() {
         alertDialog =  MaterialAlertDialogBuilder(this).apply {
-            val view = layoutInflater.inflate(R.layout.dialog_layout,null)
+            val view = layoutInflater.inflate(R.layout.dialog,null)
             val editText = view.findViewById<EditText>(R.id.search_edittxt)
             setTitle(getString(R.string.add_fav_dialog_title))
             setPositiveButton(getString(R.string.dialog_button_add)) { _, _ ->
@@ -326,7 +295,7 @@ abstract class BaseMapActivity: AppCompatActivity() {
 
     }
 
-    private fun updateChecker(){
+    private fun checkUpdates(){
         lifecycleScope.launchWhenResumed {
             viewModel.update.collect{
                 if (it!= null){
@@ -364,7 +333,6 @@ abstract class BaseMapActivity: AppCompatActivity() {
                                 viewModel.clearUpdate()
                                 dialog.dismiss()
                             }
-
                             is MainViewModel.State.Failed -> {
                                 Toast.makeText(
                                     getActivityInstance(),

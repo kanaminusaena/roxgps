@@ -48,8 +48,4 @@ import de.robv.android.xposed.XSharedPreferences
 
      val reload = pref().reload()
 
-
-
-
-
 }

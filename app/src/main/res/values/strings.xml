@@ -1,7 +1,6 @@
 <resources>
 
     <!-- Home -->
-
     <string name="app_name">GPS Setter</string>
     <string name="title_activity_maps">MapsActivity</string>
     <string name="xposed_desc">Set location</string>
@@ -16,25 +15,24 @@
     <string name="location_set">Location set</string>
     <string name="title">Location set notification</string>
     <string name="des">Show notification when location is set</string>
-    <string name="location_unset">Location not set</string>
+    <string name="location_unset">Location unset</string>
     <string name="no_internet">No Internet</string>
     <string name="search_hint">"search eg. New York or 37.7749,-122.4194"</string>
-
-
+    <string name="getlocation_desc">Get current location</string>
+    <string name="addfavorite_desc">Add favorite</string>
 
     <!-- Errors -->
     <string name="error_xposed_module_missing">Xposed module is not enabled</string>
     <string name="error_xposed_module_missing_desc">Enable this module in LSPosed Manager</string>
     <string name="error_missing_root">No root access</string>
     <string name="error_missing_root_desc">Root access is necessary in order for this app to work properly</string>
-    <!-- About -->
 
+    <!-- About -->
     <string name="about">About</string>
     <string name="about_titlele">GPS Setter</string>
     <string name="about_info">A module to set your GPS location without enabling mock location.</string>
 
     <!-- Update -->
-
     <string name="download_manager_description">Downloading update</string>
     <string name="update_button">Update</string>
     <string name="update_available">Update available</string>
@@ -42,7 +40,6 @@
 
 
     <!-- Dialog -->
-
     <string name="add_fav_dialog_title">Add favorite</string>
     <string name="dialog_button_add">Add</string>
     <string name="dialog_button_ok">OK</string>
@@ -50,10 +47,7 @@
     <string name="save">Save</string>
     <string name="progress_dialog_searching">Searching...</string>
 
-
-
     <!-- SettingActivity -->
-
     <string name="xposed">Xposed</string>
     <string name="settings">Settings</string>
     <string name="settings_of_accuracy">Accuracy</string>
@@ -75,6 +69,5 @@
     <string name="start_button">Set location</string>
     <string name="app_update_failed">Update failed</string>
     <string name="dark_theme">Dark theme</string>
-
 
 </resources>

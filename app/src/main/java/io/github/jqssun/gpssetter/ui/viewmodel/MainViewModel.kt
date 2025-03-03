@@ -42,7 +42,7 @@ import kotlin.math.roundToInt
 class MainViewModel @Inject constructor(
     private val favoriteRepository: FavoriteRepository,
     private val prefManger: PrefManager,
-    private val updateChecker: UpdateChecker,
+    private val checkUpdates: UpdateChecker,
     private val downloadManager: DownloadManager,
     @ApplicationContext context: Context
 ) : ViewModel() {
@@ -103,9 +103,9 @@ class MainViewModel @Inject constructor(
     private val _update = MutableStateFlow<UpdateChecker.Update?>(null).apply {
         viewModelScope.launch {
             withContext(Dispatchers.IO){
-                updateChecker.clearCachedDownloads(context)
+                checkUpdates.clearCachedDownloads(context)
             }
-            updateChecker.getLatestRelease().collect {
+            checkUpdates.getLatestRelease().collect {
                 emit(it)
             }
         }

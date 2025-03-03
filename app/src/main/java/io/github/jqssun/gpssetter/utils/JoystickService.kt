@@ -29,7 +29,7 @@ class JoystickService : Service(),View.OnTouchListener,View.OnClickListener {
         super.onCreate()
         wm =  getSystemService(WINDOW_SERVICE) as WindowManager
         val mInflater :LayoutInflater = getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
-        mJoystickContainerView = mInflater.inflate(R.layout.joystick_layout, null as ViewGroup?) as View
+        mJoystickContainerView = mInflater.inflate(R.layout.joystick, null as ViewGroup?) as View
         mJoystickView = mJoystickContainerView!!.findViewById(R.id.joystickView_right)
         mJoystickView?.setOnTouchListener { v, event ->
             if (event.action == 1){

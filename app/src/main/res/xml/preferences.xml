@@ -9,7 +9,7 @@
             android:entries="@array/theme_texts"
             android:entryValues="@array/theme_values"
             android:icon="@drawable/ic_dark_mode"
-            android:key="darkTheme"
+            android:key="dark_theme"
             android:summary="%s"
             android:title="@string/dark_theme" />
 

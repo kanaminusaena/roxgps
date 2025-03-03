@@ -1,18 +1,18 @@
 # GPS Setter
 
+[![LSPosed](https://img.shields.io/github/downloads/Xposed-Modules-Repo/io.github.jqssun.gpssetter/total?label=LSPosed&logo=Android&style=flat&labelColor=F48FB1&logoColor=ffffff)](https://github.com/Xposed-Modules-Repo/io.github.jqssun.gpssetter/releases)
+[![stars](https://img.shields.io/github/stars/jqssun/android-gps-setter)](https://github.com/jqssun/android-gps-setter/stargazers)
+[![build](https://img.shields.io/github/actions/workflow/status/jqssun/android-gps-setter/apk.yml)](https://github.com/jqssun/android-gps-setter/actions/workflows/apk.yml)
 [![release](https://img.shields.io/github/v/release/jqssun/android-gps-setter)](https://github.com/jqssun/android-gps-setter/releases)
-[![downloads](https://img.shields.io/github/downloads/jqssun/android-gps-setter/total)](https://github.com/jqssun/android-gps-setter/releases)
-  
 [![license](https://img.shields.io/github/license/jqssun/android-gps-setter)](https://github.com/jqssun/android-gps-setter/blob/master/LICENSE)
 [![issues](https://img.shields.io/github/issues/jqssun/android-gps-setter)](https://github.com/jqssun/android-gps-setter/issues)
-[![stars](https://img.shields.io/github/stars/jqssun/android-gps-setter)](https://github.com/jqssun/android-gps-setter/stargazers)
   
+A GPS setter based on the Xposed framework. This fork is the first module to achieve support for Android 15+ with its sources available.
+
 [<img src="https://raw.githubusercontent.com/NeoApplications/Neo-Backup/refs/heads/main/badge_github.png" alt="Get it on GitHub" height="80">](https://github.com/jqssun/android-gps-setter/releases)
 
 <!-- 
-[![LSPosed](https://img.shields.io/github/downloads/Xposed-Modules-Repo/com.jqssun.android-gps-setter/total?label=LSPosed&logo=Android&style=flat&labelColor=F48FB1&logoColor=ffffff)](https://github.com/Xposed-Modules-Repo/com.jqssun.android-gps-setter/releases)
-[![Github downloads](https://img.shields.io/github/downloads/jqssun/android-gps-setter/total?label=Release)]()
-![](https://github.com/Xposed-Modules-Repo/io.github.jqssun.gpssetter/blob/main/banner.png) 
+[![downloads](https://img.shields.io/github/downloads/jqssun/android-gps-setter/total?label=GitHub&logo=GitHub)]()
 
 [<img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" alt="Get it on F-Droid" height="80">]()
 [<img src="https://gitlab.com/IzzyOnDroid/repo/-/raw/master/assets/IzzyOnDroid.png" height="80">]()

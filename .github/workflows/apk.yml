@@ -119,12 +119,14 @@ jobs:
       - name: Sync
         run: |
           cd ${{ env.target_path }}
-          cp ../README.md .
+          cp ../README.md ../LICENSE .
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
           git add README.md
-          git commit -m 'sync'
-          git push
+          git add LICENSE
+          git commit --amend --no-edit
+          git push --force
+      # git commit -m 'sync'
       
       # - name: Get latest release
       #   id: get_release

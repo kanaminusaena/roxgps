@@ -22,7 +22,7 @@ import androidx.preference.Preference
 import androidx.preference.PreferenceDataStore
 import androidx.preference.DropDownPreference
 import io.github.jqssun.gpssetter.R
-import io.github.jqssun.gpssetter.databinding.SettingsActivityBinding
+import io.github.jqssun.gpssetter.databinding.ActivitySettingsBinding
 import io.github.jqssun.gpssetter.utils.JoystickService
 import io.github.jqssun.gpssetter.utils.PrefManager
 import io.github.jqssun.gpssetter.utils.ext.showToast
@@ -33,11 +33,10 @@ import android.graphics.Color
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
 
-class SettingsActivity : AppCompatActivity() {
-
+class ActivitySettings : AppCompatActivity() {
 
     private val binding by lazy {
-        SettingsActivityBinding.inflate(layoutInflater)
+        ActivitySettingsBinding.inflate(layoutInflater)
     }
 
     class SettingPreferenceDataStore() : PreferenceDataStore() {
@@ -65,7 +64,7 @@ class SettingsActivity : AppCompatActivity() {
             return when (key) {
                 "accuracy_settings" -> PrefManager.accuracy
                 "map_type" -> PrefManager.mapType.toString()
-                "darkTheme" -> PrefManager.darkTheme.toString()
+                "dark_theme" -> PrefManager.darkTheme.toString()
                 else -> throw IllegalArgumentException("Invalid key $key")
             }
         }
@@ -74,7 +73,7 @@ class SettingsActivity : AppCompatActivity() {
             return when (key) {
                 "accuracy_settings" -> PrefManager.accuracy = value
                 "map_type" -> PrefManager.mapType = value!!.toInt()
-                "darkTheme" -> PrefManager.darkTheme = value!!.toInt()
+                "dark_theme" -> PrefManager.darkTheme = value!!.toInt()
                 else -> throw IllegalArgumentException("Invalid key $key")
             }
         }
@@ -117,12 +116,9 @@ class SettingsActivity : AppCompatActivity() {
 
     class SettingsPreferenceFragment : ModulePreferenceFragment() {
 
-
         override fun onCreatePreferencesInModuleApp(savedInstanceState: Bundle?, rootKey: String?) {
             preferenceManager?.preferenceDataStore = SettingPreferenceDataStore()
             setPreferencesFromResource(R.xml.preferences, rootKey)
-
-
 
             findPreference<EditTextPreference>("accuracy_settings")?.let {
                 it.summary = "${PrefManager.accuracy} m"
@@ -148,7 +144,7 @@ class SettingsActivity : AppCompatActivity() {
                 }
             }
 
-            findPreference<DropDownPreference>("darkTheme")?.setOnPreferenceChangeListener { _, newValue ->
+            findPreference<DropDownPreference>("dark_theme")?.setOnPreferenceChangeListener { _, newValue ->
                 val newMode = (newValue as String).toInt()
                 if (PrefManager.darkTheme != newMode) {
                     AppCompatDelegate.setDefaultNightMode(newMode)
@@ -224,8 +220,5 @@ class SettingsActivity : AppCompatActivity() {
                 }
             }
         }
-
     }
-
-
 }
