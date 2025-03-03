@@ -2,13 +2,9 @@
 
     <!-- Home -->
     <string name="app_name">GPS Setter</string>
-    <string name="title_activity_maps">MapsActivity</string>
     <string name="xposed_desc">Set location</string>
     <string name="search">Search</string>
     <string name="address">United States</string>
-    <string name="add_favorite">Add favorite</string>
-    <string name="add_fav_in_database">Add favorite to database</string>
-    <string name="show_fav_list">Show favorite list</string>
     <string name="favorites">Favorites</string>
     <string name="address_not_found">Address not found</string>
     <string name="cant_save">Can\'t save</string>
@@ -17,19 +13,15 @@
     <string name="des">Show notification when location is set</string>
     <string name="location_unset">Location unset</string>
     <string name="no_internet">No Internet</string>
-    <string name="search_hint">"search eg. New York or 37.7749,-122.4194"</string>
     <string name="getlocation_desc">Get current location</string>
     <string name="addfavorite_desc">Add favorite</string>
 
     <!-- Errors -->
     <string name="error_xposed_module_missing">Xposed module is not enabled</string>
     <string name="error_xposed_module_missing_desc">Enable this module in LSPosed Manager</string>
-    <string name="error_missing_root">No root access</string>
-    <string name="error_missing_root_desc">Root access is necessary in order for this app to work properly</string>
 
     <!-- About -->
     <string name="about">About</string>
-    <string name="about_titlele">GPS Setter</string>
     <string name="about_info">A module to set your GPS location without enabling mock location.</string>
 
     <!-- Update -->
@@ -42,10 +34,8 @@
     <!-- Dialog -->
     <string name="add_fav_dialog_title">Add favorite</string>
     <string name="dialog_button_add">Add</string>
-    <string name="dialog_button_ok">OK</string>
     <string name="location_not_select">Location not selected</string>
     <string name="save">Save</string>
-    <string name="progress_dialog_searching">Searching...</string>
 
     <!-- SettingActivity -->
     <string name="xposed">Xposed</string>
@@ -65,8 +55,6 @@
     <string name="random_position_summary">Use a random location around the set location</string>
     <string name="drawer_open">Open</string>
     <string name="drawer_close">Close</string>
-    <string name="stop">Stop</string>
-    <string name="start_button">Set location</string>
     <string name="app_update_failed">Update failed</string>
     <string name="dark_theme">Dark theme</string>
 
