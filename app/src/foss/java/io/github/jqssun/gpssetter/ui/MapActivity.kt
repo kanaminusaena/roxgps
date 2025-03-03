@@ -38,7 +38,6 @@ import android.content.pm.PackageManager
 import android.Manifest
 import androidx.core.app.ActivityCompat
 
-
 typealias CustomLatLng = LatLng
 
 class MapActivity: BaseMapActivity(), OnMapReadyCallback, MapLibreMap.OnMapClickListener {
@@ -131,12 +130,13 @@ class MapActivity: BaseMapActivity(), OnMapReadyCallback, MapLibreMap.OnMapClick
                     ActivityCompat.requestPermissions(this@MapActivity, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), 99);
                 }
             }
+            // TODO: fix bug with drawer
             uiSettings.setAllGesturesEnabled(true)
+            uiSettings.setCompassEnabled(true)
             uiSettings.setCompassMargins(0,480,120,0)
-            // uiSettings.setLogoMargins(0,0,0,80)
-            uiSettings.setLogoEnabled(false)
-            uiSettings.setAttributionEnabled(true)
-            uiSettings.setAttributionMargins(0,0,0,0) // TODO: fix bug with drawer
+            uiSettings.setLogoEnabled(true)
+            uiSettings.setLogoMargins(0,0,0,80)
+            // uiSettings.setAttributionEnabled(false)
             // uiSettings.setAttributionMargins(80,0,0,80)
             // setPadding(0,0,0,80)
 

@@ -23,12 +23,11 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
-import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.gms.maps.model.CameraPosition
-
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import android.content.pm.PackageManager
 import android.Manifest
 import androidx.core.app.ActivityCompat
@@ -60,6 +59,26 @@ class MapActivity: BaseMapActivity(), OnMapReadyCallback, GoogleMap.OnMapClickLi
             .replace(R.id.map, mapFragment)
             .commit()
         mapFragment?.getMapAsync(this)
+    }
+    override fun moveMapToNewLocation(moveNewLocation: Boolean) {
+        if (moveNewLocation) {
+            mLatLng = LatLng(lat, lon)
+            mLatLng.let { latLng ->
+                mMap.animateCamera(CameraUpdateFactory.newCameraPosition(
+                        CameraPosition.Builder()
+                        .target(latLng!!)
+                        .zoom(12.0f)
+                        .bearing(0f)
+                        .tilt(0f)
+                        .build()
+                ))
+                mMarker?.apply {
+                    position = latLng
+                    isVisible = true
+                    showInfoWindow()
+                }
+            }
+        }
     }
     override fun onMapReady(googleMap: GoogleMap) {
         mMap = googleMap
@@ -111,26 +130,6 @@ class MapActivity: BaseMapActivity(), OnMapReadyCallback, GoogleMap.OnMapClickLi
                 mMap.animateCamera(CameraUpdateFactory.newLatLng(it))
                 lat = it.latitude
                 lon = it.longitude
-            }
-        }
-    }
-    override fun moveMapToNewLocation(moveNewLocation: Boolean) {
-        if (moveNewLocation) {
-            mLatLng = LatLng(lat, lon)
-            mLatLng.let { latLng ->
-                mMap.animateCamera(CameraUpdateFactory.newCameraPosition(
-                        CameraPosition.Builder()
-                        .target(latLng!!)
-                        .zoom(12.0f)
-                        .bearing(0f)
-                        .tilt(0f)
-                        .build()
-                ))
-                mMarker?.apply {
-                    position = latLng
-                    isVisible = true
-                    showInfoWindow()
-                }
             }
         }
     }

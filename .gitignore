@@ -1,5 +1,7 @@
 .DS_Store
 .idea
+*.jks
+local.properties
 
 *.iml
 .gradle
@@ -15,5 +17,3 @@
 /captures
 .externalNativeBuild
 .cxx
-
-local.properties

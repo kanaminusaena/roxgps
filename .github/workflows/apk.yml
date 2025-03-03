@@ -54,47 +54,28 @@ jobs:
 
       - name: Build
         run: |
-          echo "storeFile=/" >> local.properties;
+          echo ${{ secrets.STORE }} | base64 -d > upload.jks
+          echo ${{ secrets.LOCAL }} | base64 -d > local.properties
           chmod +x ./gradlew;
-          ./gradlew assembleDebug --stacktrace
+          ./gradlew assembleRelease --stacktrace
+          rm upload.jks local.properties
 
-      - name: Upload
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.repository_name }} - ${{ env.date_today }}
-          path: ${{ env.main_project_module }}/build/outputs/apk/
-
-      - name: Draft
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: v${{ env.version }}
-          release_name: v${{ env.version }}
-          draft: false # true
-          prerelease: false
-       
-      - name: Publish FOSS (GitHub)
-        uses: actions/upload-release-asset@v1.0.1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ env.main_project_module }}/build/outputs/apk/foss/debug/app-foss-debug.apk
-          asset_name: app-foss-debug.apk
-          asset_content_type: application/zip
+      # - name: Upload
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: ${{ env.repository_name }} - ${{ env.date_today }}
+      #     path: ${{ env.main_project_module }}/build/outputs/apk/
 
       - name: Publish (GitHub)
-        uses: actions/upload-release-asset@v1.0.1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v2
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ env.main_project_module }}/build/outputs/apk/full/debug/app-full-debug.apk
-          asset_name: app-full-debug.apk
-          asset_content_type: application/zip
-      
+          token: ${{ secrets.GITHUB_TOKEN }}
+          name: v${{ env.version }}
+          tag_name: v${{ env.version }}
+          files: |
+            ${{ env.main_project_module }}/build/outputs/apk/foss/release/app-foss-arm64-v8a-release.apk
+            ${{ env.main_project_module }}/build/outputs/apk/full/release/app-full-arm64-v8a-release.apk
+
       - name: Publish (Xposed)
         uses: softprops/action-gh-release@v2
         with:
@@ -103,8 +84,8 @@ jobs:
           name: v${{ env.version }}
           tag_name: v${{ env.version }}
           files: |
-            ${{ env.main_project_module }}/build/outputs/apk/foss/debug/app-foss-debug.apk
-            ${{ env.main_project_module }}/build/outputs/apk/full/debug/app-full-debug.apk
+            ${{ env.main_project_module }}/build/outputs/apk/foss/release/app-foss-arm64-v8a-release.apk
+            ${{ env.main_project_module }}/build/outputs/apk/full/release/app-full-arm64-v8a-release.apk
 
       - name: Checkout
         uses: actions/checkout@v4
@@ -126,7 +107,6 @@ jobs:
           git add LICENSE
           git commit --amend --no-edit
           git push --force
-      # git commit -m 'sync'
       
       # - name: Get latest release
       #   id: get_release
@@ -153,7 +133,7 @@ jobs:
       #     done
 
       # - name: Create a new release
-      #   id: create_new_release
+      #   id: create_release
       #   uses: actions/create-release@v1
       #   env:
       #       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -169,7 +149,7 @@ jobs:
       #   env:
       #       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       #   with:
-      #     upload_url: ${{ steps.create_new_release.outputs.upload_url }}
+      #     upload_url: ${{ steps.create_release.outputs.upload_url }}
       #     asset_path: release-assets/${{ env.full }}
       #     asset_name: ${{ env.full }}
       #     asset_content_type: application/zip
