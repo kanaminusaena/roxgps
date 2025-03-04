@@ -1,14 +1,14 @@
 # GPS Setter
 
+[![Stars](https://img.shields.io/github/stars/jqssun/android-gps-setter)](https://github.com/jqssun/android-gps-setter/stargazers)
 [![LSPosed](https://img.shields.io/github/downloads/Xposed-Modules-Repo/io.github.jqssun.gpssetter/total?label=LSPosed&logo=Android&style=flat&labelColor=F48FB1&logoColor=ffffff)](https://github.com/Xposed-Modules-Repo/io.github.jqssun.gpssetter/releases)
-[![stars](https://img.shields.io/github/stars/jqssun/android-gps-setter)](https://github.com/jqssun/android-gps-setter/stargazers)
-[![downloads](https://img.shields.io/github/downloads/jqssun/android-gps-setter/total?label=GitHub&logo=GitHub)](https://github.com/jqssun/android-gps-setter/releases)
-[![build](https://img.shields.io/github/actions/workflow/status/jqssun/android-gps-setter/apk.yml)](https://github.com/jqssun/android-gps-setter/actions/workflows/apk.yml)
+[![GitHub](https://img.shields.io/github/downloads/jqssun/android-gps-setter/total?label=GitHub&logo=GitHub)](https://github.com/jqssun/android-gps-setter/releases)
 [![release](https://img.shields.io/github/v/release/jqssun/android-gps-setter)](https://github.com/jqssun/android-gps-setter/releases)
+[![build](https://img.shields.io/github/actions/workflow/status/jqssun/android-gps-setter/apk.yml)](https://github.com/jqssun/android-gps-setter/actions/workflows/apk.yml)
 [![license](https://img.shields.io/github/license/jqssun/android-gps-setter)](https://github.com/jqssun/android-gps-setter/blob/master/LICENSE)
 [![issues](https://img.shields.io/github/issues/jqssun/android-gps-setter)](https://github.com/jqssun/android-gps-setter/issues)
   
-A GPS setter based on the Xposed framework. This fork is the first module to achieve support for Android 15+ with its sources available.
+A GPS setter based on the Xposed framework. This fork is the first module to achieve support for Android 15+ with its sources available.  
 
 ## Releases
 
@@ -73,12 +73,16 @@ Specifically, in the case of hooking just the app, it intercepts [`android.locat
 
 ## Features
 
-- ✨ Supports new system server location APIs introduced in Android 14+
-- 🍀 Supports a fully FLOSS build flavor - including all underlying dependencies
-- 🖲️ Allows adjusting location on the fly via an on-screen joystick overlay
+- ✨ (New) Supports system server location APIs introduced in Android 14+
+- 🍀 (New) Supports a fully FLOSS build flavor - including all underlying dependencies
+- 🖲️ (New) Allows adjusting location on the fly via an on-screen joystick overlay
+- 🎉 (New) Feataures custom designed resource bundles with updated dependent libraries
 - 🎲 Allows using a live updating random location in the vicinity of the set point
-- 🎉 Feataures custom designed resource bundles with updated dependent libraries
 - 🔥 Compatible with latest Material Design
+
+## Demo
+
+<video loop src='https://github.com/user-attachments/assets/fbc0901c-b126-4ca7-9239-34390a76e7f9' alt="demo" width="200" style="display: block; margin: auto;"></video> <!-- https://github.com/jqssun/android-gps-setter/releases/download/v0.0.1/0.mp4 -->
 
 ## Credits
 
