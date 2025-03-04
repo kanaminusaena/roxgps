@@ -76,7 +76,7 @@ Specifically, in the case of hooking just the app, it intercepts [`android.locat
 - ✨ (New) Supports system server location APIs introduced in Android 14+
 - 🍀 (New) Supports a fully FLOSS build flavor - including all underlying dependencies
 - 🖲️ (New) Allows adjusting location on the fly via an on-screen joystick overlay
-- 🎉 (New) Feataures custom designed resource bundles with updated dependent libraries
+- 🎉 (New) Features custom designed resource bundles with updated dependent libraries
 - 🎲 Allows using a live updating random location in the vicinity of the set point
 - 🔥 Compatible with latest Material Design
 

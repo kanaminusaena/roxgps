@@ -28,6 +28,10 @@ android {
             universalApk false
         }
     }
+    dependenciesInfo {
+        includeInApk = false
+        includeInBundle = false
+    }
 
     signingConfigs {
         release {
@@ -69,12 +73,12 @@ android {
     productFlavors {
         foss {
             dimension "version"
-            versionNameSuffix "-foss"
+            // versionNameSuffix "-foss"
             isDefault true
         }
         full {
             dimension "version"
-            // versionNameSuffix "-full"
+            versionNameSuffix "-full"
         }
     }
 
