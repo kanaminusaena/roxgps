@@ -22,7 +22,7 @@ sleep 4
 
 gsed -i "/def tagName =/c\def tagName = '$VERSION_NAME'" app/build.gradle
 gsed -i "/versionCode/c\        versionCode $VERSION_CODE" app/build.gradle
-gsed -i "/CurrentVersion: /c\CurrentVersion: $VERSION_NAME-foss" .fdroid.yml
+gsed -i "/CurrentVersion: /c\CurrentVersion: $VERSION_NAME" .fdroid.yml
 gsed -i "/CurrentVersionCode: /c\CurrentVersionCode: $VERSION_CODE" .fdroid.yml
 
 git commit -am "bump version"

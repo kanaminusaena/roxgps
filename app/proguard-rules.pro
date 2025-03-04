@@ -22,7 +22,7 @@
 
 
 -keep class io.github.jqssun.gpssetter.xposed.XposedHook{*;}
--keep class io.github.jqssun.gpssetter.xposed.Xshare{ *;}
+-keep class io.github.jqssun.gpssetter.xposed.Xshare{*;}
 -keepnames class io.github.jqssun.gpssetter.selfhook.XposedSelfHooks{*;}
 -keep class de.robv.android.xposed.**{*;}
 -keepnames class de.robv.android.xposed.**

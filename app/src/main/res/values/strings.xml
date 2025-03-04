@@ -2,7 +2,7 @@
 
     <!-- Home -->
     <string name="app_name">GPS Setter</string>
-    <string name="xposed_desc">Set location</string>
+    <string name="xposed_desc">A GPS setter based on the Xposed framework.</string>
     <string name="search">Search</string>
     <string name="address">United States</string>
     <string name="favorites">Favorites</string>

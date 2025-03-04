@@ -25,9 +25,11 @@ Builds:
     gradle:
       - foss
 
+AllowedAPKSigningKeys: 64ca1fa39ddf9e0e89c57d73fb681d2a5b35ae20f071771e2eb401b5032ef1a9
+
 MaintainerNotes: scanner detects 'com/google/android/gms/...' from 'org.microg.gms:play-services-location`
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags
-CurrentVersion: 0.0.5-foss
+CurrentVersion: 0.0.5
 CurrentVersionCode: 5

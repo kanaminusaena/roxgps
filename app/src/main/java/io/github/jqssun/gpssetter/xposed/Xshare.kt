@@ -21,20 +21,20 @@ class Xshare {
      val getLat: Double
      get() = pref().getFloat(
          "latitude",
-         22.2855200.toFloat()
+         45.0000000.toFloat()
      ).toDouble()
 
 
      val getLng : Double
      get() = pref().getFloat(
          "longitude",
-         114.1576900.toFloat()
+         0.0000000.toFloat()
      ).toDouble()
 
      val isHookedSystem : Boolean
      get() = pref().getBoolean(
-         "isHookedSystem",
-         false
+         "system_hooked",
+         true
      )
 
      val isRandomPosition :Boolean
@@ -44,7 +44,7 @@ class Xshare {
      )
 
      val accuracy : String?
-     get() = pref().getString("accuracy_settings","10")
+     get() = pref().getString("accuracy_level","10")
 
      val reload = pref().reload()
 

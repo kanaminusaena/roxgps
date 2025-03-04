@@ -1,7 +1,7 @@
 package io.github.jqssun.gpssetter
 
 import androidx.appcompat.app.AppCompatDelegate
-import com.highcapable.yukihookapi.hook.xposed.application.ModuleApplication
+import android.app.Application
 import dagger.hilt.android.HiltAndroidApp
 import io.github.jqssun.gpssetter.utils.PrefManager
 import kotlinx.coroutines.CoroutineScope
@@ -10,9 +10,8 @@ import timber.log.Timber
 
 lateinit var gsApp: App
 
-
 @HiltAndroidApp
-class App : ModuleApplication() {
+class App : Application() {
     val globalScope = CoroutineScope(Dispatchers.Default)
 
     companion object {
@@ -27,7 +26,6 @@ class App : ModuleApplication() {
         super.onCreate()
         gsApp = this
         commonInit()
-        // MonetCompat.enablePaletteCompat()
         AppCompatDelegate.setDefaultNightMode(PrefManager.darkTheme)
     }
 }

@@ -24,7 +24,7 @@ import androidx.preference.DropDownPreference
 import androidx.preference.EditTextPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceDataStore
-import com.highcapable.yukihookapi.hook.xposed.prefs.ui.ModulePreferenceFragment
+import androidx.preference.PreferenceFragmentCompat
 import io.github.jqssun.gpssetter.R
 import io.github.jqssun.gpssetter.databinding.ActivitySettingsBinding
 import io.github.jqssun.gpssetter.utils.JoystickService
@@ -40,27 +40,27 @@ class ActivitySettings : AppCompatActivity() {
     class SettingPreferenceDataStore() : PreferenceDataStore() {
         override fun getBoolean(key: String?, defValue: Boolean): Boolean {
             return when (key) {
-                "isHookedSystem" -> PrefManager.isHookSystem
+                "system_hooked" -> PrefManager.isSystemHooked
                 "random_position" -> PrefManager.isRandomPosition
-                "disable_update" -> PrefManager.disableUpdate
-                "isJoyStickEnable" -> PrefManager.isJoyStickEnable
+                "update_disabled" -> PrefManager.isUpdateDisabled
+                "joystick_enabled" -> PrefManager.isJoystickEnabled
                 else -> throw IllegalArgumentException("Invalid key $key")
             }
         }
 
         override fun putBoolean(key: String?, value: Boolean) {
             return when (key) {
-                "isHookedSystem" -> PrefManager.isHookSystem = value
+                "system_hooked" -> PrefManager.isSystemHooked = value
                 "random_position" -> PrefManager.isRandomPosition = value
-                "disable_update" -> PrefManager.disableUpdate = value
-                "isJoyStickEnable" -> PrefManager.isJoyStickEnable = value
+                "update_disabled" -> PrefManager.isUpdateDisabled = value
+                "joystick_enabled" -> PrefManager.isJoystickEnabled = value
                 else -> throw IllegalArgumentException("Invalid key $key")
             }
         }
 
         override fun getString(key: String?, defValue: String?): String? {
             return when (key) {
-                "accuracy_settings" -> PrefManager.accuracy
+                "accuracy_level" -> PrefManager.accuracy
                 "map_type" -> PrefManager.mapType.toString()
                 "dark_theme" -> PrefManager.darkTheme.toString()
                 else -> throw IllegalArgumentException("Invalid key $key")
@@ -69,7 +69,7 @@ class ActivitySettings : AppCompatActivity() {
 
         override fun putString(key: String?, value: String?) {
             return when (key) {
-                "accuracy_settings" -> PrefManager.accuracy = value
+                "accuracy_level" -> PrefManager.accuracy = value
                 "map_type" -> PrefManager.mapType = value!!.toInt()
                 "dark_theme" -> PrefManager.darkTheme = value!!.toInt()
                 else -> throw IllegalArgumentException("Invalid key $key")
@@ -112,13 +112,13 @@ class ActivitySettings : AppCompatActivity() {
     }
 
 
-    class SettingsPreferenceFragment : ModulePreferenceFragment() {
+    class SettingsPreferenceFragment : PreferenceFragmentCompat() {
 
-        override fun onCreatePreferencesInModuleApp(savedInstanceState: Bundle?, rootKey: String?) {
+        override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
             preferenceManager?.preferenceDataStore = SettingPreferenceDataStore()
             setPreferencesFromResource(R.xml.preferences, rootKey)
 
-            findPreference<EditTextPreference>("accuracy_settings")?.let {
+            findPreference<EditTextPreference>("accuracy_level")?.let {
                 it.summary = "${PrefManager.accuracy} m"
                 it.setOnBindEditTextListener { editText ->
                     editText.inputType = InputType.TYPE_CLASS_NUMBER;
@@ -151,7 +151,7 @@ class ActivitySettings : AppCompatActivity() {
                 true
             }
 
-            findPreference<Preference>("isJoyStickEnable")?.let {
+            findPreference<Preference>("joystick_enabled")?.let {
                 it.setOnPreferenceClickListener {
                     if (askOverlayPermission()){
                         if (isJoystickRunning()) {

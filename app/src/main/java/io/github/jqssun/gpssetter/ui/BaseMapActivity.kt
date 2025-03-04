@@ -1,8 +1,5 @@
 package io.github.jqssun.gpssetter.ui
 
-// import com.kieronquinn.monetcompat.app.MonetCompatActivity
-
-// import androidx.core.content.ContextCompat
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Notification
@@ -107,7 +104,7 @@ abstract class BaseMapActivity: AppCompatActivity() {
         setupNavView()
         setupButtons()
         setupDrawer()
-        if (PrefManager.isJoyStickEnable){
+        if (PrefManager.isJoystickEnabled){
             startService(Intent(this, JoystickService::class.java))
         }
     }
