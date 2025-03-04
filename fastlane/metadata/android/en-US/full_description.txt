@@ -1,0 +1,6 @@
+<br>- ✨ Supports new system server location APIs introduced in Android 14+
+<br>- 🍀 Supports a fully FLOSS build flavor - including all underlying dependencies
+<br>- 🖲️ Allows adjusting the location on the fly via an on-screen joystick overlay
+<br>- 🎲 Allows using a live updating random location in the vicinity of the set point
+<br>- 🎉 Feataures custom designed resource bundles with updated dependent libraries
+<br>- 🔥 Compatible with latest Material Design

@@ -11,6 +11,7 @@
 A GPS setter based on the Xposed framework. This fork is the first module to achieve support for Android 15+ with its sources available.
 
 ## Releases
+
 <table>
     <tr>
         <th>Version</th>
@@ -64,21 +65,20 @@ Specifically, in the case of hooking just the app, it intercepts [`android.locat
 - [`getAccuracy()`](https://developer.android.com/reference/android/location/Location#getAccuracy())
 - [`getLastKnownLocation(java.lang.String)`](https://developer.android.com/reference/android/location/LocationManager#getLastKnownLocation(java.lang.String))
 
-## Changes
-
-This module inherits from the original GpsSetter project with the following changes:
-- Added support for new location APIs in system server introduced in Android 14+
-- Added support for dynamically adjusting the location via a joystick overlay
-- Added ability to only depend on FOSS libraries
-- Updated UI to work with latest Material Design
-- Updated custom designed resource bundles
-- Newer dependencies
-
 ## Compatibility
 
 - Android 8.1+ (tested up to Android 16 Beta 2)
 - Rooted devices with Xposed framework installed (e.g. LSPosed)
 - Unrooted devices with LSPatch (with manually embedded specified location)
+
+## Features
+
+- ✨ Supports new system server location APIs introduced in Android 14+
+- 🍀 Supports a fully FLOSS build flavor - including all underlying dependencies
+- 🖲️ Allows adjusting location on the fly via an on-screen joystick overlay
+- 🎲 Allows using a live updating random location in the vicinity of the set point
+- 🎉 Feataures custom designed resource bundles with updated dependent libraries
+- 🔥 Compatible with latest Material Design
 
 ## Credits
 
