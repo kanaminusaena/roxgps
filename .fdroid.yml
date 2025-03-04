@@ -29,5 +29,5 @@ MaintainerNotes: scanner detects 'com/google/android/gms/...' from 'org.microg.g
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags
-CurrentVersion: 0.0.5
+CurrentVersion: 0.0.5-foss
 CurrentVersionCode: 5
