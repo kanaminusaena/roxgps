@@ -14,7 +14,6 @@ import kotlin.math.sin
 
 class JoystickService : Service(),View.OnTouchListener,View.OnClickListener {
 
-
     private var wm: WindowManager? = null
     private var mJoystickContainerView: View? = null
     private var mJoystickView: JoystickView? = null

@@ -27,7 +27,4 @@ interface FavoriteDao {
         @Query("SELECT * FROM favorite WHERE id = :id ORDER BY id DESC")
         fun getSingleFavorite(id: Long) : Favorite
 
-
-
-
 }

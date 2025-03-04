@@ -93,15 +93,11 @@ object PrefManager   {
 
     }
 
-
-
-
     @OptIn(DelicateCoroutinesApi::class)
     private fun runInBackground(method: suspend () -> Unit){
         GlobalScope.launch(Dispatchers.IO) {
             method.invoke()
         }
     }
-
 
 }

@@ -19,12 +19,9 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import javax.inject.Singleton
 
-
 @Module
 @InstallIn(SingletonComponent::class)
 object AppModule{
-
-
 
     @Singleton
     @Provides
@@ -40,12 +37,10 @@ object AppModule{
         application.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
 
 
-
     @Singleton
     @Provides
     fun provideGithubService(retrofit: Retrofit): GitHubService =
         retrofit.create(GitHubService::class.java)
-
 
     @Provides
     @Singleton
@@ -73,6 +68,3 @@ object AppModule{
     fun providesApplicationScope() = CoroutineScope(SupervisorJob())
 
 }
-
-
-

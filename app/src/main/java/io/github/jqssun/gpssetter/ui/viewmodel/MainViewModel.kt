@@ -37,6 +37,7 @@ import java.io.File
 import javax.inject.Inject
 import kotlin.math.roundToInt
 
+import io.github.jqssun.gpssetter.xposed.Xshare
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
@@ -82,14 +83,13 @@ class MainViewModel @Inject constructor(
 
     }
 
-
     val isXposed = MutableLiveData<Boolean>()
     fun updateXposedState() {
         onMain {
             isXposed.value = YukiHookAPI.Status.isModuleActive
+            // isXposed.value = Xshare().isModuleActive()
         }
     }
-
 
     fun deleteFavorite(favorite: Favorite) = onIO {
         favoriteRepository.deleteFavorite(favorite)

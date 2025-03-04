@@ -53,12 +53,24 @@ object LocationHook : YukiBaseHooker() {
             Timber.tag("GPS Setter")
                 .e(e, "Failed to get XposedSettings for %s", context.packageName)
         }
-
     }
 
 
     @SuppressLint("NewApi")
     override fun onHook() {
+        // if (packageName == BuildConfig.APPLICATION_ID) {
+        //     findClass(BuildConfig.APPLICATION_ID + ".xposed.Xshare").hook {
+        //         injectMember {
+        //             method {
+        //                 name = "isModuleActive"
+        //                 returnType = BooleanType
+        //             }
+        //             beforeHook {
+        //                 result = true
+        //             }
+        //         }
+        //     }
+        // }
 
         loadSystem {
             if (settings.isStarted && (settings.isHookedSystem && !ignorePkg.contains(packageName))) {
@@ -378,10 +390,7 @@ object LocationHook : YukiBaseHooker() {
                             XposedBridge.log("GS: Not possible to mock (Pre Q)! $e")
                         }
                         result = location
-
-
                     }
-
                 }
             }
         }

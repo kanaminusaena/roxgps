@@ -21,7 +21,7 @@ class UpdateChecker @Inject constructor(private val apiResponse : GitHubService)
             getReleaseList()?.let { gitHubReleaseResponse ->
                 val currentTag = gitHubReleaseResponse.tagName
 
-                if (currentTag != null && (currentTag != BuildConfig.TAG_NAME && PrefManager.isUpdateDisabled)) {
+                if (currentTag != null && (currentTag != "v" + BuildConfig.TAG_NAME && PrefManager.isUpdateDisabled)) {
                     //New update available!
                     val asset =
                         gitHubReleaseResponse.assets?.firstOrNull { it.name?.endsWith(".apk") == true }
@@ -48,7 +48,7 @@ class UpdateChecker @Inject constructor(private val apiResponse : GitHubService)
                             publishedAt,
                             asset?.browserDownloadUrl
                                 ?: "https://github.com/jqssun/android-gps-setter/releases",
-                            asset?.name ?: "app-release.apk",
+                            asset?.name ?: "app-full-arm64-v8a-release.apk",
                             releaseUrl ?: "https://github.com/jqssun/android-gps-setter/releases"
                         )
                     ).isSuccess
@@ -76,9 +76,6 @@ class UpdateChecker @Inject constructor(private val apiResponse : GitHubService)
     fun clearCachedDownloads(context: Context){
         File(context.externalCacheDir, "updates").deleteRecursively()
     }
-
-
-
 
     @Parcelize
     data class Update(val name: String, val changelog: String, val timestamp: String, val assetUrl: String, val assetName: String, val releaseUrl: String):

@@ -111,7 +111,6 @@ class ActivitySettings : AppCompatActivity() {
         return super.onOptionsItemSelected(item)
     }
 
-
     class SettingsPreferenceFragment : PreferenceFragmentCompat() {
 
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {

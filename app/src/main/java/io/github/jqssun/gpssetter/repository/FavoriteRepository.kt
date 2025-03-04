@@ -28,6 +28,4 @@ class FavoriteRepository @Inject constructor(private val favoriteDao: FavoriteDa
 
     }
 
-
-
 }

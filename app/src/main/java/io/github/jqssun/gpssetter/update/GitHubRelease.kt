@@ -48,5 +48,4 @@ class GitHubRelease {
         var browserDownloadUrl: String? = null
     }
 
-
 }

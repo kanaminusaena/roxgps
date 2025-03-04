@@ -7,7 +7,7 @@ import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import io.github.jqssun.gpssetter.R
- class NotificationsChannel{
+class NotificationsChannel{
 
     private fun createChannelIfNeeded(context: Context) {
         NotificationChannelCompat.Builder("set.location", NotificationManager.IMPORTANCE_DEFAULT).apply {
@@ -34,6 +34,4 @@ import io.github.jqssun.gpssetter.R
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.cancelAll()
     }
-
-
 }
