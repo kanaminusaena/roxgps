@@ -1,21 +1,22 @@
 package io.github.jqssun.gpssetter.xposed
 
-import com.highcapable.yukihookapi.annotation.xposed.InjectYukiHookWithXposed
-import com.highcapable.yukihookapi.hook.factory.configs
-import com.highcapable.yukihookapi.hook.factory.encase
-import com.highcapable.yukihookapi.hook.xposed.proxy.IYukiHookXposedInit
+import de.robv.android.xposed.IXposedHookLoadPackage
+import de.robv.android.xposed.XC_MethodHook
+import de.robv.android.xposed.XposedBridge
+import de.robv.android.xposed.XposedHelpers
+import de.robv.android.xposed.callbacks.XC_LoadPackage
 import io.github.jqssun.gpssetter.BuildConfig
 
-@InjectYukiHookWithXposed(modulePackageName = BuildConfig.APPLICATION_ID)
-class HookEntry : IYukiHookXposedInit {
+class HookEntry : IXposedHookLoadPackage {
 
-    override fun onInit() = configs {
-        isEnableHookSharedPreferences = true
-        isEnableModulePrefsCache = true
+    override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
+        if (lpparam.packageName == BuildConfig.APPLICATION_ID) {
+            XposedHelpers.findAndHookMethod("io.github.jqssun.gpssetter.ui.viewmodel.MainViewModel", lpparam.classLoader, "updateXposedState", object : XC_MethodHook() {
+                override fun beforeHookedMethod(param: MethodHookParam) {
+                    param.result = null
+                }
+            })
+        }
+        LocationHook.initHooks(lpparam)
     }
-
-    override fun onHook() = encase {
-        loadHooker(LocationHook)
-    }
-
 }

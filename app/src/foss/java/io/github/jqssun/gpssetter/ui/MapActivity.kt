@@ -123,7 +123,7 @@ class MapActivity: BaseMapActivity(), OnMapReadyCallback, MapLibreMap.OnMapClick
             uiSettings.setCompassMargins(0,480,120,0)
             uiSettings.setLogoEnabled(true)
             uiSettings.setLogoMargins(0,0,0,80)
-            // uiSettings.setAttributionEnabled(false)
+            uiSettings.setAttributionEnabled(false)
             // uiSettings.setAttributionMargins(80,0,0,80)
             // setPadding(0,0,0,80)
 

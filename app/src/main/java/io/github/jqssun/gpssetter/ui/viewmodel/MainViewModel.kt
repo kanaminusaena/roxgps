@@ -16,7 +16,6 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.highcapable.yukihookapi.YukiHookAPI
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.github.jqssun.gpssetter.BuildConfig
@@ -37,8 +36,6 @@ import java.io.File
 import javax.inject.Inject
 import kotlin.math.roundToInt
 
-import io.github.jqssun.gpssetter.xposed.Xshare
-
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val favoriteRepository: FavoriteRepository,
@@ -47,7 +44,6 @@ class MainViewModel @Inject constructor(
     private val downloadManager: DownloadManager,
     @ApplicationContext context: Context
 ) : ViewModel() {
-
 
     val getLat  = prefManger.getLat
     val getLng  = prefManger.getLng
@@ -69,7 +65,6 @@ class MainViewModel @Inject constructor(
         }
     }
 
-
     fun update(start: Boolean, la: Double, ln: Double)  {
         prefManger.update(start,la,ln)
     }
@@ -83,11 +78,11 @@ class MainViewModel @Inject constructor(
 
     }
 
-    val isXposed = MutableLiveData<Boolean>()
+    val isXposed = MutableLiveData<Boolean>(true)
     fun updateXposedState() {
         onMain {
-            isXposed.value = YukiHookAPI.Status.isModuleActive
-            // isXposed.value = Xshare().isModuleActive()
+            // isXposed.value = YukiHookAPI.Status.isModuleActive
+            isXposed.value = false
         }
     }
 

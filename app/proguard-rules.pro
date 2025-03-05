@@ -20,7 +20,11 @@
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
 
+-keep class io.github.jqssun.gpssetter.ui.viewmodel.MainViewModel{*;}
+-keepnames class io.github.jqssun.gpssetter.ui.viewmodel.MainViewModel.**
+
 -keep class io.github.jqssun.gpssetter.xposed.Xshare{*;}
+-keep class io.github.jqssun.gpssetter.xposed.HookEntry{*;}
 -keep class de.robv.android.xposed.**{*;}
 -keepnames class de.robv.android.xposed.**
 

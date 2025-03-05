@@ -4,10 +4,6 @@ import io.github.jqssun.gpssetter.BuildConfig
 
 class Xshare {
 
-    public fun isModuleActive() : Boolean {
-        return false
-    }
-
     private var xPref: XSharedPreferences? = null
 
     private fun pref() : XSharedPreferences {

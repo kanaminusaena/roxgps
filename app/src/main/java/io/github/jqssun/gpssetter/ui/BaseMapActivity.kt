@@ -201,7 +201,8 @@ abstract class BaseMapActivity: AppCompatActivity() {
                 xposedDialog = MaterialAlertDialogBuilder(this).run {
                     setTitle(R.string.error_xposed_module_missing)
                     setMessage(R.string.error_xposed_module_missing_desc)
-                    setCancelable(BuildConfig.DEBUG)
+                    // setCancelable(BuildConfig.DEBUG)
+                    setCancelable(true)
                     show()
                 }
             }
