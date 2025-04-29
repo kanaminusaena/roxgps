@@ -1,3 +1,4 @@
+```kotlin name=app/src/main/java/io/github/jqssun/gpssetter/ui/BaseMapActivity.kt
 package io.github.jqssun.gpssetter.ui
 
 import android.Manifest
