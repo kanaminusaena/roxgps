@@ -404,7 +404,37 @@ abstract class BaseMapActivity: AppCompatActivity() {
     }
 
     protected fun showStartNotification(address: String){
-        notificationsChannel.showNotification(this){
+    // Intent to handle the "Stop" button action
+    val stopIntent = Intent(this, NotificationActionReceiver::class.java).apply {
+        action = NotificationsChannel.ACTION_STOP
+    }
+    val stopPendingIntent: PendingIntent = PendingIntent.getBroadcast(
+        this,
+        0,
+        stopIntent,
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+    )
+    
+    // Build the notification
+    val notification = NotificationCompat.Builder(this, "set.location")
+        .setSmallIcon(R.drawable.ic_stop) // Use the stop icon resource
+        .setContentTitle(getString(R.string.location_set)) // Title of the notification
+        .setContentText(address) // Address to display in the notification
+        .setAutoCancel(true) // Auto-cancel on click
+        .setOngoing(true) // Persistent notifications
+        .setCategory(Notification.CATEGORY_EVENT) // Notification category
+        .addAction(
+            R.drawable.ic_stop, // Icon for the action button
+            getString(R.string.stop), // Text for the button
+            stopPendingIntent // PendingIntent for the button action
+        )
+        .setPriority(NotificationCompat.PRIORITY_HIGH) // High-priority notification
+        .build()
+
+    // Show the notification
+    NotificationManagerCompat.from(this).notify(123, notification)
+        
+    /*    notificationsChannel.showNotification(this){
             it.setSmallIcon(R.drawable.ic_stop)
             it.setContentTitle(getString(R.string.location_set))
             it.setContentText(address)
@@ -412,7 +442,7 @@ abstract class BaseMapActivity: AppCompatActivity() {
             it.setOngoing(true)
             it.setCategory(Notification.CATEGORY_EVENT)
             it.priority = NotificationCompat.PRIORITY_HIGH
-        }
+        } */
     }
 
     protected fun cancelNotification(){
