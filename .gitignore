@@ -15,5 +15,7 @@ local.properties
 /.idea/assetWizardSettings.xml
 /build
 /captures
+/google-services.json
 .externalNativeBuild
 .cxx
+*.bak

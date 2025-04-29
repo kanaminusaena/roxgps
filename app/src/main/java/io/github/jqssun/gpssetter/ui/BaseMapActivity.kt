@@ -55,6 +55,7 @@ import java.io.IOException
 import java.util.regex.Matcher
 import java.util.regex.Pattern
 import kotlin.properties.Delegates
+import androidx.core.app.NotificationManagerCompat
 
 @AndroidEntryPoint
 abstract class BaseMapActivity: AppCompatActivity() {
@@ -104,9 +105,28 @@ abstract class BaseMapActivity: AppCompatActivity() {
         setupNavView()
         setupButtons()
         setupDrawer()
+        checkNotifPermission()
         if (PrefManager.isJoystickEnabled){
             startService(Intent(this, JoystickService::class.java))
         }
+    }
+    
+    private fun checkNotifPermission(){
+        // Check if notifications are enabled
+    if (!NotificationManagerCompat.from(this).areNotificationsEnabled()) {
+        // Show dialog to prompt user
+        val alertDialog = MaterialAlertDialogBuilder(this)
+            .setTitle("Enable Notifications")
+            .setMessage("This app requires notifications for optimal functionality. Please enable notifications in the settings.")
+            .setPositiveButton("Open Settings") { _, _ ->
+                val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                intent.putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+                startActivity(intent)
+            }
+            .setNegativeButton("Cancel", null)
+            .create()
+        alertDialog.show()
+    }
     }
 
     private fun setupDrawer() {
@@ -212,6 +232,7 @@ abstract class BaseMapActivity: AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         viewModel.updateXposedState()
+        checkNotifPermission()
     }
 
     protected fun aboutDialog(){
@@ -388,6 +409,7 @@ abstract class BaseMapActivity: AppCompatActivity() {
             it.setContentTitle(getString(R.string.location_set))
             it.setContentText(address)
             it.setAutoCancel(true)
+            it.setOngoing(true)
             it.setCategory(Notification.CATEGORY_EVENT)
             it.priority = NotificationCompat.PRIORITY_HIGH
         }
