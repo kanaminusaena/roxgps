@@ -1,4 +1,3 @@
-```kotlin name=app/src/main/java/io/github/jqssun/gpssetter/ui/BaseMapActivity.kt
 package io.github.jqssun.gpssetter.ui
 
 import android.Manifest
@@ -32,6 +31,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.AppCompatButton
 import androidx.core.app.ActivityCompat
+import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.view.GravityCompat
 import androidx.core.view.WindowCompat
@@ -61,7 +61,6 @@ import kotlinx.coroutines.flow.callbackFlow
 import java.io.IOException
 import java.util.regex.Pattern
 import kotlin.properties.Delegates
-import androidx.core.app.NotificationCompat
 
 @AndroidEntryPoint
 abstract class BaseMapActivity : AppCompatActivity() {
@@ -667,4 +666,3 @@ sealed class SearchProgress {
     /** Indicates that search failed with an error. */
     data class Fail(val error: String?) : SearchProgress()
 }
-```
