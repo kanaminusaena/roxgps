@@ -9,9 +9,8 @@ import io.github.jqssun.gpssetter.utils.NotificationsChannel
 class NotificationActionReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context?, intent: Intent?) {
     if (intent?.action == NotificationsChannel.ACTION_STOP && context is BaseMapActivity) {
-        // Trigger the stop button logic
         context.runOnUiThread {
-            context.binding.stopButton.performClick()
+            context.performStopButtonClick() // Call the public method
         }
     }
 }
