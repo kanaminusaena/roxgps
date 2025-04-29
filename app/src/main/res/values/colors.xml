@@ -7,5 +7,6 @@
     <color name="primary_light">#BBDEFB</color>
     -->
     <color name="ic_launcher_background">#CCCCCC</color>
+    <color name="red">#FF0000</color>
 
 </resources>
