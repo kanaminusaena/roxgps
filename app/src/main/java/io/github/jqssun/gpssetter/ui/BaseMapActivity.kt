@@ -60,36 +60,49 @@ import kotlinx.coroutines.flow.callbackFlow
 import java.io.IOException
 import java.util.regex.Pattern
 import kotlin.properties.Delegates
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
+import androidx.core.app.NotificationCompat
 
 @AndroidEntryPoint
 abstract class BaseMapActivity : AppCompatActivity() {
 
+    // Latitude property, must be initialized before use
     protected var lat by Delegates.notNull<Double>()
+    // Longitude property, must be initialized before use
     protected var lon by Delegates.notNull<Double>()
+    // ViewModel for main activity logic
     protected val viewModel by viewModels<MainViewModel>()
+    // View binding for activity layout
     protected val binding by lazy { ActivityMapBinding.inflate(layoutInflater) }
+    // MaterialAlertDialogBuilder for various dialogs
     protected lateinit var alertDialog: MaterialAlertDialogBuilder
+    // Reference to current AlertDialog, for dismissing
     protected lateinit var dialog: AlertDialog
+    // Holds update info if available
     protected val update by lazy { viewModel.getAvailableUpdate() }
-
+    // Notifications channel utility class
     private val notificationsChannel = NotificationsChannel
+    // Adapter for favorite locations list
     private var favListAdapter: FavListAdapter = FavListAdapter()
+    // Dialog for Xposed warning
     private var xposedDialog: AlertDialog? = null
+    // For retrieving device location
     private lateinit var fusedLocationClient: FusedLocationProviderClient
+    // Permission request code
     private val PERMISSION_ID = 42
-
-    private val elevationOverlayProvider by lazy {
-        ElevationOverlayProvider(this)
-    }
+    // Elevation overlay for header styling
+    private val elevationOverlayProvider by lazy { ElevationOverlayProvider(this) }
+    // Header background color with proper elevation
     private val headerBackground by lazy {
         elevationOverlayProvider.compositeOverlayWithThemeSurfaceColorIfNeeded(
             resources.getDimension(R.dimen.bottom_sheet_elevation)
         )
     }
 
+    // BroadcastReceiver for notification stop action
     private val stopActionReceiver = object : BroadcastReceiver() {
+        /**
+         * Handles the stop action broadcast for the notification.
+         */
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == NotificationsChannel.ACTION_STOP) {
                 performStopButtonClick()
@@ -97,12 +110,35 @@ abstract class BaseMapActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Returns the current activity instance as BaseMapActivity.
+     */
     protected abstract fun getActivityInstance(): BaseMapActivity
+
+    /**
+     * Returns true if the map currently has a marker placed.
+     */
     protected abstract fun hasMarker(): Boolean
+
+    /**
+     * Initializes the map view and related logic.
+     */
     protected abstract fun initializeMap()
+
+    /**
+     * Sets up and binds all UI buttons.
+     */
     protected abstract fun setupButtons()
+
+    /**
+     * Moves the map view to a new location if requested.
+     * @param moveNewLocation whether to move to the new location
+     */
     protected abstract fun moveMapToNewLocation(moveNewLocation: Boolean)
 
+    /**
+     * Initialization logic for the activity, including UI and listeners.
+     */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge(navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT))
@@ -122,21 +158,33 @@ abstract class BaseMapActivity : AppCompatActivity() {
         registerReceiver(stopActionReceiver, IntentFilter(NotificationsChannel.ACTION_STOP))
     }
 
+    /**
+     * Called when activity resumes; checks module state and notification permissions.
+     */
     override fun onResume() {
         super.onResume()
         viewModel.updateXposedState()
         checkNotifPermission()
     }
 
+    /**
+     * Cleanup logic for the activity, including unregistering receivers.
+     */
     override fun onDestroy() {
         super.onDestroy()
         unregisterReceiver(stopActionReceiver)
     }
 
+    /**
+     * Programmatically triggers the stop button click.
+     */
     fun performStopButtonClick() {
         binding.stopButton.performClick()
     }
 
+    /**
+     * Checks and requests notification permissions if required by Android version.
+     */
     private fun checkNotifPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
@@ -160,6 +208,9 @@ abstract class BaseMapActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Sets up the navigation drawer and its toggle behavior.
+     */
     private fun setupDrawer() {
         supportActionBar?.setDisplayShowTitleEnabled(false)
         val mDrawerToggle = object : ActionBarDrawerToggle(
@@ -175,6 +226,9 @@ abstract class BaseMapActivity : AppCompatActivity() {
         binding.container.addDrawerListener(mDrawerToggle)
     }
 
+    /**
+     * Sets up the navigation view, including listeners and search logic.
+     */
     private fun setupNavView() {
         binding.mapContainer.map.setOnApplyWindowInsetsListener { _, insets ->
             val topInset: Int = insets.systemWindowInsetTop
@@ -226,6 +280,9 @@ abstract class BaseMapActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Observes if the Xposed module is enabled and shows a dialog if not.
+     */
     private fun checkModuleEnabled() {
         viewModel.isXposed.observe(this) { isXposed ->
             if (!isXposed) {
@@ -239,6 +296,9 @@ abstract class BaseMapActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Shows the about dialog with app information.
+     */
     protected fun aboutDialog() {
         alertDialog = MaterialAlertDialogBuilder(this)
         layoutInflater.inflate(R.layout.about, null).apply {
@@ -251,6 +311,9 @@ abstract class BaseMapActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Shows a dialog to add a favorite location.
+     */
     protected fun addFavoriteDialog() {
         alertDialog = MaterialAlertDialogBuilder(this).apply {
             val view = layoutInflater.inflate(R.layout.dialog, null)
@@ -273,6 +336,9 @@ abstract class BaseMapActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Opens the favorite list dialog and sets up its callbacks.
+     */
     private fun openFavoriteListDialog() {
         getAllUpdatedFavList()
         alertDialog = MaterialAlertDialogBuilder(this)
@@ -295,6 +361,9 @@ abstract class BaseMapActivity : AppCompatActivity() {
         dialog.show()
     }
 
+    /**
+     * Fetches the latest favorite locations and updates the adapter.
+     */
     private fun getAllUpdatedFavList() {
         lifecycleScope.launch {
             lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -306,6 +375,9 @@ abstract class BaseMapActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Checks for available updates and triggers update dialog if present.
+     */
     private fun checkUpdates() {
         lifecycleScope.launchWhenResumed {
             viewModel.update.collect {
@@ -316,6 +388,9 @@ abstract class BaseMapActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Shows the update dialog and starts download if update is available.
+     */
     private fun updateDialog() {
         alertDialog = MaterialAlertDialogBuilder(this)
         alertDialog.setTitle(R.string.update_available)
@@ -370,6 +445,10 @@ abstract class BaseMapActivity : AppCompatActivity() {
         dialog.show()
     }
 
+    /**
+     * Returns a Flow for searching an address, sending progress and result/failure.
+     * @param address The address or coordinates string to search.
+     */
     private suspend fun getSearchAddress(address: String) = callbackFlow {
         withContext(Dispatchers.IO) {
             trySend(SearchProgress.Progress)
@@ -399,6 +478,10 @@ abstract class BaseMapActivity : AppCompatActivity() {
         awaitClose { this.cancel() }
     }
 
+    /**
+     * Shows a persistent notification with a stop action.
+     * @param address The address to display in the notification.
+     */
     protected fun showStartNotification(address: String) {
         val stopIntent = Intent(this, NotificationActionReceiver::class.java).apply {
             action = NotificationsChannel.ACTION_STOP
@@ -425,10 +508,16 @@ abstract class BaseMapActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Cancels all notifications for this app.
+     */
     protected fun cancelNotification() {
         notificationsChannel.cancelAllNotifications(this)
     }
 
+    /**
+     * Displays a Snackbar that prompts the user to enable location services.
+     */
     private fun handleLocationError() {
         Snackbar.make(binding.root, "Location services are disabled.", Snackbar.LENGTH_LONG)
             .setAction("Enable") {
@@ -437,6 +526,9 @@ abstract class BaseMapActivity : AppCompatActivity() {
             .show()
     }
 
+    /**
+     * Requests the last known location and moves the map if successful.
+     */
     @SuppressLint("MissingPermission")
     protected fun getLastLocation() {
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
@@ -462,6 +554,9 @@ abstract class BaseMapActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Requests a new location update if the last known location is unavailable.
+     */
     @SuppressLint("MissingPermission")
     private fun requestNewLocationData() {
         val mLocationRequest = LocationRequest().apply {
@@ -477,6 +572,9 @@ abstract class BaseMapActivity : AppCompatActivity() {
         )
     }
 
+    /**
+     * Callback for location updates, updates lat/lon when received.
+     */
     private val mLocationCallback = object : LocationCallback() {
         override fun onLocationResult(locationResult: LocationResult) {
             val mLastLocation: Location = locationResult.lastLocation ?: return
@@ -485,17 +583,26 @@ abstract class BaseMapActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Returns true if either GPS or network location provider is enabled.
+     */
     private fun isLocationEnabled(): Boolean {
         val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
         return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
             || locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
     }
 
+    /**
+     * Returns true if location permissions are granted.
+     */
     private fun checkPermissions(): Boolean {
         return ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED &&
                 ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
     }
 
+    /**
+     * Requests location permissions from the user.
+     */
     private fun requestPermissions() {
         ActivityCompat.requestPermissions(
             this,
@@ -507,6 +614,9 @@ abstract class BaseMapActivity : AppCompatActivity() {
         )
     }
 
+    /**
+     * Handles the result of a permission request.
+     */
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<out String>,
@@ -518,16 +628,24 @@ abstract class BaseMapActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Displays a short toast message.
+     * @param message The message to show.
+     */
     protected fun showToast(message: String) {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     }
 
+    /**
+     * Checks whether the device is connected to a network.
+     * @return true if connected, false otherwise.
+     */
     protected fun isNetworkConnected(): Boolean {
-        val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             val network = connectivityManager.activeNetwork ?: return false
             val activeNetwork = connectivityManager.getNetworkCapabilities(network) ?: return false
-            return activeNetwork.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            return activeNetwork.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)
         } else {
             @Suppress("DEPRECATION")
             val networkInfo = connectivityManager.activeNetworkInfo
@@ -537,8 +655,15 @@ abstract class BaseMapActivity : AppCompatActivity() {
     }
 }
 
+/**
+ * Represents progress or result of a search operation.
+ */
 sealed class SearchProgress {
+    /** Indicates that searching is in progress. */
     object Progress : SearchProgress()
+    /** Indicates that search completed with coordinates. */
     data class Complete(val lat: Double, val lon: Double) : SearchProgress()
+    /** Indicates that search failed with an error. */
     data class Fail(val error: String?) : SearchProgress()
 }
+```
