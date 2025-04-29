@@ -57,6 +57,11 @@ import java.util.regex.Pattern
 import kotlin.properties.Delegates
 import androidx.core.app.NotificationManagerCompat
 import io.github.jqssun.gpssetter.receiver.NotificationActionReceiver
+import android.content.BroadcastReceiver
+import android.content.IntentFilter
+import android.os.Build
+import com.google.android.material.snackbar.Snackbar
+import android.app.PendingIntent
 
 @AndroidEntryPoint
 abstract class BaseMapActivity: AppCompatActivity() {
@@ -432,7 +437,7 @@ abstract class BaseMapActivity: AppCompatActivity() {
 
     protected fun showStartNotification(address: String) {
     val stopIntent = Intent(this, NotificationActionReceiver::class.java).apply {
-        action = ACTION_STOP
+        action = NotificationsChannel.ACTION_STOP
     }
     val stopPendingIntent: PendingIntent = PendingIntent.getBroadcast(
         this,
