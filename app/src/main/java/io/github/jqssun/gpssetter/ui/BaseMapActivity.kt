@@ -69,7 +69,8 @@ abstract class BaseMapActivity: AppCompatActivity() {
     protected lateinit var dialog: AlertDialog
     protected val update by lazy { viewModel.getAvailableUpdate() }
 
-    private val notificationsChannel by lazy { NotificationsChannel() }
+   // private val notificationsChannel by lazy { NotificationsChannel() }
+    private val notificationsChannel = NotificationsChannel
     private var favListAdapter: FavListAdapter = FavListAdapter()
     private var xposedDialog: AlertDialog? = null
     private lateinit var fusedLocationClient: FusedLocationProviderClient
@@ -83,6 +84,15 @@ abstract class BaseMapActivity: AppCompatActivity() {
         elevationOverlayProvider.compositeOverlayWithThemeSurfaceColorIfNeeded(
             resources.getDimension(R.dimen.bottom_sheet_elevation)
         )
+    }
+    
+    private val stopActionReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == "io.github.jqssun.gpssetter.STOP_ACTION") {
+                // Handle the stop action
+                performStopButtonClick()
+            }
+        }
     }
 
     protected abstract fun getActivityInstance(): BaseMapActivity
@@ -110,16 +120,24 @@ abstract class BaseMapActivity: AppCompatActivity() {
         if (PrefManager.isJoystickEnabled){
             startService(Intent(this, JoystickService::class.java))
         }
+        // Register the broadcast receiver
+        registerReceiver(stopActionReceiver, IntentFilter("io.github.jqssun.gpssetter.STOP_ACTION"))
     }
     
     fun performStopButtonClick() {
     binding.stopButton.performClick()
 }
     
-    private fun checkNotifPermission(){
-        // Check if notifications are enabled
-    if (!NotificationManagerCompat.from(this).areNotificationsEnabled()) {
-        // Show dialog to prompt user
+    private fun checkNotifPermission() {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                PERMISSION_ID
+            )
+        }
+    } else if (!NotificationManagerCompat.from(this).areNotificationsEnabled()) {
         val alertDialog = MaterialAlertDialogBuilder(this)
             .setTitle("Enable Notifications")
             .setMessage("This app requires notifications for optimal functionality. Please enable notifications in the settings.")
@@ -128,11 +146,11 @@ abstract class BaseMapActivity: AppCompatActivity() {
                 intent.putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
                 startActivity(intent)
             }
-            .setNegativeButton("Cancel", null)
+            .setNegativeButton("Done", null)
             .create()
         alertDialog.show()
     }
-    }
+}
 
     private fun setupDrawer() {
         supportActionBar?.setDisplayShowTitleEnabled(false)
@@ -220,24 +238,28 @@ abstract class BaseMapActivity: AppCompatActivity() {
 
     private fun checkModuleEnabled(){
         viewModel.isXposed.observe(this) { isXposed ->
-            xposedDialog?.dismiss()
-            xposedDialog = null
-            if (!isXposed) {
-                xposedDialog = MaterialAlertDialogBuilder(this).run {
-                    setTitle(R.string.error_xposed_module_missing)
-                    setMessage(R.string.error_xposed_module_missing_desc)
-                    // setCancelable(BuildConfig.DEBUG)
-                    setCancelable(true)
-                    show()
-                }
-            }
+    if (!isXposed) {
+        xposedDialog?.dismiss()
+        xposedDialog = MaterialAlertDialogBuilder(this).run {
+            setTitle(R.string.error_xposed_module_missing)
+            setMessage(R.string.error_xposed_module_missing_desc)
+            setCancelable(true)
+            show()
         }
+    }
+}
     }
 
     override fun onResume() {
         super.onResume()
         viewModel.updateXposedState()
         checkNotifPermission()
+    }
+    
+    override fun onDestroy() {
+        super.onDestroy()
+        // Unregister the broadcast receiver to avoid memory leaks
+        unregisterReceiver(stopActionReceiver)
     }
 
     protected fun aboutDialog(){
@@ -408,10 +430,9 @@ abstract class BaseMapActivity: AppCompatActivity() {
         awaitClose { this.cancel() }
     }
 
-    protected fun showStartNotification(address: String){
-    // Intent to handle the "Stop" button action
+    protected fun showStartNotification(address: String) {
     val stopIntent = Intent(this, NotificationActionReceiver::class.java).apply {
-        action = NotificationsChannel.ACTION_STOP
+        action = ACTION_STOP
     }
     val stopPendingIntent: PendingIntent = PendingIntent.getBroadcast(
         this,
@@ -419,52 +440,61 @@ abstract class BaseMapActivity: AppCompatActivity() {
         stopIntent,
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
     )
-        
-        notificationsChannel.showNotification(this){
-            it.setSmallIcon(R.drawable.ic_stop)
-            it.setContentTitle(getString(R.string.location_set))
-            it.setContentText(address)
-            it.setAutoCancel(true)
-            it.setOngoing(true)
-            it.setCategory(Notification.CATEGORY_EVENT)
-            it.priority = NotificationCompat.PRIORITY_HIGH
-            it.addAction(
-            R.drawable.ic_stop, // Icon for the action button
-            getString(R.string.stop), // Text for the button
-            stopPendingIntent // PendingIntent for the button action
+
+    notificationsChannel.showNotification(this) {
+        it.setSmallIcon(R.drawable.ic_stop)
+        it.setContentTitle(getString(R.string.location_set))
+        it.setContentText(address)
+        it.setAutoCancel(true)
+        it.setOngoing(true)
+        it.setCategory(Notification.CATEGORY_EVENT)
+        it.priority = NotificationCompat.PRIORITY_HIGH
+        it.addAction(
+            R.drawable.ic_stop,
+            getString(R.string.stop),
+            stopPendingIntent
         )
-        }
     }
+}
 
     protected fun cancelNotification(){
         notificationsChannel.cancelAllNotifications(this)
     }
 
+    private fun handleLocationError() {
+    Snackbar.make(binding.root, "Location services are disabled.", Snackbar.LENGTH_LONG)
+        .setAction("Enable") {
+            val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+            startActivity(intent)
+        }
+        .show()
+}
+
     // Get current location
-    @SuppressLint("MissingPermission")
-    protected fun getLastLocation() {
-        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
-        if (checkPermissions()) {
-            if (isLocationEnabled()) {
-                fusedLocationClient.lastLocation.addOnCompleteListener(this) { task ->
-                    val location: Location? = task.result
-                    if (location == null) {
-                        requestNewLocationData()
-                    } else {
-                        lat = location.latitude
-                        lon = location.longitude
-                        moveMapToNewLocation(true)
-                    }
+@SuppressLint("MissingPermission")
+protected fun getLastLocation() {
+    fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+    if (checkPermissions()) {
+        if (isLocationEnabled()) {
+            fusedLocationClient.lastLocation.addOnCompleteListener(this) { task ->
+                val location: Location? = task.result
+                if (location == null) {
+                    requestNewLocationData()
+                } else {
+                    lat = location.latitude
+                    lon = location.longitude
+                    moveMapToNewLocation(true)
                 }
-            } else {
-                showToast("Turn on location")
-                val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
-                startActivity(intent)
+            }.addOnFailureListener {
+                handleLocationError()
             }
         } else {
-            requestPermissions()
+            handleLocationError()
         }
+    } else {
+        requestPermissions()
     }
+}
 
     @SuppressLint("MissingPermission")
     private fun requestNewLocationData() {

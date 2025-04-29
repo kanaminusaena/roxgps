@@ -8,14 +8,13 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import io.github.jqssun.gpssetter.R
 
-class NotificationsChannel{
-
-    object NotificationsChannel {
+object NotificationsChannel {
     const val ACTION_STOP = "io.github.jqssun.gpssetter.ACTION_STOP"
-}
+    const val CHANNEL_ID = "gps_setter_channel"
+    const val NOTIFICATION_ID = 123
 
     private fun createChannelIfNeeded(context: Context) {
-        NotificationChannelCompat.Builder("set.location", NotificationManager.IMPORTANCE_DEFAULT).apply {
+        NotificationChannelCompat.Builder(CHANNEL_ID, NotificationManager.IMPORTANCE_DEFAULT).apply {
             setName(context.getString(R.string.title))
             setDescription(context.getString(R.string.des))
         }.build().also {
@@ -25,13 +24,13 @@ class NotificationsChannel{
 
     private fun createNotification(context: Context, options: (NotificationCompat.Builder) -> Unit): Notification {
         createChannelIfNeeded(context)
-        return NotificationCompat.Builder(context, "set.location").apply { options(this) }.build()
+        return NotificationCompat.Builder(context, CHANNEL_ID).apply { options(this) }.build()
     }
 
     fun showNotification(context: Context, options: (NotificationCompat.Builder) -> Unit): Notification {
         val notification = createNotification(context, options)
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        notificationManager.notify(123, notification)
+        notificationManager.notify(NOTIFICATION_ID, notification)
         return notification
     }
 
