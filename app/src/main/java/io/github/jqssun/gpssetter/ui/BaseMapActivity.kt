@@ -56,6 +56,7 @@ import java.util.regex.Matcher
 import java.util.regex.Pattern
 import kotlin.properties.Delegates
 import androidx.core.app.NotificationManagerCompat
+import io.github.jqssun.gpssetter.utils.NotificationsChannel
 
 @AndroidEntryPoint
 abstract class BaseMapActivity: AppCompatActivity() {
