@@ -3,14 +3,18 @@ package io.github.jqssun.gpssetter.ui
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Notification
+import android.app.PendingIntent
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.location.Address
 import android.location.Geocoder
 import android.location.Location
 import android.location.LocationManager
+import android.os.Build
 import android.os.Bundle
 import android.os.Looper
 import android.provider.Settings
@@ -27,8 +31,9 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.AppCompatButton
 import androidx.core.app.ActivityCompat
-import androidx.core.app.NotificationCompat
-import androidx.core.view.*
+import androidx.core.app.NotificationManagerCompat
+import androidx.core.view.GravityCompat
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -38,33 +43,28 @@ import com.google.android.gms.location.*
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.elevation.ElevationOverlayProvider
 import com.google.android.material.progressindicator.LinearProgressIndicator
+import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
 import io.github.jqssun.gpssetter.BuildConfig
 import io.github.jqssun.gpssetter.R
 import io.github.jqssun.gpssetter.adapter.FavListAdapter
 import io.github.jqssun.gpssetter.databinding.ActivityMapBinding
+import io.github.jqssun.gpssetter.receiver.NotificationActionReceiver
 import io.github.jqssun.gpssetter.ui.viewmodel.MainViewModel
 import io.github.jqssun.gpssetter.utils.JoystickService
 import io.github.jqssun.gpssetter.utils.NotificationsChannel
 import io.github.jqssun.gpssetter.utils.PrefManager
-import io.github.jqssun.gpssetter.utils.ext.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.callbackFlow
 import java.io.IOException
-import java.util.regex.Matcher
 import java.util.regex.Pattern
 import kotlin.properties.Delegates
-import androidx.core.app.NotificationManagerCompat
-import io.github.jqssun.gpssetter.receiver.NotificationActionReceiver
-import android.content.BroadcastReceiver
-import android.content.IntentFilter
-import android.os.Build
-import com.google.android.material.snackbar.Snackbar
-import android.app.PendingIntent
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 
 @AndroidEntryPoint
-abstract class BaseMapActivity: AppCompatActivity() {
+abstract class BaseMapActivity : AppCompatActivity() {
 
     protected var lat by Delegates.notNull<Double>()
     protected var lon by Delegates.notNull<Double>()
@@ -74,7 +74,6 @@ abstract class BaseMapActivity: AppCompatActivity() {
     protected lateinit var dialog: AlertDialog
     protected val update by lazy { viewModel.getAvailableUpdate() }
 
-   // private val notificationsChannel by lazy { NotificationsChannel() }
     private val notificationsChannel = NotificationsChannel
     private var favListAdapter: FavListAdapter = FavListAdapter()
     private var xposedDialog: AlertDialog? = null
@@ -84,17 +83,15 @@ abstract class BaseMapActivity: AppCompatActivity() {
     private val elevationOverlayProvider by lazy {
         ElevationOverlayProvider(this)
     }
-
     private val headerBackground by lazy {
         elevationOverlayProvider.compositeOverlayWithThemeSurfaceColorIfNeeded(
             resources.getDimension(R.dimen.bottom_sheet_elevation)
         )
     }
-    
+
     private val stopActionReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action == "io.github.jqssun.gpssetter.STOP_ACTION") {
-                // Handle the stop action
+            if (intent?.action == NotificationsChannel.ACTION_STOP) {
                 performStopButtonClick()
             }
         }
@@ -109,11 +106,8 @@ abstract class BaseMapActivity: AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge(navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT))
-
         WindowCompat.setDecorFitsSystemWindows(window, false)
-        lifecycleScope.launchWhenCreated {
-            setContentView(binding.root)
-        }
+        setContentView(binding.root)
         setSupportActionBar(binding.toolbar)
         initializeMap()
         checkModuleEnabled()
@@ -122,40 +116,49 @@ abstract class BaseMapActivity: AppCompatActivity() {
         setupButtons()
         setupDrawer()
         checkNotifPermission()
-        if (PrefManager.isJoystickEnabled){
+        if (PrefManager.isJoystickEnabled) {
             startService(Intent(this, JoystickService::class.java))
         }
-        // Register the broadcast receiver
-        registerReceiver(stopActionReceiver, IntentFilter("io.github.jqssun.gpssetter.STOP_ACTION"))
+        registerReceiver(stopActionReceiver, IntentFilter(NotificationsChannel.ACTION_STOP))
     }
-    
+
+    override fun onResume() {
+        super.onResume()
+        viewModel.updateXposedState()
+        checkNotifPermission()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        unregisterReceiver(stopActionReceiver)
+    }
+
     fun performStopButtonClick() {
-    binding.stopButton.performClick()
-}
-    
-    private fun checkNotifPermission() {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(
-                this,
-                arrayOf(Manifest.permission.POST_NOTIFICATIONS),
-                PERMISSION_ID
-            )
-        }
-    } else if (!NotificationManagerCompat.from(this).areNotificationsEnabled()) {
-        val alertDialog = MaterialAlertDialogBuilder(this)
-            .setTitle("Enable Notifications")
-            .setMessage("This app requires notifications for optimal functionality. Please enable notifications in the settings.")
-            .setPositiveButton("Open Settings") { _, _ ->
-                val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
-                intent.putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
-                startActivity(intent)
-            }
-            .setNegativeButton("Done", null)
-            .create()
-        alertDialog.show()
+        binding.stopButton.performClick()
     }
-}
+
+    private fun checkNotifPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                    PERMISSION_ID
+                )
+            }
+        } else if (!NotificationManagerCompat.from(this).areNotificationsEnabled()) {
+            MaterialAlertDialogBuilder(this)
+                .setTitle("Enable Notifications")
+                .setMessage("This app requires notifications for optimal functionality. Please enable notifications in the settings.")
+                .setPositiveButton("Open Settings") { _, _ ->
+                    val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                    intent.putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+                    startActivity(intent)
+                }
+                .setNegativeButton("Done", null)
+                .show()
+        }
+    }
 
     private fun setupDrawer() {
         supportActionBar?.setDisplayShowTitleEnabled(false)
@@ -166,25 +169,16 @@ abstract class BaseMapActivity: AppCompatActivity() {
             R.string.drawer_open,
             R.string.drawer_close
         ) {
-            override fun onDrawerClosed(view: View) {
-                super.onDrawerClosed(view)
-                invalidateOptionsMenu()
-            }
-
-            override fun onDrawerOpened(drawerView: View) {
-                super.onDrawerOpened(drawerView)
-                invalidateOptionsMenu()
-            }
+            override fun onDrawerClosed(view: View) = invalidateOptionsMenu()
+            override fun onDrawerOpened(drawerView: View) = invalidateOptionsMenu()
         }
-        binding.container.setDrawerListener(mDrawerToggle)
+        binding.container.addDrawerListener(mDrawerToggle)
     }
 
     private fun setupNavView() {
-
         binding.mapContainer.map.setOnApplyWindowInsetsListener { _, insets ->
             val topInset: Int = insets.systemWindowInsetTop
-            val bottomInset: Int = insets.systemWindowInsetBottom
-            binding.navView.setPadding(0,topInset,0,0)
+            binding.navView.setPadding(0, topInset, 0, 0)
             insets.consumeSystemWindowInsets()
         }
 
@@ -194,23 +188,19 @@ abstract class BaseMapActivity: AppCompatActivity() {
                 if (isNetworkConnected()) {
                     lifecycleScope.launch(Dispatchers.Main) {
                         val getInput = v.text.toString()
-                        if (getInput.isNotEmpty()){
-                            getSearchAddress(getInput).let {
-                                it.collect { result ->
-                                    when(result) {
-                                        is SearchProgress.Progress -> {
-                                            progress.visibility = View.VISIBLE
-                                        }
-                                        is SearchProgress.Complete -> {
-                                            progress.visibility = View.GONE
-                                            lat = result.lat
-                                            lon = result.lon
-                                            moveMapToNewLocation(true)
-                                        }
-                                        is SearchProgress.Fail -> {
-                                            progress.visibility = View.GONE
-                                            showToast(result.error!!)
-                                        }
+                        if (getInput.isNotEmpty()) {
+                            getSearchAddress(getInput).collect { result ->
+                                when (result) {
+                                    is SearchProgress.Progress -> progress.visibility = View.VISIBLE
+                                    is SearchProgress.Complete -> {
+                                        progress.visibility = View.GONE
+                                        lat = result.lat
+                                        lon = result.lon
+                                        moveMapToNewLocation(true)
+                                    }
+                                    is SearchProgress.Fail -> {
+                                        progress.visibility = View.GONE
+                                        showToast(result.error ?: "")
                                     }
                                 }
                             }
@@ -219,63 +209,42 @@ abstract class BaseMapActivity: AppCompatActivity() {
                 } else {
                     showToast(getString(R.string.no_internet))
                 }
-                return@setOnEditorActionListener true
+                true
+            } else {
+                false
             }
-            return@setOnEditorActionListener false
         }
 
         binding.navView.setNavigationItemSelectedListener {
-            when(it.itemId){
-                R.id.get_favorite -> {
-                    openFavoriteListDialog()
-                }
-                R.id.settings -> {
-                    startActivity(Intent(this,ActivitySettings::class.java))
-                }
-                R.id.about -> {
-                    aboutDialog()
-                }
+            when (it.itemId) {
+                R.id.get_favorite -> openFavoriteListDialog()
+                R.id.settings -> startActivity(Intent(this, ActivitySettings::class.java))
+                R.id.about -> aboutDialog()
             }
             binding.container.closeDrawer(GravityCompat.START)
             true
         }
     }
 
-    private fun checkModuleEnabled(){
+    private fun checkModuleEnabled() {
         viewModel.isXposed.observe(this) { isXposed ->
-    if (!isXposed) {
-        xposedDialog?.dismiss()
-        xposedDialog = MaterialAlertDialogBuilder(this).run {
-            setTitle(R.string.error_xposed_module_missing)
-            setMessage(R.string.error_xposed_module_missing_desc)
-            setCancelable(true)
-            show()
+            if (!isXposed) {
+                xposedDialog?.dismiss()
+                xposedDialog = MaterialAlertDialogBuilder(this)
+                    .setTitle(R.string.error_xposed_module_missing)
+                    .setMessage(R.string.error_xposed_module_missing_desc)
+                    .setCancelable(true)
+                    .show()
+            }
         }
     }
-}
-    }
 
-    override fun onResume() {
-        super.onResume()
-        viewModel.updateXposedState()
-        checkNotifPermission()
-    }
-    
-    override fun onDestroy() {
-        super.onDestroy()
-        // Unregister the broadcast receiver to avoid memory leaks
-        unregisterReceiver(stopActionReceiver)
-    }
-
-    protected fun aboutDialog(){
+    protected fun aboutDialog() {
         alertDialog = MaterialAlertDialogBuilder(this)
-        layoutInflater.inflate(R.layout.about,null).apply {
-            val  titlele = findViewById<TextView>(R.id.design_about_title)
-            val  version = findViewById<TextView>(R.id.design_about_version)
-            val  info = findViewById<TextView>(R.id.design_about_info)
-            titlele.text = getString(R.string.app_name)
-            version.text = BuildConfig.VERSION_NAME
-            info.text = getString(R.string.about_info)
+        layoutInflater.inflate(R.layout.about, null).apply {
+            findViewById<TextView>(R.id.design_about_title).text = getString(R.string.app_name)
+            findViewById<TextView>(R.id.design_about_version).text = BuildConfig.VERSION_NAME
+            findViewById<TextView>(R.id.design_about_info).text = getString(R.string.about_info)
         }.run {
             alertDialog.setView(this)
             alertDialog.show()
@@ -283,18 +252,19 @@ abstract class BaseMapActivity: AppCompatActivity() {
     }
 
     protected fun addFavoriteDialog() {
-        alertDialog =  MaterialAlertDialogBuilder(this).apply {
-            val view = layoutInflater.inflate(R.layout.dialog,null)
+        alertDialog = MaterialAlertDialogBuilder(this).apply {
+            val view = layoutInflater.inflate(R.layout.dialog, null)
             val editText = view.findViewById<EditText>(R.id.search_edittxt)
             setTitle(getString(R.string.add_fav_dialog_title))
             setPositiveButton(getString(R.string.dialog_button_add)) { _, _ ->
                 val s = editText.text.toString()
-                if (hasMarker()){
-                  showToast(getString(R.string.location_not_select))
-                }else{
+                if (hasMarker()) {
+                    showToast(getString(R.string.location_not_select))
+                } else {
                     viewModel.storeFavorite(s, lat, lon)
-                    viewModel.response.observe(getActivityInstance()){
-                        if (it == (-1).toLong()) showToast(getString(R.string.cant_save)) else showToast(getString(R.string.save))
+                    viewModel.response.observe(getActivityInstance()) {
+                        if (it == (-1).toLong()) showToast(getString(R.string.cant_save))
+                        else showToast(getString(R.string.save))
                     }
                 }
             }
@@ -307,18 +277,15 @@ abstract class BaseMapActivity: AppCompatActivity() {
         getAllUpdatedFavList()
         alertDialog = MaterialAlertDialogBuilder(this)
         alertDialog.setTitle(getString(R.string.favorites))
-        val view = layoutInflater.inflate(R.layout.fav,null)
+        val view = layoutInflater.inflate(R.layout.fav, null)
         val rcv = view.findViewById<RecyclerView>(R.id.favorites_list)
         rcv.layoutManager = LinearLayoutManager(this)
         rcv.adapter = favListAdapter
         favListAdapter.onItemClick = {
-            it.let {
-                lat = it.lat!!
-                lon = it.lng!!
-            }
+            lat = it.lat ?: lat
+            lon = it.lng ?: lon
             moveMapToNewLocation(true)
-            if (dialog.isShowing) dialog.dismiss()
-
+            if (::dialog.isInitialized && dialog.isShowing) dialog.dismiss()
         }
         favListAdapter.onItemDelete = {
             viewModel.deleteFavorite(it)
@@ -326,32 +293,30 @@ abstract class BaseMapActivity: AppCompatActivity() {
         alertDialog.setView(view)
         dialog = alertDialog.create()
         dialog.show()
-
     }
 
-    private fun getAllUpdatedFavList(){
+    private fun getAllUpdatedFavList() {
         lifecycleScope.launch {
-            lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED){
+            lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.doGetUserDetails()
                 viewModel.allFavList.collect {
                     favListAdapter.submitList(it)
                 }
             }
         }
-
     }
 
-    private fun checkUpdates(){
+    private fun checkUpdates() {
         lifecycleScope.launchWhenResumed {
-            viewModel.update.collect{
-                if (it!= null){
+            viewModel.update.collect {
+                if (it != null) {
                     updateDialog()
                 }
             }
         }
     }
 
-    private fun updateDialog(){
+    private fun updateDialog() {
         alertDialog = MaterialAlertDialogBuilder(this)
         alertDialog.setTitle(R.string.update_available)
         alertDialog.setMessage(update?.changelog)
@@ -386,14 +351,13 @@ abstract class BaseMapActivity: AppCompatActivity() {
                                     Toast.LENGTH_LONG
                                 ).show()
                                 dialog.dismiss()
-
                             }
                             else -> {}
                         }
                     }
                 }
-                update?.let { it ->
-                    viewModel.startDownload(getActivityInstance(), it)
+                update?.let { u ->
+                    viewModel.startDownload(getActivityInstance(), u)
                 } ?: run {
                     dialog.dismiss()
                 }
@@ -407,27 +371,27 @@ abstract class BaseMapActivity: AppCompatActivity() {
     }
 
     private suspend fun getSearchAddress(address: String) = callbackFlow {
-        withContext(Dispatchers.IO){
+        withContext(Dispatchers.IO) {
             trySend(SearchProgress.Progress)
-            val matcher: Matcher =
-                Pattern.compile("[-+]?\\d{1,3}([.]\\d+)?, *[-+]?\\d{1,3}([.]\\d+)?").matcher(address)
-
-            if (matcher.matches()){
+            val matcher = Pattern.compile("[-+]?\\d{1,3}([.]\\d+)?, *[-+]?\\d{1,3}([.]\\d+)?").matcher(address)
+            if (matcher.matches()) {
                 delay(3000)
-                trySend(SearchProgress.Complete(matcher.group().split(",")[0].toDouble(),matcher.group().split(",")[1].toDouble()))
-            }else {
+                trySend(SearchProgress.Complete(
+                    matcher.group().split(",")[0].toDouble(),
+                    matcher.group().split(",")[1].toDouble()
+                ))
+            } else {
                 val geocoder = Geocoder(getActivityInstance())
-                val addressList: List<Address>? = geocoder.getFromLocationName(address,3)
-
                 try {
+                    val addressList: List<Address>? = geocoder.getFromLocationName(address, 3)
                     addressList?.let {
-                        if (it.size == 1){
-                           trySend(SearchProgress.Complete(addressList[0].latitude, addressList[0].longitude))
-                        }else {
+                        if (it.size == 1) {
+                            trySend(SearchProgress.Complete(it[0].latitude, it[0].longitude))
+                        } else {
                             trySend(SearchProgress.Fail(getString(R.string.address_not_found)))
                         }
                     }
-                } catch (io : IOException){
+                } catch (io: IOException) {
                     trySend(SearchProgress.Fail(getString(R.string.no_internet)))
                 }
             }
@@ -436,79 +400,76 @@ abstract class BaseMapActivity: AppCompatActivity() {
     }
 
     protected fun showStartNotification(address: String) {
-    val stopIntent = Intent(this, NotificationActionReceiver::class.java).apply {
-        action = NotificationsChannel.ACTION_STOP
-    }
-    val stopPendingIntent: PendingIntent = PendingIntent.getBroadcast(
-        this,
-        0,
-        stopIntent,
-        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-    )
-
-    notificationsChannel.showNotification(this) {
-        it.setSmallIcon(R.drawable.ic_stop)
-        it.setContentTitle(getString(R.string.location_set))
-        it.setContentText(address)
-        it.setAutoCancel(true)
-        it.setOngoing(true)
-        it.setCategory(Notification.CATEGORY_EVENT)
-        it.priority = NotificationCompat.PRIORITY_HIGH
-        it.addAction(
-            R.drawable.ic_stop,
-            getString(R.string.stop),
-            stopPendingIntent
+        val stopIntent = Intent(this, NotificationActionReceiver::class.java).apply {
+            action = NotificationsChannel.ACTION_STOP
+        }
+        val stopPendingIntent: PendingIntent = PendingIntent.getBroadcast(
+            this,
+            0,
+            stopIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
+        notificationsChannel.showNotification(this) {
+            it.setSmallIcon(R.drawable.ic_stop)
+            it.setContentTitle(getString(R.string.location_set))
+            it.setContentText(address)
+            it.setAutoCancel(true)
+            it.setOngoing(true)
+            it.setCategory(Notification.CATEGORY_EVENT)
+            it.priority = NotificationCompat.PRIORITY_HIGH
+            it.addAction(
+                R.drawable.ic_stop,
+                getString(R.string.stop),
+                stopPendingIntent
+            )
+        }
     }
-}
 
-    protected fun cancelNotification(){
+    protected fun cancelNotification() {
         notificationsChannel.cancelAllNotifications(this)
     }
 
     private fun handleLocationError() {
-    Snackbar.make(binding.root, "Location services are disabled.", Snackbar.LENGTH_LONG)
-        .setAction("Enable") {
-            val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
-            startActivity(intent)
-        }
-        .show()
-}
+        Snackbar.make(binding.root, "Location services are disabled.", Snackbar.LENGTH_LONG)
+            .setAction("Enable") {
+                startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+            }
+            .show()
+    }
 
-    // Get current location
-@SuppressLint("MissingPermission")
-protected fun getLastLocation() {
-    fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
-    if (checkPermissions()) {
-        if (isLocationEnabled()) {
-            fusedLocationClient.lastLocation.addOnCompleteListener(this) { task ->
-                val location: Location? = task.result
-                if (location == null) {
-                    requestNewLocationData()
-                } else {
-                    lat = location.latitude
-                    lon = location.longitude
-                    moveMapToNewLocation(true)
+    @SuppressLint("MissingPermission")
+    protected fun getLastLocation() {
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+        if (checkPermissions()) {
+            if (isLocationEnabled()) {
+                fusedLocationClient.lastLocation.addOnCompleteListener(this) { task ->
+                    val location: Location? = task.result
+                    if (location == null) {
+                        requestNewLocationData()
+                    } else {
+                        lat = location.latitude
+                        lon = location.longitude
+                        moveMapToNewLocation(true)
+                    }
+                }.addOnFailureListener {
+                    handleLocationError()
                 }
-            }.addOnFailureListener {
+            } else {
                 handleLocationError()
             }
         } else {
-            handleLocationError()
+            requestPermissions()
         }
-    } else {
-        requestPermissions()
     }
-}
 
     @SuppressLint("MissingPermission")
     private fun requestNewLocationData() {
-        val mLocationRequest = LocationRequest()
-        mLocationRequest.priority = LocationRequest.PRIORITY_HIGH_ACCURACY
-        mLocationRequest.interval = 0
-        mLocationRequest.fastestInterval = 0
-        mLocationRequest.numUpdates = 1
-
+        val mLocationRequest = LocationRequest().apply {
+            priority = LocationRequest.PRIORITY_HIGH_ACCURACY
+            interval = 0
+            fastestInterval = 0
+            numUpdates = 1
+        }
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         fusedLocationClient.requestLocationUpdates(
             mLocationRequest, mLocationCallback,
@@ -518,32 +479,30 @@ protected fun getLastLocation() {
 
     private val mLocationCallback = object : LocationCallback() {
         override fun onLocationResult(locationResult: LocationResult) {
-            val mLastLocation: Location = locationResult.lastLocation!!
+            val mLastLocation: Location = locationResult.lastLocation ?: return
             lat = mLastLocation.latitude
             lon = mLastLocation.longitude
         }
     }
 
     private fun isLocationEnabled(): Boolean {
-        val locationManager: LocationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) || locationManager.isProviderEnabled(
-            LocationManager.NETWORK_PROVIDER
-        )
+        val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
+            || locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
     }
 
     private fun checkPermissions(): Boolean {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED &&
-            ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-        ) {
-            return true
-        }
-        return false
+        return ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED &&
+                ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
     }
 
     private fun requestPermissions() {
         ActivityCompat.requestPermissions(
             this,
-            arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION),
+            arrayOf(
+                Manifest.permission.ACCESS_COARSE_LOCATION,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ),
             PERMISSION_ID
         )
     }
@@ -554,15 +513,32 @@ protected fun getLastLocation() {
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-
         if ((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
             getLastLocation()
+        }
+    }
+
+    protected fun showToast(message: String) {
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+    }
+
+    protected fun isNetworkConnected(): Boolean {
+        val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val network = connectivityManager.activeNetwork ?: return false
+            val activeNetwork = connectivityManager.getNetworkCapabilities(network) ?: return false
+            return activeNetwork.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+        } else {
+            @Suppress("DEPRECATION")
+            val networkInfo = connectivityManager.activeNetworkInfo
+            @Suppress("DEPRECATION")
+            return networkInfo != null && networkInfo.isConnected
         }
     }
 }
 
 sealed class SearchProgress {
     object Progress : SearchProgress()
-    data class Complete(val lat: Double , val lon : Double) : SearchProgress()
+    data class Complete(val lat: Double, val lon: Double) : SearchProgress()
     data class Fail(val error: String?) : SearchProgress()
 }
