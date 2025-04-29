@@ -57,5 +57,8 @@
     <string name="drawer_close">Close</string>
     <string name="app_update_failed">Update failed</string>
     <string name="dark_theme">Dark theme</string>
+    
+    <!-- notifications -->
+    <string name="stop">Stop</string>
 
 </resources>

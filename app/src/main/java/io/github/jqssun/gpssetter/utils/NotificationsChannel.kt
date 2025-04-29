@@ -7,7 +7,12 @@ import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import io.github.jqssun.gpssetter.R
+
 class NotificationsChannel{
+
+    object NotificationsChannel {
+    const val ACTION_STOP = "io.github.jqssun.gpssetter.ACTION_STOP"
+}
 
     private fun createChannelIfNeeded(context: Context) {
         NotificationChannelCompat.Builder("set.location", NotificationManager.IMPORTANCE_DEFAULT).apply {
