@@ -77,9 +77,7 @@
     <!-- Storage Permission -->
     <string name="storage_permission_error_title">Izin Penyimpanan Diperlukan</string>
     <string name="storage_permission_error_message">Aplikasi memerlukan izin untuk mengakses penyimpanan untuk menyimpan file log. Aplikasi tidak dapat berfungsi tanpa izin ini.</string>
-    <string name="settings">Pengaturan</string>
     <string name="exit">Keluar</string>
-    
     <string name="try_again">Coba Lagi</string>
 
 </resources>
