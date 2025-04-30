@@ -14,30 +14,27 @@ object NotificationsChannel {
     const val NOTIFICATION_ID = 123
 
     private fun createChannelIfNeeded(context: Context) {
-        NotificationChannelCompat.Builder(CHANNEL_ID, NotificationManager.IMPORTANCE_DEFAULT).apply {
-            setName(context.getString(R.string.title))
-            setDescription(context.getString(R.string.des))
-        }.build().also {
-            NotificationManagerCompat.from(context).createNotificationChannel(it)
-        }
+        NotificationChannelCompat.Builder(CHANNEL_ID, NotificationManager.IMPORTANCE_DEFAULT)
+            .setName(context.getString(R.string.title))
+            .setDescription(context.getString(R.string.des))
+            .build().also {
+                NotificationManagerCompat.from(context).createNotificationChannel(it)
+            }
     }
 
-    private fun createNotification(context: Context, options: (NotificationCompat.Builder) -> Unit): Notification {
+    /**
+     * Builds a notification for use with ForegroundService.
+     * Does NOT call notify() - use startForeground(id, notification) in your Service.
+     */
+    fun buildNotification(context: Context, options: (NotificationCompat.Builder) -> Unit): Notification {
         createChannelIfNeeded(context)
         return NotificationCompat.Builder(context, CHANNEL_ID).apply { options(this) }.build()
     }
 
-    fun showNotification(context: Context, options: (NotificationCompat.Builder) -> Unit): Notification {
-        val notification = createNotification(context, options)
-        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        notificationManager.notify(NOTIFICATION_ID, notification)
-        return notification
-    }
-    
     fun cancelNotification(context: Context) {
-    val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-    notificationManager.cancel(NOTIFICATION_ID)
-}
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.cancel(NOTIFICATION_ID)
+    }
 
     fun cancelAllNotifications(context: Context) {
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager

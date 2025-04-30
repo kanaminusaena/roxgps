@@ -17,7 +17,7 @@ class LocationService : Service() {
             }
             else -> {
                 val address = intent?.getStringExtra("address") ?: "Location set"
-                val notification: Notification = NotificationsChannel.showNotification(this) { builder ->
+                val notification: Notification = NotificationsChannel.buildNotification(this) { builder ->
                     val stopIntent = Intent(this, LocationService::class.java).apply {
                         action = NotificationsChannel.ACTION_STOP
                     }
