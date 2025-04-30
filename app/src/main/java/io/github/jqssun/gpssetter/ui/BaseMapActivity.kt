@@ -59,6 +59,7 @@ import java.util.regex.Pattern
 import kotlin.properties.Delegates
 import io.github.jqssun.gpssetter.utils.FileLogger
 import android.net.Uri
+import io.github.jqssun.gpssetter.utils.StoragePermissionChecker
 
 @AndroidEntryPoint
 abstract class BaseMapActivity : AppCompatActivity() {
