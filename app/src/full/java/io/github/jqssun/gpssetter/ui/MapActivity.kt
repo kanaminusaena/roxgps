@@ -125,6 +125,7 @@ class MapActivity : BaseMapActivity(), OnMapReadyCallback, GoogleMap.OnMapClickL
                 }
             }
         }
+         setupZoomButtons()
     }
 
     /**
@@ -188,6 +189,24 @@ class MapActivity : BaseMapActivity(), OnMapReadyCallback, GoogleMap.OnMapClickL
             binding.startButton.visibility = View.VISIBLE
             cancelNotification()
             showToast(getString(R.string.location_unset))
+        }
+    }
+    
+    /**
+     * Setup Plus and Minus Zoom Buttons (must be present in your layout)
+     */
+    private fun setupZoomButtons() {
+        // Assuming your layout has ImageButtons with ids plusButton and minusButton
+        plusButton = findViewById(R.id.plusButton)
+        minusButton = findViewById(R.id.minusButton)
+
+        plusButton.setOnClickListener {
+            val currentZoom = mMap.cameraPosition.zoom
+            mMap.animateCamera(CameraUpdateFactory.zoomTo(currentZoom + 1f))
+        }
+        minusButton.setOnClickListener {
+            val currentZoom = mMap.cameraPosition.zoom
+            mMap.animateCamera(CameraUpdateFactory.zoomTo(currentZoom - 1f))
         }
     }
 }
