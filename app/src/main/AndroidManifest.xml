@@ -41,6 +41,14 @@
         </activity>
 
         <!-- Removed NotificationActionReceiver as it's no longer needed with ForegroundService -->
+        
+        <receiver
+    android:name=".receiver.ServiceStoppedReceiver"
+    android:exported="true">
+    <intent-filter>
+        <action android:name="io.github.jqssun.gpssetter.ACTION_SERVICE_STOPPED" />
+    </intent-filter>
+</receiver>
 
         <service
             android:name=".service.LocationService"
