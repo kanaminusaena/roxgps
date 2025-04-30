@@ -95,7 +95,7 @@ dependencies {
     // FOSS flavor: microg + maplibre + annotation plugin!
     fossImplementation 'org.microg.gms:play-services-location:0.3.6.244735'
     fossImplementation 'org.maplibre.gl:android-sdk:11.8.2'
-    fossImplementation 'com.github.maplibre:maplibre-android-plugins:annotation-v2.0.0'
+    fossImplementation 'com.github.maplibre.maplibre-android-plugins:annotation:fc1f5644a2'
 
     // Full flavor: Google Play Services + Maps
     fullImplementation 'com.google.android.gms:play-services-location:21.0.1'
