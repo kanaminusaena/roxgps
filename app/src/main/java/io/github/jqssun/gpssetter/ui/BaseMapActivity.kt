@@ -84,6 +84,7 @@ abstract class BaseMapActivity : AppCompatActivity() {
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     // Permission request code
     private val PERMISSION_ID = 42
+    private const val TAG = "BaseMapActivity"
     // Elevation overlay for header styling
     private val elevationOverlayProvider by lazy { ElevationOverlayProvider(this) }
     // Header background color with proper elevation
@@ -124,10 +125,21 @@ abstract class BaseMapActivity : AppCompatActivity() {
      */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge(navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT))
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-        setContentView(binding.root)
-        setSupportActionBar(binding.toolbar)
+        FileLogger.log("Memulai onCreate", TAG, "I")
+        try {
+            enableEdgeToEdge(navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT))
+            WindowCompat.setDecorFitsSystemWindows(window, false)
+            setContentView(binding.root)
+            setSupportActionBar(binding.toolbar)
+            
+            initializeComponents()
+        } catch (e: Exception) {
+            FileLogger.log("Error dalam onCreate: ${e.message}", TAG, "E")
+        }
+    }
+    
+    private fun initializeComponents() {
+        FileLogger.log("Menginisialisasi komponen", TAG, "D")
         initializeMap()
         checkModuleEnabled()
         checkUpdates()
@@ -135,16 +147,20 @@ abstract class BaseMapActivity : AppCompatActivity() {
         setupButtons()
         setupDrawer()
         checkNotifPermission()
+        
         if (PrefManager.isJoystickEnabled) {
+            FileLogger.log("Memulai JoystickService", TAG, "D")
             startService(Intent(this, JoystickService::class.java))
         }
     }
+
 
     /**
      * Called when activity resumes; checks module state and notification permissions.
      */
     override fun onResume() {
         super.onResume()
+        FileLogger.log("Activity onResume", TAG, "D")
         viewModel.updateXposedState()
         checkNotifPermission()
     }
@@ -160,8 +176,14 @@ abstract class BaseMapActivity : AppCompatActivity() {
      * Checks and requests notification permissions if required by Android version.
      */
     private fun checkNotifPermission() {
+        FileLogger.log("Memeriksa izin notifikasi", TAG, "D")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            if (ActivityCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                FileLogger.log("Meminta izin notifikasi untuk Android 13+", TAG, "I")
                 ActivityCompat.requestPermissions(
                     this,
                     arrayOf(Manifest.permission.POST_NOTIFICATIONS),
@@ -169,16 +191,8 @@ abstract class BaseMapActivity : AppCompatActivity() {
                 )
             }
         } else if (!NotificationManagerCompat.from(this).areNotificationsEnabled()) {
-            MaterialAlertDialogBuilder(this)
-                .setTitle("Enable Notifications")
-                .setMessage("This app requires notifications for optimal functionality. Please enable notifications in the settings.")
-                .setPositiveButton("Open Settings") { _, _ ->
-                    val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
-                    intent.putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
-                    startActivity(intent)
-                }
-                .setNegativeButton("Done", null)
-                .show()
+            FileLogger.log("Notifikasi tidak diaktifkan, menampilkan dialog", TAG, "W")
+            showNotificationPermissionDialog()
         }
     }
 
@@ -186,18 +200,30 @@ abstract class BaseMapActivity : AppCompatActivity() {
      * Sets up the navigation drawer and its toggle behavior.
      */
     private fun setupDrawer() {
+        FileLogger.log("Menyiapkan navigation drawer", TAG, "D")
         supportActionBar?.setDisplayShowTitleEnabled(false)
-        val mDrawerToggle = object : ActionBarDrawerToggle(
+        val mDrawerToggle = createDrawerToggle()
+        binding.container.addDrawerListener(mDrawerToggle)
+    }
+
+    private fun createDrawerToggle(): ActionBarDrawerToggle {
+        return object : ActionBarDrawerToggle(
             this,
             binding.container,
             binding.toolbar,
             R.string.drawer_open,
             R.string.drawer_close
         ) {
-            override fun onDrawerClosed(view: View) = invalidateOptionsMenu()
-            override fun onDrawerOpened(drawerView: View) = invalidateOptionsMenu()
+            override fun onDrawerClosed(view: View) {
+                FileLogger.log("Drawer ditutup", TAG, "D")
+                invalidateOptionsMenu()
+            }
+
+            override fun onDrawerOpened(drawerView: View) {
+                FileLogger.log("Drawer dibuka", TAG, "D")
+                invalidateOptionsMenu()
+            }
         }
-        binding.container.addDrawerListener(mDrawerToggle)
     }
 
     /**
@@ -289,26 +315,43 @@ abstract class BaseMapActivity : AppCompatActivity() {
      * Shows a dialog to add a favorite location.
      */
     protected fun addFavoriteDialog() {
+        FileLogger.log("Menampilkan dialog tambah favorit", TAG, "D")
         alertDialog = MaterialAlertDialogBuilder(this).apply {
             val view = layoutInflater.inflate(R.layout.dialog, null)
             val editText = view.findViewById<EditText>(R.id.search_edittxt)
+            
             setTitle(getString(R.string.add_fav_dialog_title))
             setPositiveButton(getString(R.string.dialog_button_add)) { _, _ ->
-                val s = editText.text.toString()
-                if (hasMarker()) {
-                    showToast(getString(R.string.location_not_select))
-                } else {
-                    viewModel.storeFavorite(s, lat, lon)
-                    viewModel.response.observe(getActivityInstance()) {
-                        if (it == (-1).toLong()) showToast(getString(R.string.cant_save))
-                        else showToast(getString(R.string.save))
-                    }
-                }
+                handleFavoriteAddition(editText.text.toString())
             }
             setView(view)
             show()
         }
     }
+    
+    private fun handleFavoriteAddition(locationName: String) {
+        if (hasMarker()) {
+            FileLogger.log("Gagal menambah favorit: Lokasi belum dipilih", TAG, "W")
+            showToast(getString(R.string.location_not_select))
+        } else {
+            FileLogger.log("Menyimpan lokasi favorit: $locationName ($lat, $lon)", TAG, "I")
+            viewModel.storeFavorite(locationName, lat, lon)
+            observeFavoriteResponse()
+        }
+    }
+
+    private fun observeFavoriteResponse() {
+        viewModel.response.observe(getActivityInstance()) { response ->
+            if (response == -1L) {
+                FileLogger.log("Gagal menyimpan lokasi favorit", TAG, "E")
+                showToast(getString(R.string.cant_save))
+            } else {
+                FileLogger.log("Lokasi favorit berhasil disimpan", TAG, "I")
+                showToast(getString(R.string.save))
+            }
+        }
+    }
+
 
     /**
      * Opens the favorite list dialog and sets up its callbacks.
@@ -502,27 +545,42 @@ abstract class BaseMapActivity : AppCompatActivity() {
      */
     @SuppressLint("MissingPermission")
     protected fun getLastLocation() {
+        FileLogger.log("Meminta lokasi terakhir", TAG, "D")
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
-        if (checkPermissions()) {
-            if (isLocationEnabled()) {
-                fusedLocationClient.lastLocation.addOnCompleteListener(this) { task ->
-                    val location: Location? = task.result
-                    if (location == null) {
-                        requestNewLocationData()
-                    } else {
-                        lat = location.latitude
-                        lon = location.longitude
-                        moveMapToNewLocation(true)
-                    }
-                }.addOnFailureListener {
-                    handleLocationError()
-                }
-            } else {
+        
+        when {
+            !checkPermissions() -> {
+                FileLogger.log("Izin lokasi tidak diberikan", TAG, "W")
+                requestPermissions()
+            }
+            !isLocationEnabled() -> {
+                FileLogger.log("Layanan lokasi tidak aktif", TAG, "W")
                 handleLocationError()
             }
-        } else {
-            requestPermissions()
+            else -> {
+                requestLastLocation()
+            }
         }
+    }
+    
+    private fun requestLastLocation() {
+        FileLogger.log("Meminta pembaruan lokasi", TAG, "D")
+        fusedLocationClient.lastLocation
+            .addOnSuccessListener { location ->
+                location?.let {
+                    FileLogger.log("Lokasi diterima: ${it.latitude}, ${it.longitude}", TAG, "I")
+                    lat = it.latitude
+                    lon = it.longitude
+                    moveMapToNewLocation(true)
+                } ?: run {
+                    FileLogger.log("Lokasi null, meminta pembaruan baru", TAG, "W")
+                    requestNewLocationData()
+                }
+            }
+            .addOnFailureListener { e ->
+                FileLogger.log("Gagal mendapatkan lokasi: ${e.message}", TAG, "E")
+                handleLocationError()
+            }
     }
 
     /**
@@ -604,6 +662,7 @@ abstract class BaseMapActivity : AppCompatActivity() {
      * @param message The message to show.
      */
     protected fun showToast(message: String) {
+        FileLogger.log("Menampilkan toast: $message", TAG, "D")
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     }
 
@@ -612,16 +671,20 @@ abstract class BaseMapActivity : AppCompatActivity() {
      * @return true if connected, false otherwise.
      */
     protected fun isNetworkConnected(): Boolean {
+        val isConnected = checkNetworkConnectivity()
+        FileLogger.log("Status koneksi jaringan: $isConnected", TAG, "D")
+        return isConnected
+    }
+    
+    private fun checkNetworkConnectivity(): Boolean {
         val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            val network = connectivityManager.activeNetwork ?: return false
-            val activeNetwork = connectivityManager.getNetworkCapabilities(network) ?: return false
-            return activeNetwork.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val network = connectivityManager.activeNetwork
+            val activeNetwork = connectivityManager.getNetworkCapabilities(network)
+            activeNetwork?.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
         } else {
             @Suppress("DEPRECATION")
-            val networkInfo = connectivityManager.activeNetworkInfo
-            @Suppress("DEPRECATION")
-            return networkInfo != null && networkInfo.isConnected
+            connectivityManager.activeNetworkInfo?.isConnected == true
         }
     }
 }
