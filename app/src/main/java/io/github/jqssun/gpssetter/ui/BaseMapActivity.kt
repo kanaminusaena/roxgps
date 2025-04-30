@@ -57,6 +57,7 @@ import kotlinx.coroutines.flow.callbackFlow
 import java.io.IOException
 import java.util.regex.Pattern
 import kotlin.properties.Delegates
+import io.github.jqssun.gpssetter.utils.FileLogger
 
 @AndroidEntryPoint
 abstract class BaseMapActivity : AppCompatActivity() {
@@ -456,12 +457,18 @@ abstract class BaseMapActivity : AppCompatActivity() {
      * @param address The address to display in the notification.
      */
     protected fun showStartNotification(address: String) {
-    val intent = Intent(this, LocationService::class.java)
-    intent.putExtra("address", address)
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-        startForegroundService(intent) // Android 8.0+ requirement
-    } else {
-        startService(intent)
+    try {
+        val intent = Intent(this, LocationService::class.java).apply {
+            putExtra(LocationService.EXTRA_ADDRESS, address)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(intent)
+        } else {
+            startService(intent)
+        }
+    } catch (e: Exception) {
+        FileLogger.log("BaseMapActivity", "Error starting service: ${e.message}", TAG, "E")
+        Toast.makeText(this, "Gagal memulai service lokasi", Toast.LENGTH_SHORT).show()
     }
 }
 
