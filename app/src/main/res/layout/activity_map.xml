@@ -42,41 +42,6 @@
             android:layout_height="match_parent"
             android:layout_width="match_parent"/>
 
-        <!-- ZOOM BUTTONS Floating group, top right above map -->
-        <LinearLayout
-            android:id="@+id/zoom_buttons"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentTop="true"
-            android:layout_alignParentEnd="true"
-            android:layout_marginTop="120dp"
-            android:layout_marginEnd="20dp"
-            android:orientation="vertical"
-            android:background="@android:color/transparent">
-
-            <ImageButton
-                android:id="@+id/plusButton"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:background="@android:color/transparent"
-                android:src="@drawable/ic_plus"
-                android:contentDescription="@string/zoom_in"
-                android:focusable="false"
-                android:clickable="true"
-                />
-
-            <ImageButton
-                android:id="@+id/minusButton"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:background="@android:color/transparent"
-                android:src="@drawable/ic_minus"
-                android:contentDescription="@string/zoom_out"
-                android:focusable="false"
-                android:clickable="true"
-                />
-        </LinearLayout>
-
         <com.google.android.material.button.MaterialButton
             android:id="@+id/getlocation"
             style="@style/Widget.Material3.Button.TonalButton"

@@ -20,13 +20,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Extract version from build.gradle
+      - name: Extract version from build.gradle (tagName)
         id: version
         run: |
-          # Ambil versionName dari build.gradle
-          VERSION_NAME=$(grep -m 1 versionName ${{ env.main_project_module }}/build.gradle | sed 's/.*versionName[[:space:]]*["'\'']\([^"'\'']*\)["'\''].*$/\1/')
-          echo "version=$VERSION_NAME" >> $GITHUB_ENV
-          echo "VERSION=$VERSION_NAME"
+          TAG_NAME=$(grep -m 1 "def tagName" ${{ env.main_project_module }}/build.gradle | sed "s/def tagName *= *['\"]\\([0-9.]*\\)['\"]/\1/")
+          if [ -z "$TAG_NAME" ]; then
+            echo "GAGAL mendapatkan tagName dari build.gradle"
+            exit 1
+          fi
+          echo "version=$TAG_NAME" >> $GITHUB_ENV
+          echo "VERSION=$TAG_NAME"
 
       - name: Set ENV
         run: |

@@ -7,7 +7,6 @@ import io.github.jqssun.gpssetter.utils.PrefManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import timber.log.Timber
-import io.github.jqssun.gpssetter.utils.FileLogger
 
 lateinit var gsApp: App
 
@@ -25,7 +24,6 @@ class App : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        FileLogger.init(this)
         gsApp = this
         commonInit()
         AppCompatDelegate.setDefaultNightMode(PrefManager.darkTheme)
