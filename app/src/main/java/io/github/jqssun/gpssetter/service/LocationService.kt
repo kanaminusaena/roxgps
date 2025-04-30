@@ -28,6 +28,7 @@ class LocationService : Service() {
                         .setContentTitle(getString(io.github.jqssun.gpssetter.R.string.location_set))
                         .setContentText(address)
                         .setOngoing(true)
+                        .setAutoCancel(false)
                         .setCategory(Notification.CATEGORY_EVENT)
                         .setPriority(androidx.core.app.NotificationCompat.PRIORITY_HIGH)
                         .addAction(
