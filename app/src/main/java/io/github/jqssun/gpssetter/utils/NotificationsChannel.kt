@@ -3,6 +3,7 @@ package io.github.jqssun.gpssetter.utils
 import android.app.Notification
 import android.app.NotificationManager
 import android.content.Context
+import android.util.Log
 import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -12,14 +13,20 @@ object NotificationsChannel {
     const val ACTION_STOP = "io.github.jqssun.gpssetter.ACTION_STOP"
     const val CHANNEL_ID = "gps_setter_channel"
     const val NOTIFICATION_ID = 123
+    private const val TAG = "NotificationsChannel"
 
     private fun createChannelIfNeeded(context: Context) {
-        NotificationChannelCompat.Builder(CHANNEL_ID, NotificationManager.IMPORTANCE_DEFAULT)
-            .setName(context.getString(R.string.title))
-            .setDescription(context.getString(R.string.des))
-            .build().also {
-                NotificationManagerCompat.from(context).createNotificationChannel(it)
-            }
+        try {
+            NotificationChannelCompat.Builder(CHANNEL_ID, NotificationManagerCompat.IMPORTANCE_DEFAULT)
+                .setName(context.getString(R.string.title)) // Should be clear, e.g. "GPS Setter"
+                .setDescription(context.getString(R.string.des)) // E.g. "Location update notifications"
+                .build().also {
+                    NotificationManagerCompat.from(context).createNotificationChannel(it)
+                }
+        } catch (e: Exception) {
+            // Log or ignore - channel might already exist or ROM bug
+            Log.d(TAG, "Failed to create notification channel", e)
+        }
     }
 
     /**
@@ -32,12 +39,10 @@ object NotificationsChannel {
     }
 
     fun cancelNotification(context: Context) {
-        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        notificationManager.cancel(NOTIFICATION_ID)
+        NotificationManagerCompat.from(context).cancel(NOTIFICATION_ID)
     }
 
     fun cancelAllNotifications(context: Context) {
-        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        notificationManager.cancelAll()
+        NotificationManagerCompat.from(context).cancelAll()
     }
 }

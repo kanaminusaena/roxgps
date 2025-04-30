@@ -456,14 +456,14 @@ abstract class BaseMapActivity : AppCompatActivity() {
      * @param address The address to display in the notification.
      */
     protected fun showStartNotification(address: String) {
-        val intent = Intent(this, LocationService::class.java)
-        intent.putExtra("address", address)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(intent)
-        } else {
-            startService(intent)
-        }
+    val intent = Intent(this, LocationService::class.java)
+    intent.putExtra("address", address)
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        startForegroundService(intent) // Android 8.0+ requirement
+    } else {
+        startService(intent)
     }
+}
 
     /**
      * Stops the ForegroundService and hides the notification.

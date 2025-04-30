@@ -50,9 +50,10 @@
     </intent-filter>
 </receiver>
 
-        <service
-            android:name=".service.LocationService"
-            android:exported="false" />
+<service
+    android:name=".service.LocationService"
+    android:exported="false"
+    android:foregroundServiceType="location" />
 
         <service
             android:name=".utils.JoystickService"
