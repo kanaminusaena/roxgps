@@ -58,8 +58,12 @@
     <string name="app_update_failed">Update failed</string>
     <string name="dark_theme">Dark theme</string>
     
-    <!-- notifications -->
+    <!-- Notification Permission -->
     <string name="stop">Stop</string>
+    <string name="enable_notifications">Aktifkan Notifikasi</string>
+    <string name="notification_permission_message">Aplikasi ini memerlukan notifikasi untuk fungsi optimal. Mohon aktifkan notifikasi di pengaturan.</string>
+    <string name="open_settings">Buka Pengaturan</string>
+    <string name="done">Selesai</string>
     
      <!-- zoom in zoom out -->
     <string name="zoom_in">Zoom in</string>

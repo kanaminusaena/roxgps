@@ -62,6 +62,10 @@ import io.github.jqssun.gpssetter.utils.FileLogger
 @AndroidEntryPoint
 abstract class BaseMapActivity : AppCompatActivity() {
 
+    companion object {
+        private const val TAG = "BaseMapActivity"
+        private const val PERMISSION_ID = 42
+    }
     // Latitude property, must be initialized before use
     protected var lat by Delegates.notNull<Double>()
     // Longitude property, must be initialized before use
@@ -83,8 +87,7 @@ abstract class BaseMapActivity : AppCompatActivity() {
     // For retrieving device location
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     // Permission request code
-    private val PERMISSION_ID = 42
-    private const val TAG = "BaseMapActivity"
+    
     // Elevation overlay for header styling
     private val elevationOverlayProvider by lazy { ElevationOverlayProvider(this) }
     // Header background color with proper elevation
@@ -192,7 +195,18 @@ abstract class BaseMapActivity : AppCompatActivity() {
             }
         } else if (!NotificationManagerCompat.from(this).areNotificationsEnabled()) {
             FileLogger.log("Notifikasi tidak diaktifkan, menampilkan dialog", TAG, "W")
-            showNotificationPermissionDialog()
+            MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.enable_notifications)
+                .setMessage(R.string.notification_permission_message)
+                .setPositiveButton(R.string.open_settings) { _, _ ->
+                    FileLogger.log("Membuka pengaturan notifikasi", TAG, "I")
+                    val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                        putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+                    }
+                    startActivity(intent)
+                }
+                .setNegativeButton(R.string.done, null)
+                .show()
         }
     }
 
@@ -500,20 +514,21 @@ abstract class BaseMapActivity : AppCompatActivity() {
      * @param address The address to display in the notification.
      */
     protected fun showStartNotification(address: String) {
-    try {
-        val intent = Intent(this, LocationService::class.java).apply {
-            putExtra(LocationService.EXTRA_ADDRESS, address)
+        try {
+            val intent = Intent(this, LocationService::class.java).apply {
+                putExtra(LocationService.EXTRA_ADDRESS, address)
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(intent)
+            } else {
+                startService(intent)
+            }
+            FileLogger.log("Service lokasi dimulai dengan alamat: $address", TAG, "I")
+        } catch (e: Exception) {
+            FileLogger.log("Error saat memulai service: ${e.message}", TAG, "E")
+            Toast.makeText(this, "Gagal memulai service lokasi", Toast.LENGTH_SHORT).show()
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(intent)
-        } else {
-            startService(intent)
-        }
-    } catch (e: Exception) {
-        FileLogger.log("BaseMapActivity", "Error starting service: ${e.message}", TAG, "E")
-        Toast.makeText(this, "Gagal memulai service lokasi", Toast.LENGTH_SHORT).show()
     }
-}
 
     /**
      * Stops the ForegroundService and hides the notification.
