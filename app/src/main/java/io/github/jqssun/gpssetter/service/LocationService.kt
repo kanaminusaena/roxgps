@@ -11,6 +11,9 @@ class LocationService : Service() {
         when (intent?.action) {
             NotificationsChannel.ACTION_STOP -> {
                 NotificationsChannel.cancelNotification(this)
+                // Broadcast to update UI in Activity when service is stopped from notification
+                val stoppedIntent = Intent("io.github.jqssun.gpssetter.ACTION_SERVICE_STOPPED")
+                sendBroadcast(stoppedIntent)
                 stopForeground(true)
                 stopSelf()
                 return START_NOT_STICKY

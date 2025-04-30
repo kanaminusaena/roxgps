@@ -2,6 +2,10 @@ package io.github.jqssun.gpssetter.ui
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.view.View
 import android.widget.ImageButton
@@ -30,6 +34,27 @@ class MapActivity : BaseMapActivity(), OnMapReadyCallback, GoogleMap.OnMapClickL
 
     private lateinit var plusButton: ImageButton
     private lateinit var minusButton: ImageButton
+
+    // Receiver to handle stop action from notification/service
+    private val serviceStoppedReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            // Mimic stopButton click UI logic
+            binding.stopButton.visibility = View.GONE
+            binding.startButton.visibility = View.VISIBLE
+            removeMarker()
+            showToast(getString(R.string.location_unset))
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        registerReceiver(serviceStoppedReceiver, IntentFilter("io.github.jqssun.gpssetter.ACTION_SERVICE_STOPPED"))
+    }
+
+    override fun onStop() {
+        super.onStop()
+        unregisterReceiver(serviceStoppedReceiver)
+    }
 
     override fun hasMarker(): Boolean {
         // Returns true if marker is NOT visible (so location is not selected)
@@ -165,12 +190,15 @@ class MapActivity : BaseMapActivity(), OnMapReadyCallback, GoogleMap.OnMapClickL
         }
 
         binding.startButton.setOnClickListener {
+            // Immediately update UI for responsiveness
+            binding.startButton.visibility = View.GONE
+            binding.stopButton.visibility = View.VISIBLE
+
             viewModel.update(true, lat, lon)
             mLatLng?.let {
                 updateMarker(it)
             }
-            binding.startButton.visibility = View.GONE
-            binding.stopButton.visibility = View.VISIBLE
+            // Launching address lookup and notification in the background
             lifecycleScope.launch {
                 mLatLng?.getAddress(getActivityInstance())?.let { address ->
                     address.collect { value ->
@@ -181,12 +209,14 @@ class MapActivity : BaseMapActivity(), OnMapReadyCallback, GoogleMap.OnMapClickL
             showToast(getString(R.string.location_set))
         }
         binding.stopButton.setOnClickListener {
+            // Immediately update UI for responsiveness
+            binding.stopButton.visibility = View.GONE
+            binding.startButton.visibility = View.VISIBLE
+
             mLatLng?.let {
                 viewModel.update(false, it.latitude, it.longitude)
             }
             removeMarker()
-            binding.stopButton.visibility = View.GONE
-            binding.startButton.visibility = View.VISIBLE
             cancelNotification()
             showToast(getString(R.string.location_unset))
         }
