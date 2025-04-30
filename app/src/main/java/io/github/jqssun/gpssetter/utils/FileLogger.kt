@@ -1,6 +1,7 @@
 package io.github.jqssun.gpssetter.utils
 
 import android.content.Context
+import android.os.Environment
 import android.util.Log
 import java.io.File
 import java.io.FileWriter
@@ -10,17 +11,15 @@ import java.util.*
 
 object FileLogger {
     private const val LOG_TAG = "FileLogger"
-    private const val LOG_FOLDER = "RoxGPS/log"
+    private const val LOG_FOLDER = "log"
     private var logFile: File? = null
     private var isInitialized = false
 
     fun init(context: Context) {
         try {
-            // Buat direktori RoxGPS/log di internal storage
-            val logDir = File(context.filesDir, LOG_FOLDER).apply {
-                if (!exists()) {
-                    mkdirs()
-                }
+            // Simpan ke external storage: /storage/emulated/0/Android/data/<package>/files/log
+            val logDir = File(context.getExternalFilesDir(null), LOG_FOLDER).apply {
+                if (!exists()) mkdirs()
             }
 
             // Buat file log dengan format nama: log_YYYY_MM_DD.txt
@@ -35,7 +34,7 @@ object FileLogger {
 
             isInitialized = true
             log("Logger diinisialisasi. File log: ${logFile?.absolutePath}", LOG_TAG, "I")
-            
+
             // Bersihkan log lama
             cleanOldLogs(logDir)
         } catch (e: Exception) {
@@ -57,8 +56,7 @@ object FileLogger {
 
     @Synchronized
     fun log(message: String, tag: String = LOG_TAG, level: String = "D") {
-        val timestamp = SimpleDateFormat("dd-MM-yyyy | HH:mm:ss.SSS", Locale.getDefault())
-            .format(Date())
+        val timestamp = SimpleDateFormat("dd-MM-yyyy | HH:mm:ss.SSS", Locale.getDefault()).format(Date())
         val logMessage = "$timestamp [$level] [$tag] $message\n"
 
         // Selalu log ke Logcat
@@ -104,9 +102,10 @@ object FileLogger {
     /**
      * Mendapatkan semua file log yang tersedia
      */
-    fun getLogFiles(): List<File> {
-        return logFile?.parentFile?.listFiles()?.filter { 
-            it.name.startsWith("log_") && it.name.endsWith(".txt") 
+    fun getLogFiles(context: Context): List<File> {
+        val logDir = File(context.getExternalFilesDir(null), LOG_FOLDER)
+        return logDir.listFiles()?.filter {
+            it.name.startsWith("log_") && it.name.endsWith(".txt")
         }?.sortedByDescending { it.lastModified() } ?: emptyList()
     }
 
@@ -124,9 +123,10 @@ object FileLogger {
     /**
      * Menghapus semua file log
      */
-    fun clearAllLogs() {
+    fun clearAllLogs(context: Context) {
+        val logDir = File(context.getExternalFilesDir(null), LOG_FOLDER)
         try {
-            logFile?.parentFile?.listFiles()?.forEach { file ->
+            logDir.listFiles()?.forEach { file ->
                 if (file.name.startsWith("log_") && file.name.endsWith(".txt")) {
                     file.delete()
                 }
@@ -140,9 +140,10 @@ object FileLogger {
     /**
      * Mengecek ukuran total folder log
      */
-    fun getLogFolderSize(): Long {
+    fun getLogFolderSize(context: Context): Long {
+        val logDir = File(context.getExternalFilesDir(null), LOG_FOLDER)
         var size = 0L
-        logFile?.parentFile?.listFiles()?.forEach { file ->
+        logDir.listFiles()?.forEach { file ->
             size += file.length()
         }
         return size
@@ -151,7 +152,8 @@ object FileLogger {
     /**
      * Mendapatkan path folder log
      */
-    fun getLogFolderPath(): String {
-        return logFile?.parentFile?.absolutePath ?: ""
+    fun getLogFolderPath(context: Context): String {
+        val logDir = File(context.getExternalFilesDir(null), LOG_FOLDER)
+        return logDir.absolutePath
     }
 }
