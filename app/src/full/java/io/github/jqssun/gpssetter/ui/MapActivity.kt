@@ -39,9 +39,11 @@ class MapActivity : BaseMapActivity(), OnMapReadyCallback, GoogleMap.OnMapClickL
     private val serviceStoppedReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             // Mimic stopButton click UI logic
+            // Optionally call a method like performStopButtonClick() or update UI directly
+            performStopButtonClick()
             binding.stopButton.visibility = View.GONE
             binding.startButton.visibility = View.VISIBLE
-            removeMarker()
+            //removeMarker()
             showToast(getString(R.string.location_unset))
         }
     }

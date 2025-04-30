@@ -17,7 +17,7 @@ class ServiceStoppedReceiver : BroadcastReceiver() {
             val channelId = "service_stopped_channel"
             val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-            // Create notification channel for Android O and above
+            // Create a notification channel if needed (Android 8.0+)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 val channel = NotificationChannel(
                     channelId,
@@ -27,23 +27,26 @@ class ServiceStoppedReceiver : BroadcastReceiver() {
                 notificationManager.createNotificationChannel(channel)
             }
 
+            // Intent to open your app’s main screen (MapActivity)
             val openAppIntent = Intent(context, MapActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             }
             val pendingIntent = PendingIntent.getActivity(
-                context, 0, openAppIntent,
+                context,
+                0,
+                openAppIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
 
             val notification = NotificationCompat.Builder(context, channelId)
-                .setSmallIcon(R.drawable.ic_play)
+                .setSmallIcon(R.drawable.ic_stop)
                 .setContentTitle(context.getString(R.string.app_name))
                 .setContentText("Location service has been stopped.")
                 .setContentIntent(pendingIntent)
                 .setAutoCancel(true)
                 .build()
 
-            notificationManager.notify(1001, notification)
+            notificationManager.notify(2001, notification)
         }
     }
 }
