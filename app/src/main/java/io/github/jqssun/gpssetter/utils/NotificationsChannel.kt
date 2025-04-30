@@ -33,6 +33,11 @@ object NotificationsChannel {
         notificationManager.notify(NOTIFICATION_ID, notification)
         return notification
     }
+    
+    fun cancelNotification(context: Context) {
+    val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    notificationManager.cancel(NOTIFICATION_ID)
+}
 
     fun cancelAllNotifications(context: Context) {
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager

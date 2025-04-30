@@ -37,13 +37,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        
-        <receiver android:name=".receiver.NotificationActionReceiver"
-                  android:exported="false">
-            <intent-filter>
-                <action android:name="io.github.jqssun.gpssetter.STOP_ACTION" />
-            </intent-filter>
-        </receiver>
+
+        <!-- Removed NotificationActionReceiver as it's no longer needed with ForegroundService -->
+
+        <service
+            android:name=".service.LocationService"
+            android:exported="false" />
 
         <service
             android:name=".utils.JoystickService"

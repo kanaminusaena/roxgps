@@ -2,12 +2,9 @@ package io.github.jqssun.gpssetter.ui
 
 import android.Manifest
 import android.annotation.SuppressLint
-import android.app.Notification
-import android.app.PendingIntent
-import android.content.BroadcastReceiver
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.location.Address
@@ -31,7 +28,6 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.AppCompatButton
 import androidx.core.app.ActivityCompat
-import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.view.GravityCompat
 import androidx.core.view.WindowCompat
@@ -50,7 +46,7 @@ import io.github.jqssun.gpssetter.BuildConfig
 import io.github.jqssun.gpssetter.R
 import io.github.jqssun.gpssetter.adapter.FavListAdapter
 import io.github.jqssun.gpssetter.databinding.ActivityMapBinding
-import io.github.jqssun.gpssetter.receiver.NotificationActionReceiver
+import io.github.jqssun.gpssetter.service.LocationService
 import io.github.jqssun.gpssetter.ui.viewmodel.MainViewModel
 import io.github.jqssun.gpssetter.utils.JoystickService
 import io.github.jqssun.gpssetter.utils.NotificationsChannel
@@ -79,8 +75,6 @@ abstract class BaseMapActivity : AppCompatActivity() {
     protected lateinit var dialog: AlertDialog
     // Holds update info if available
     protected val update by lazy { viewModel.getAvailableUpdate() }
-    // Notifications channel utility class
-    private val notificationsChannel = NotificationsChannel
     // Adapter for favorite locations list
     private var favListAdapter: FavListAdapter = FavListAdapter()
     // Dialog for Xposed warning
@@ -96,18 +90,6 @@ abstract class BaseMapActivity : AppCompatActivity() {
         elevationOverlayProvider.compositeOverlayWithThemeSurfaceColorIfNeeded(
             resources.getDimension(R.dimen.bottom_sheet_elevation)
         )
-    }
-
-    // BroadcastReceiver for notification stop action
-    private val stopActionReceiver = object : BroadcastReceiver() {
-        /**
-         * Handles the stop action broadcast for the notification.
-         */
-        override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action == NotificationsChannel.ACTION_STOP) {
-                performStopButtonClick()
-            }
-        }
     }
 
     /**
@@ -155,7 +137,6 @@ abstract class BaseMapActivity : AppCompatActivity() {
         if (PrefManager.isJoystickEnabled) {
             startService(Intent(this, JoystickService::class.java))
         }
-        registerReceiver(stopActionReceiver, IntentFilter(NotificationsChannel.ACTION_STOP))
     }
 
     /**
@@ -168,15 +149,7 @@ abstract class BaseMapActivity : AppCompatActivity() {
     }
 
     /**
-     * Cleanup logic for the activity, including unregistering receivers.
-     */
-    override fun onDestroy() {
-        super.onDestroy()
-        unregisterReceiver(stopActionReceiver)
-    }
-
-    /**
-     * Programmatically triggers the stop button click.
+     * Programmatically triggers the stop button click (not needed anymore with service).
      */
     fun performStopButtonClick() {
         binding.stopButton.performClick()
@@ -479,40 +452,31 @@ abstract class BaseMapActivity : AppCompatActivity() {
     }
 
     /**
-     * Shows a persistent notification with a stop action.
+     * Shows a persistent notification with a stop action via ForegroundService.
      * @param address The address to display in the notification.
      */
     protected fun showStartNotification(address: String) {
-        val stopIntent = Intent(this, NotificationActionReceiver::class.java).apply {
-            action = NotificationsChannel.ACTION_STOP
-        }
-        val stopPendingIntent: PendingIntent = PendingIntent.getBroadcast(
-            this,
-            0,
-            stopIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-        notificationsChannel.showNotification(this) {
-            it.setSmallIcon(R.drawable.ic_stop)
-            it.setContentTitle(getString(R.string.location_set))
-            it.setContentText(address)
-            it.setAutoCancel(true)
-            it.setOngoing(true)
-            it.setCategory(Notification.CATEGORY_EVENT)
-            it.priority = NotificationCompat.PRIORITY_HIGH
-            it.addAction(
-                R.drawable.ic_stop,
-                getString(R.string.stop),
-                stopPendingIntent
-            )
+        val intent = Intent(this, LocationService::class.java)
+        intent.putExtra("address", address)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(intent)
+        } else {
+            startService(intent)
         }
     }
 
     /**
-     * Cancels all notifications for this app.
+     * Stops the ForegroundService and hides the notification.
      */
     protected fun cancelNotification() {
-        notificationsChannel.cancelAllNotifications(this)
+        val stopIntent = Intent(this, LocationService::class.java).apply {
+            action = NotificationsChannel.ACTION_STOP
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(stopIntent)
+        } else {
+            startService(stopIntent)
+        }
     }
 
     /**

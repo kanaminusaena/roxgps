@@ -4,6 +4,7 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.view.View
+import android.widget.ImageButton
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.lifecycleScope
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -11,7 +12,6 @@ import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
-import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
@@ -27,6 +27,9 @@ class MapActivity : BaseMapActivity(), OnMapReadyCallback, GoogleMap.OnMapClickL
     private lateinit var mMap: GoogleMap
     private var mLatLng: LatLng? = null
     private var mMarker: Marker? = null
+
+    private lateinit var plusButton: ImageButton
+    private lateinit var minusButton: ImageButton
 
     override fun hasMarker(): Boolean {
         // Returns true if marker is NOT visible (so location is not selected)
@@ -44,15 +47,14 @@ class MapActivity : BaseMapActivity(), OnMapReadyCallback, GoogleMap.OnMapClickL
     }
 
     /**
-     * Hides the marker.
+     * Hides the marker and zooms out the map to a wider view.
      */
     private fun removeMarker() {
-    mMarker?.isVisible = false
-    // Zoom out the map to a world view (zoom level 2)
-    mLatLng?.let {
-        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(it, 12f))
+        mMarker?.isVisible = false
+        mLatLng?.let {
+            mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(it, 12f))
+        }
     }
-}
 
     /**
      * Sets up the map fragment and requests async map load.
@@ -119,13 +121,12 @@ class MapActivity : BaseMapActivity(), OnMapReadyCallback, GoogleMap.OnMapClickL
             setOnMapClickListener(this@MapActivity)
             if (viewModel.isStarted) {
                 mMarker?.let {
-                    // Optionally show marker and info window
-                     it.isVisible = true
-                     it.showInfoWindow()
+                    it.isVisible = true
+                    it.showInfoWindow()
                 }
             }
         }
-         setupZoomButtons()
+        setupZoomButtons()
     }
 
     /**
@@ -154,7 +155,6 @@ class MapActivity : BaseMapActivity(), OnMapReadyCallback, GoogleMap.OnMapClickL
         }
         binding.getlocation.setOnClickListener {
             getLastLocation()
-            // When location is updated, moveMapToNewLocation(true) will trigger updateMarker and animate the camera
             mLatLng = LatLng(lat, lon)
             mLatLng?.let { updateMarker(it) }
         }
@@ -191,12 +191,11 @@ class MapActivity : BaseMapActivity(), OnMapReadyCallback, GoogleMap.OnMapClickL
             showToast(getString(R.string.location_unset))
         }
     }
-    
+
     /**
      * Setup Plus and Minus Zoom Buttons (must be present in your layout)
      */
     private fun setupZoomButtons() {
-        // Assuming your layout has ImageButtons with ids plusButton and minusButton
         plusButton = findViewById(R.id.plusButton)
         minusButton = findViewById(R.id.minusButton)
 
