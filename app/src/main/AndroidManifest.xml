@@ -14,6 +14,9 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <!-- Untuk Android 11 ke atas -->
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" 
+        tools:ignore="ScopedStorage" />
 
     <application
         android:name=".App"
@@ -55,7 +58,11 @@
     android:name=".service.LocationService"
     android:enabled="true"
     android:exported="false"
-    android:foregroundServiceType="location" />
+    android:foregroundServiceType="location">
+    <intent-filter>
+        <action android:name="io.github.jqssun.gpssetter.ACTION_STOP" />
+    </intent-filter>
+</service>
 
         <service
             android:name=".utils.JoystickService"

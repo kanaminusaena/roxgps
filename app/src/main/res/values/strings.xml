@@ -65,8 +65,21 @@
     <string name="open_settings">Buka Pengaturan</string>
     <string name="done">Selesai</string>
     
+    <!-- Notification Channel -->
+    <string name="notification_channel_name">Layanan Lokasi</string>
+    <string name="notification_channel_description">Menampilkan status layanan lokasi yang sedang berjalan</string>
+    <string name="notification_title">RoxGPS Aktif</string>
+    
      <!-- zoom in zoom out -->
     <string name="zoom_in">Zoom in</string>
     <string name="zoom_out">Zoom out</string>
+    
+    <!-- Storage Permission -->
+    <string name="storage_permission_error_title">Izin Penyimpanan Diperlukan</string>
+    <string name="storage_permission_error_message">Aplikasi memerlukan izin untuk mengakses penyimpanan untuk menyimpan file log. Aplikasi tidak dapat berfungsi tanpa izin ini.</string>
+    <string name="settings">Pengaturan</string>
+    <string name="exit">Keluar</string>
+    
+    <string name="try_again">Coba Lagi</string>
 
 </resources>

@@ -58,6 +58,7 @@ import java.io.IOException
 import java.util.regex.Pattern
 import kotlin.properties.Delegates
 import io.github.jqssun.gpssetter.utils.FileLogger
+import android.net.Uri
 
 @AndroidEntryPoint
 abstract class BaseMapActivity : AppCompatActivity() {
@@ -65,32 +66,33 @@ abstract class BaseMapActivity : AppCompatActivity() {
     companion object {
         private const val TAG = "BaseMapActivity"
         private const val PERMISSION_ID = 42
+        const val STORAGE_PERMISSION_REQUEST = 100
     }
-    // Latitude property, must be initialized before use
+    // Properti Latitude, harus diinisialisasi sebelum digunakan
     protected var lat by Delegates.notNull<Double>()
-    // Longitude property, must be initialized before use
+    // Properti Longitude, harus diinisialisasi sebelum digunakan
     protected var lon by Delegates.notNull<Double>()
-    // ViewModel for main activity logic
+    // ViewModel untuk logika aktivitas utama
     protected val viewModel by viewModels<MainViewModel>()
-    // View binding for activity layout
+    // View binding untuk layout aktivitas
     protected val binding by lazy { ActivityMapBinding.inflate(layoutInflater) }
-    // MaterialAlertDialogBuilder for various dialogs
+    // MaterialAlertDialogBuilder untuk berbagai dialog
     protected lateinit var alertDialog: MaterialAlertDialogBuilder
-    // Reference to current AlertDialog, for dismissing
+    // Referensi ke AlertDialog saat ini, untuk menghilangkan
     protected lateinit var dialog: AlertDialog
-    // Holds update info if available
+    // Menyimpan info pembaruan jika tersedia
     protected val update by lazy { viewModel.getAvailableUpdate() }
-    // Adapter for favorite locations list
+    // Adapter untuk daftar lokasi favorit
     private var favListAdapter: FavListAdapter = FavListAdapter()
-    // Dialog for Xposed warning
+    // Dialog untuk peringatan Xposed
     private var xposedDialog: AlertDialog? = null
-    // For retrieving device location
+    // Untuk mengambil lokasi perangkat
     private lateinit var fusedLocationClient: FusedLocationProviderClient
-    // Permission request code
+    // Kode permintaan izin
     
-    // Elevation overlay for header styling
+    // Overlay elevasi untuk styling header
     private val elevationOverlayProvider by lazy { ElevationOverlayProvider(this) }
-    // Header background color with proper elevation
+    // Warna latar belakang header dengan elevasi yang sesuai
     private val headerBackground by lazy {
         elevationOverlayProvider.compositeOverlayWithThemeSurfaceColorIfNeeded(
             resources.getDimension(R.dimen.bottom_sheet_elevation)
@@ -98,44 +100,52 @@ abstract class BaseMapActivity : AppCompatActivity() {
     }
 
     /**
-     * Returns the current activity instance as BaseMapActivity.
+     * Mengembalikan instance aktivitas saat ini sebagai BaseMapActivity.
      */
     protected abstract fun getActivityInstance(): BaseMapActivity
 
     /**
-     * Returns true if the map currently has a marker placed.
+     * Mengembalikan true jika peta saat ini memiliki penanda yang ditempatkan.
      */
     protected abstract fun hasMarker(): Boolean
 
     /**
-     * Initializes the map view and related logic.
+     * Menginisialisasi tampilan peta dan logika terkait.
      */
     protected abstract fun initializeMap()
 
     /**
-     * Sets up and binds all UI buttons.
+     * Menyiapkan dan mengikat semua tombol UI.
      */
     protected abstract fun setupButtons()
 
     /**
-     * Moves the map view to a new location if requested.
-     * @param moveNewLocation whether to move to the new location
+     * Memindahkan tampilan peta ke lokasi baru jika diminta.
+     * @param moveNewLocation apakah akan pindah ke lokasi baru
      */
     protected abstract fun moveMapToNewLocation(moveNewLocation: Boolean)
+    
+    private lateinit var storagePermissionChecker: StoragePermissionChecker
 
     /**
-     * Initialization logic for the activity, including UI and listeners.
+     * Logika inisialisasi untuk aktivitas, termasuk UI dan pendengar.
      */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         FileLogger.log("Memulai onCreate", TAG, "I")
         try {
+            setupStoragePermission()
             enableEdgeToEdge(navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT))
             WindowCompat.setDecorFitsSystemWindows(window, false)
             setContentView(binding.root)
             setSupportActionBar(binding.toolbar)
-            
-            initializeComponents()
+
+            // Inisialisasi komponen hanya jika izin sudah diberikan
+            if (storagePermissionChecker.hasStoragePermission()) {
+                initializeComponents()
+            } else {
+                requestStoragePermission()
+            }
         } catch (e: Exception) {
             FileLogger.log("Error dalam onCreate: ${e.message}", TAG, "E")
         }
@@ -156,27 +166,105 @@ abstract class BaseMapActivity : AppCompatActivity() {
             startService(Intent(this, JoystickService::class.java))
         }
     }
+    
+    private fun setupStoragePermission() {
+        storagePermissionChecker = StoragePermissionChecker(this)
+        FileLogger.log("Storage permission checker diinisialisasi", TAG, "D")
+    }
+
+    private fun requestStoragePermission() {
+        storagePermissionChecker.requestStoragePermission { granted ->
+            if (granted) {
+                FileLogger.log("Izin penyimpanan diberikan, melanjutkan inisialisasi", TAG, "I")
+                initializeComponents()
+            } else {
+                FileLogger.log("Izin penyimpanan ditolak", TAG, "W")
+                showStoragePermissionError()
+            }
+        }
+    }
+
+    private fun showStoragePermissionError() {
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.storage_permission_error_title)
+            .setMessage(R.string.storage_permission_error_message)
+            .setPositiveButton(R.string.settings) { _, _ ->
+                requestStorageAccess()
+            }
+            .setNegativeButton(R.string.exit) { _, _ ->
+                finish()
+            }
+            .setCancelable(false)
+            .show()
+    }
+
+    // Fungsi untuk meminta izin storage
+    private fun requestStorageAccess() {
+        try {
+            FileLogger.log("Memulai permintaan akses storage", TAG, "I")
+            // Untuk Android 11 ke atas
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
+                    data = Uri.parse("package:$packageName")
+                }
+                // Ini akan memanggil onActivityResult
+                startActivityForResult(intent, STORAGE_PERMISSION_REQUEST)
+            }
+        } catch (e: Exception) {
+            FileLogger.log("Error saat meminta akses storage: ${e.message}", TAG, "E")
+        }
+    }
+    
+    // Ini akan dipanggil otomatis setelah startActivityForResult selesai
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        FileLogger.log("Menerima hasil activity dengan requestCode: $requestCode", TAG, "D")
+        
+        when (requestCode) {
+            STORAGE_PERMISSION_REQUEST -> {
+                // Forward ke StoragePermissionChecker
+                storagePermissionChecker.onActivityResult(requestCode)
+                
+                // Cek hasil
+                if (storagePermissionChecker.hasStoragePermission()) {
+                    FileLogger.log("Izin storage diberikan, melanjutkan inisialisasi", TAG, "I")
+                    initializeComponents()
+                } else {
+                    FileLogger.log("Izin storage ditolak", TAG, "W")
+                    showStoragePermissionError()
+                }
+            }
+        }
+    }
 
 
     /**
-     * Called when activity resumes; checks module state and notification permissions.
+     * Dipanggil saat aktivitas dilanjutkan; memeriksa status modul dan izin notifikasi.
      */
     override fun onResume() {
         super.onResume()
         FileLogger.log("Activity onResume", TAG, "D")
         viewModel.updateXposedState()
         checkNotifPermission()
+        
+        // Cek ulang izin saat kembali dari pengaturan
+        if (!storagePermissionChecker.hasStoragePermission()) {
+            requestStoragePermission()
+        } else {
+            viewModel.updateXposedState()
+            checkNotifPermission()
+        }
     }
 
     /**
-     * Programmatically triggers the stop button click (not needed anymore with service).
+     * Secara programatis memicu klik tombol berhenti (tidak diperlukan lagi dengan service).
      */
     fun performStopButtonClick() {
         binding.stopButton.performClick()
     }
 
     /**
-     * Checks and requests notification permissions if required by Android version.
+     * Memeriksa dan meminta izin notifikasi jika diperlukan oleh versi Android.
      */
     private fun checkNotifPermission() {
         FileLogger.log("Memeriksa izin notifikasi", TAG, "D")
@@ -211,7 +299,7 @@ abstract class BaseMapActivity : AppCompatActivity() {
     }
 
     /**
-     * Sets up the navigation drawer and its toggle behavior.
+     * Menyiapkan navigation drawer dan perilaku toggle-nya.
      */
     private fun setupDrawer() {
         FileLogger.log("Menyiapkan navigation drawer", TAG, "D")
@@ -241,7 +329,7 @@ abstract class BaseMapActivity : AppCompatActivity() {
     }
 
     /**
-     * Sets up the navigation view, including listeners and search logic.
+     * Menyiapkan tampilan navigasi, termasuk pendengar dan logika pencarian.
      */
     private fun setupNavView() {
         binding.mapContainer.map.setOnApplyWindowInsetsListener { _, insets ->
@@ -295,7 +383,7 @@ abstract class BaseMapActivity : AppCompatActivity() {
     }
 
     /**
-     * Observes if the Xposed module is enabled and shows a dialog if not.
+     * Mengamati apakah modul Xposed diaktifkan dan menampilkan dialog jika tidak.
      */
     private fun checkModuleEnabled() {
         viewModel.isXposed.observe(this) { isXposed ->
@@ -311,7 +399,7 @@ abstract class BaseMapActivity : AppCompatActivity() {
     }
 
     /**
-     * Shows the about dialog with app information.
+     * Menampilkan dialog tentang dengan informasi aplikasi.
      */
     protected fun aboutDialog() {
         alertDialog = MaterialAlertDialogBuilder(this)
@@ -326,7 +414,7 @@ abstract class BaseMapActivity : AppCompatActivity() {
     }
 
     /**
-     * Shows a dialog to add a favorite location.
+     * Menampilkan dialog untuk menambahkan lokasi favorit.
      */
     protected fun addFavoriteDialog() {
         FileLogger.log("Menampilkan dialog tambah favorit", TAG, "D")
@@ -368,7 +456,7 @@ abstract class BaseMapActivity : AppCompatActivity() {
 
 
     /**
-     * Opens the favorite list dialog and sets up its callbacks.
+     * Membuka dialog daftar favorit dan menyiapkan callback-nya.
      */
     private fun openFavoriteListDialog() {
         getAllUpdatedFavList()
@@ -393,7 +481,7 @@ abstract class BaseMapActivity : AppCompatActivity() {
     }
 
     /**
-     * Fetches the latest favorite locations and updates the adapter.
+     * Mengambil lokasi favorit terbaru dan memperbarui adapter.
      */
     private fun getAllUpdatedFavList() {
         lifecycleScope.launch {
@@ -407,7 +495,7 @@ abstract class BaseMapActivity : AppCompatActivity() {
     }
 
     /**
-     * Checks for available updates and triggers update dialog if present.
+     * Memeriksa pembaruan yang tersedia dan memicu dialog pembaruan jika ada.
      */
     private fun checkUpdates() {
         lifecycleScope.launchWhenResumed {
@@ -420,7 +508,7 @@ abstract class BaseMapActivity : AppCompatActivity() {
     }
 
     /**
-     * Shows the update dialog and starts download if update is available.
+     * Menampilkan dialog pembaruan dan memulai pengunduhan jika pembaruan tersedia.
      */
     private fun updateDialog() {
         alertDialog = MaterialAlertDialogBuilder(this)
@@ -477,8 +565,8 @@ abstract class BaseMapActivity : AppCompatActivity() {
     }
 
     /**
-     * Returns a Flow for searching an address, sending progress and result/failure.
-     * @param address The address or coordinates string to search.
+     * Mengembalikan Flow untuk mencari alamat, mengirimkan progress dan hasil/kegagalan.
+     * @param address Alamat atau string koordinat untuk dicari.
      */
     private suspend fun getSearchAddress(address: String) = callbackFlow {
         withContext(Dispatchers.IO) {
@@ -510,8 +598,8 @@ abstract class BaseMapActivity : AppCompatActivity() {
     }
 
     /**
-     * Shows a persistent notification with a stop action via ForegroundService.
-     * @param address The address to display in the notification.
+     * Menampilkan notifikasi persisten dengan tindakan berhenti melalui ForegroundService.
+     * @param address Alamat untuk ditampilkan di notifikasi.
      */
     protected fun showStartNotification(address: String) {
         try {
@@ -531,7 +619,7 @@ abstract class BaseMapActivity : AppCompatActivity() {
     }
 
     /**
-     * Stops the ForegroundService and hides the notification.
+     * Menghentikan ForegroundService dan menyembunyikan notifikasi.
      */
     protected fun cancelNotification() {
         val stopIntent = Intent(this, LocationService::class.java).apply {
@@ -545,18 +633,18 @@ abstract class BaseMapActivity : AppCompatActivity() {
     }
 
     /**
-     * Displays a Snackbar that prompts the user to enable location services.
+     * Menampilkan Snackbar yang meminta pengguna untuk mengaktifkan layanan lokasi.
      */
     private fun handleLocationError() {
-        Snackbar.make(binding.root, "Location services are disabled.", Snackbar.LENGTH_LONG)
-            .setAction("Enable") {
+        Snackbar.make(binding.root, "Layanan lokasi dinonaktifkan.", Snackbar.LENGTH_LONG)
+            .setAction("Aktifkan") {
                 startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
             }
             .show()
     }
 
     /**
-     * Requests the last known location and moves the map if successful.
+     * Meminta lokasi terakhir yang diketahui dan memindahkan peta jika berhasil.
      */
     @SuppressLint("MissingPermission")
     protected fun getLastLocation() {
@@ -599,7 +687,7 @@ abstract class BaseMapActivity : AppCompatActivity() {
     }
 
     /**
-     * Requests a new location update if the last known location is unavailable.
+     * Meminta pembaruan lokasi baru jika lokasi terakhir yang diketahui tidak tersedia.
      */
     @SuppressLint("MissingPermission")
     private fun requestNewLocationData() {
@@ -617,7 +705,7 @@ abstract class BaseMapActivity : AppCompatActivity() {
     }
 
     /**
-     * Callback for location updates, updates lat/lon when received.
+     * Callback untuk pembaruan lokasi, memperbarui lat/lon saat diterima.
      */
     private val mLocationCallback = object : LocationCallback() {
         override fun onLocationResult(locationResult: LocationResult) {
@@ -628,7 +716,7 @@ abstract class BaseMapActivity : AppCompatActivity() {
     }
 
     /**
-     * Returns true if either GPS or network location provider is enabled.
+     * Mengembalikan true jika penyedia lokasi GPS atau jaringan diaktifkan.
      */
     private fun isLocationEnabled(): Boolean {
         val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
@@ -637,7 +725,7 @@ abstract class BaseMapActivity : AppCompatActivity() {
     }
 
     /**
-     * Returns true if location permissions are granted.
+     * Mengembalikan true jika izin lokasi diberikan.
      */
     private fun checkPermissions(): Boolean {
         return ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED &&
@@ -645,7 +733,7 @@ abstract class BaseMapActivity : AppCompatActivity() {
     }
 
     /**
-     * Requests location permissions from the user.
+     * Meminta izin lokasi dari pengguna.
      */
     private fun requestPermissions() {
         ActivityCompat.requestPermissions(
@@ -659,7 +747,7 @@ abstract class BaseMapActivity : AppCompatActivity() {
     }
 
     /**
-     * Handles the result of a permission request.
+     * Menangani hasil permintaan izin.
      */
     override fun onRequestPermissionsResult(
         requestCode: Int,
@@ -673,8 +761,8 @@ abstract class BaseMapActivity : AppCompatActivity() {
     }
 
     /**
-     * Displays a short toast message.
-     * @param message The message to show.
+     * Menampilkan pesan toast singkat.
+     * @param message Pesan untuk ditampilkan.
      */
     protected fun showToast(message: String) {
         FileLogger.log("Menampilkan toast: $message", TAG, "D")
@@ -682,8 +770,8 @@ abstract class BaseMapActivity : AppCompatActivity() {
     }
 
     /**
-     * Checks whether the device is connected to a network.
-     * @return true if connected, false otherwise.
+     * Memeriksa apakah perangkat terhubung ke jaringan.
+     * @return true jika terhubung, false jika tidak.
      */
     protected fun isNetworkConnected(): Boolean {
         val isConnected = checkNetworkConnectivity()
@@ -705,13 +793,13 @@ abstract class BaseMapActivity : AppCompatActivity() {
 }
 
 /**
- * Represents progress or result of a search operation.
+ * Mewakili progress atau hasil dari operasi pencarian.
  */
 sealed class SearchProgress {
-    /** Indicates that searching is in progress. */
+    /** Menunjukkan bahwa pencarian sedang berlangsung. */
     object Progress : SearchProgress()
-    /** Indicates that search completed with coordinates. */
+    /** Menunjukkan bahwa pencarian selesai dengan koordinat. */
     data class Complete(val lat: Double, val lon: Double) : SearchProgress()
-    /** Indicates that search failed with an error. */
+    /** Menunjukkan bahwa pencarian gagal dengan error. */
     data class Fail(val error: String?) : SearchProgress()
 }
