@@ -102,7 +102,7 @@ class MapActivity : BaseMapActivity(), OnMapReadyCallback, MapLibreMap.OnMapClic
             val key = packageManager.getApplicationInfo(packageName, PackageManager.GET_META_DATA)
                 .metaData.getString("com.maplibre.AccessToken")
             MapLibre.getInstance(this, key, WellKnownTileServer.Mapbox)
-            val mapView = mapContainerBinding.map
+            val mapView = mapContainerBinding.mapView
             mapView.onCreate(null)
             mapView.getMapAsync(this)
             FileLogger.log("MapView getMapAsync dipanggil", "MapActivity", "I")
@@ -115,7 +115,7 @@ class MapActivity : BaseMapActivity(), OnMapReadyCallback, MapLibreMap.OnMapClic
         mMap.setStyle(styleUrl) { style ->
             // SymbolManager setup
             symbolManager?.deleteAll()
-            symbolManager = SymbolManager(mapContainerBinding.map, mMap, style)
+            symbolManager = SymbolManager(mapContainerBinding.mapView, mMap, style)
             symbolManager?.iconAllowOverlap = true
             symbolManager?.textAllowOverlap = true
             symbolManager?.addDragListener(object : OnSymbolDragListener {
@@ -299,10 +299,10 @@ class MapActivity : BaseMapActivity(), OnMapReadyCallback, MapLibreMap.OnMapClic
     }
 
     // MapView lifecycle (penting agar MapView tidak leak)
-    override fun onStart() { super.onStart(); mapContainerBinding.map.onStart() }
-    override fun onResume() { super.onResume(); mapContainerBinding.map.onResume() }
-    override fun onPause() { mapContainerBinding.map.onPause(); super.onPause() }
-    override fun onStop() { mapContainerBinding.map.onStop(); super.onStop() }
-    override fun onLowMemory() { super.onLowMemory(); mapContainerBinding.map.onLowMemory() }
-    override fun onDestroy() { mapContainerBinding.map.onDestroy(); super.onDestroy() }
+    override fun onStart() { super.onStart(); mapContainerBinding.mapView.onStart() }
+    override fun onResume() { super.onResume(); mapContainerBinding.mapView.onResume() }
+    override fun onPause() { mapContainerBinding.mapView.onPause(); super.onPause() }
+    override fun onStop() { mapContainerBinding.mapView.onStop(); super.onStop() }
+    override fun onLowMemory() { super.onLowMemory(); mapContainerBinding.mapView.onLowMemory() }
+    override fun onDestroy() { mapContainerBinding.mapView.onDestroy(); super.onDestroy() }
 }
