@@ -62,6 +62,8 @@ import android.content.IntentFilter
 import android.os.Build
 import com.google.android.material.snackbar.Snackbar
 import android.app.PendingIntent
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.ViewCompat
 
 @AndroidEntryPoint
 abstract class BaseMapActivity: AppCompatActivity() {
@@ -181,12 +183,12 @@ abstract class BaseMapActivity: AppCompatActivity() {
 
     private fun setupNavView() {
 
-        binding.mapContainer.map.setOnApplyWindowInsetsListener { _, insets ->
-            val topInset: Int = insets.systemWindowInsetTop
-            val bottomInset: Int = insets.systemWindowInsetBottom
-            binding.navView.setPadding(0,topInset,0,0)
-            insets.consumeSystemWindowInsets()
-        }
+        ViewCompat.setOnApplyWindowInsetsListener(binding.mapContainer.map) { v, insets ->
+    val topInset = insets.getInsets(WindowInsetsCompat.Type.systemBars()).top
+    val bottomInset = insets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom
+    binding.navView.setPadding(0, topInset, 0, 0)
+    insets
+}
 
         val progress = binding.search.searchProgress
         binding.search.searchBox.setOnEditorActionListener { v, actionId, _ ->
