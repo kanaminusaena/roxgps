@@ -5,6 +5,8 @@ import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.view.View
 import androidx.core.app.ActivityCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
@@ -20,9 +22,6 @@ import com.roxgps.utils.FileLogger
 import com.roxgps.utils.ext.getAddress
 import com.roxgps.utils.ext.showToast
 import kotlinx.coroutines.launch
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
-
 
 typealias CustomLatLng = LatLng
 
@@ -31,14 +30,16 @@ class MapActivity: BaseMapActivity(), OnMapReadyCallback, GoogleMap.OnMapClickLi
     private lateinit var mMap: GoogleMap
     private var mLatLng: LatLng? = null
     private var mMarker: Marker? = null
-    
+
     override fun setupMapInsets() {
-    ViewCompat.setOnApplyWindowInsetsListener(binding.mapContainer.map) { view, insets ->
-        val topInset = insets.getInsets(WindowInsetsCompat.Type.systemBars()).top
-        binding.navView.setPadding(0, topInset, 0, 0)
-        insets
+        // Pastikan binding.mapContainer.map mengacu pada view yang benar.
+        // Jika struktur layout berubah, ubah referensinya sesuai.
+        ViewCompat.setOnApplyWindowInsetsListener(binding.mapContainer.map) { view, insets ->
+            val topInset = insets.getInsets(WindowInsetsCompat.Type.systemBars()).top
+            binding.navView.setPadding(0, topInset, 0, 0)
+            insets
+        }
     }
-}
 
     override fun hasMarker(): Boolean {
         FileLogger.log("hasMarker() dipanggil. Marker: ${mMarker != null}", "MapActivity", "D")
@@ -134,13 +135,13 @@ class MapActivity: BaseMapActivity(), OnMapReadyCallback, GoogleMap.OnMapClickLi
 
         with(mMap) {
             if (ActivityCompat.checkSelfPermission(this@MapActivity, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-                setMyLocationEnabled(true)
+                isMyLocationEnabled = true
                 FileLogger.log("Permission granted", "MapActivity", "I")
             } else {
                 FileLogger.log("Permission not granted, request permission", "MapActivity", "I")
                 ActivityCompat.requestPermissions(this@MapActivity, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), 99)
             }
-            setTrafficEnabled(true)
+            isTrafficEnabled = true
             uiSettings.isMyLocationButtonEnabled = false
             uiSettings.isZoomControlsEnabled = false
             uiSettings.isCompassEnabled = false
@@ -159,11 +160,11 @@ class MapActivity: BaseMapActivity(), OnMapReadyCallback, GoogleMap.OnMapClickLi
             FileLogger.log("Marker awal di lat=${it.latitude}, long=${it.longitude}", "MapActivity", "I")
         }
 
-        setOnMapClickListener(this@MapActivity)
+        setOnMapClickListener(this)
         if (viewModel.isStarted) {
             FileLogger.log("ViewModel sudah mulai", "MapActivity", "I")
             mMarker?.let {
-                // TODO: it.isVisible = true, it.showInfoWindow()
+                // TODO: tampilkan info marker jika diperlukan
             }
         } else {
             FileLogger.log("ViewModel belum mulai", "MapActivity", "I")
@@ -194,7 +195,6 @@ class MapActivity: BaseMapActivity(), OnMapReadyCallback, GoogleMap.OnMapClickLi
         lat = marker.position.latitude
         lon = marker.position.longitude
         mMap.animateCamera(CameraUpdateFactory.newLatLng(marker.position))
-        // Jika ingin update lain, tambahkan di sini
     }
 
     override fun getActivityInstance(): BaseMapActivity {
@@ -227,9 +227,7 @@ class MapActivity: BaseMapActivity(), OnMapReadyCallback, GoogleMap.OnMapClickLi
         binding.startButton.setOnClickListener {
             viewModel.update(true, lat, lon)
             FileLogger.log("startButton: SET lokasi lat=$lat, long=$lon", "MapActivity", "I")
-            mLatLng.let {
-                updateMarker(it!!)
-            }
+            mLatLng?.let { updateMarker(it) }
             binding.startButton.visibility = View.GONE
             binding.stopButton.visibility = View.VISIBLE
             lifecycleScope.launch {
@@ -247,8 +245,8 @@ class MapActivity: BaseMapActivity(), OnMapReadyCallback, GoogleMap.OnMapClickLi
             showToast(getString(R.string.location_set))
         }
         binding.stopButton.setOnClickListener {
-            mLatLng.let {
-                viewModel.update(false, it!!.latitude, it.longitude)
+            mLatLng?.let {
+                viewModel.update(false, it.latitude, it.longitude)
                 FileLogger.log("stopButton: UNSET lokasi lat=${it.latitude}, long=${it.longitude}", "MapActivity", "I")
             }
             removeMarker()
