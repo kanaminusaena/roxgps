@@ -1,4 +1,4 @@
-package io.github.jqssun.gpssetter.utils
+package com.roxgps.utils
 
 import android.Manifest
 import android.content.Intent
@@ -10,7 +10,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import android.content.pm.PackageManager
-import io.github.jqssun.gpssetter.R
+import com.roxgps.R
 
 class StoragePermissionChecker(private val activity: AppCompatActivity) {
 

@@ -1,4 +1,4 @@
-package io.github.jqssun.gpssetter.ui
+package com.roxgps.ui
 
 
 import android.app.ActivityManager
@@ -25,11 +25,11 @@ import androidx.preference.EditTextPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceDataStore
 import androidx.preference.PreferenceFragmentCompat
-import io.github.jqssun.gpssetter.R
-import io.github.jqssun.gpssetter.databinding.ActivitySettingsBinding
-import io.github.jqssun.gpssetter.utils.JoystickService
-import io.github.jqssun.gpssetter.utils.PrefManager
-import io.github.jqssun.gpssetter.utils.ext.showToast
+import com.roxgps.R
+import com.roxgps.databinding.ActivitySettingsBinding
+import com.roxgps.utils.JoystickService
+import com.roxgps.utils.PrefManager
+import com.roxgps.utils.ext.showToast
 
 class ActivitySettings : AppCompatActivity() {
 
@@ -172,7 +172,7 @@ class ActivitySettings : AppCompatActivity() {
             var isRunning = false
             val manager = requireContext().getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager? ?: return false
             for (service in manager.getRunningServices(Int.MAX_VALUE)) {
-                if ("io.github.jqssun.gpssetter.utils.JoystickService" == service.service.className) {
+                if ("com.roxgps.utils.JoystickService" == service.service.className) {
                     isRunning = true
                 }
             }

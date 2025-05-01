@@ -1,9 +1,9 @@
-package io.github.jqssun.gpssetter.repository
+package com.roxgps.repository
 
 
 import androidx.annotation.WorkerThread
-import io.github.jqssun.gpssetter.room.Favorite
-import io.github.jqssun.gpssetter.room.FavoriteDao
+import com.roxgps.room.Favorite
+import com.roxgps.room.FavoriteDao
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 

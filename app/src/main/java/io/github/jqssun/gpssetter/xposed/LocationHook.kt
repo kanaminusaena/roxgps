@@ -1,4 +1,4 @@
-package io.github.jqssun.gpssetter.xposed
+package com.roxgps.xposed
 
 // https://github.com/rovo89/XposedBridge/wiki/Helpers
 
@@ -14,7 +14,7 @@ import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
-import io.github.jqssun.gpssetter.BuildConfig
+import com.roxgps.BuildConfig
 import org.lsposed.hiddenapibypass.HiddenApiBypass
 import timber.log.Timber
 import java.util.*

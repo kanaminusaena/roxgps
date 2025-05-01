@@ -1,4 +1,4 @@
-package io.github.jqssun.gpssetter.module.util
+package com.roxgps.module.util
 
 import javax.inject.Qualifier
 

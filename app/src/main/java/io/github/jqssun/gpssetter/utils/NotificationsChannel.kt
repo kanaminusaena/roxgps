@@ -1,4 +1,4 @@
-package io.github.jqssun.gpssetter.utils
+package com.roxgps.utils
 
 import android.app.Notification
 import android.app.NotificationManager
@@ -6,10 +6,10 @@ import android.content.Context
 import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
-import io.github.jqssun.gpssetter.R
+import com.roxgps.R
 
 object NotificationsChannel {
-    const val ACTION_STOP = "io.github.jqssun.gpssetter.ACTION_STOP"
+    const val ACTION_STOP = "com.roxgps.ACTION_STOP"
     const val CHANNEL_ID = "gps_setter_channel"
     const val NOTIFICATION_ID = 123
 

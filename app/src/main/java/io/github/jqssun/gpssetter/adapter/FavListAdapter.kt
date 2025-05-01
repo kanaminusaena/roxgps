@@ -1,4 +1,4 @@
-package io.github.jqssun.gpssetter.adapter
+package com.roxgps.adapter
 
 import android.view.LayoutInflater
 import android.view.View
@@ -8,8 +8,8 @@ import android.widget.TextView
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
-import io.github.jqssun.gpssetter.R
-import io.github.jqssun.gpssetter.room.Favorite
+import com.roxgps.R
+import com.roxgps.room.Favorite
 
 class FavListAdapter(
     ) : ListAdapter<Favorite,FavListAdapter.ViewHolder>(FavListComparetor()) {

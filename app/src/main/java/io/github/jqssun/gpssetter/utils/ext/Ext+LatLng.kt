@@ -1,8 +1,8 @@
-package io.github.jqssun.gpssetter.utils.ext
+package com.roxgps.utils.ext
 
 import android.content.Context
 import android.location.Geocoder
-import io.github.jqssun.gpssetter.ui.CustomLatLng
+import com.roxgps.ui.CustomLatLng
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.callbackFlow

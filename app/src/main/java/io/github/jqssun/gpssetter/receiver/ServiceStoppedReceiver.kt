@@ -1,4 +1,4 @@
-package io.github.jqssun.gpssetter.receiver
+package com.roxgps.receiver
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -8,12 +8,12 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import androidx.core.app.NotificationCompat
-import io.github.jqssun.gpssetter.R
-import io.github.jqssun.gpssetter.ui.MapActivity
+import com.roxgps.R
+import com.roxgps.ui.MapActivity
 
 class ServiceStoppedReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {
-        if (intent?.action == "io.github.jqssun.gpssetter.ACTION_SERVICE_STOPPED") {
+        if (intent?.action == "com.roxgps.ACTION_SERVICE_STOPPED") {
             val channelId = "service_stopped_channel"
             val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 

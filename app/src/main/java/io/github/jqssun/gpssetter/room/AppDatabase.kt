@@ -1,9 +1,9 @@
-package io.github.jqssun.gpssetter.room
+package com.roxgps.room
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
-import io.github.jqssun.gpssetter.module.util.ApplicationScope
+import com.roxgps.module.util.ApplicationScope
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import javax.inject.Inject

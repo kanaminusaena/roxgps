@@ -1,4 +1,4 @@
-package io.github.jqssun.gpssetter.update
+package com.roxgps.update
 
 import retrofit2.Call
 import retrofit2.http.GET

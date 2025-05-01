@@ -1,6 +1,6 @@
-package io.github.jqssun.gpssetter.xposed
+package com.roxgps.xposed
 import de.robv.android.xposed.XSharedPreferences
-import io.github.jqssun.gpssetter.BuildConfig
+import com.roxgps.BuildConfig
 
 class Xshare {
 

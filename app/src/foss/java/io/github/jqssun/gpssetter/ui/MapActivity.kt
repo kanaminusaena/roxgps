@@ -1,4 +1,4 @@
-package io.github.jqssun.gpssetter.ui
+package com.roxgps.ui
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -9,12 +9,12 @@ import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.lifecycleScope
-import io.github.jqssun.gpssetter.R
-import io.github.jqssun.gpssetter.databinding.ActivityMapBinding
-import io.github.jqssun.gpssetter.databinding.MapContainerBinding
-import io.github.jqssun.gpssetter.utils.FileLogger
-import io.github.jqssun.gpssetter.utils.ext.getAddress
-import io.github.jqssun.gpssetter.utils.ext.showToast
+import com.roxgps.R
+import com.roxgps.databinding.ActivityMapBinding
+import com.roxgps.databinding.MapContainerBinding
+import com.roxgps.utils.FileLogger
+import com.roxgps.utils.ext.getAddress
+import com.roxgps.utils.ext.showToast
 import kotlinx.coroutines.launch
 import org.maplibre.android.MapLibre
 import org.maplibre.android.WellKnownTileServer

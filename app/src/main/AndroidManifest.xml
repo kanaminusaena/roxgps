@@ -41,7 +41,7 @@
         <receiver android:name=".receiver.NotificationActionReceiver"
                   android:exported="false">
             <intent-filter>
-                <action android:name="io.github.jqssun.gpssetter.STOP_ACTION" />
+                <action android:name="com.roxgps.STOP_ACTION" />
             </intent-filter>
         </receiver>
 

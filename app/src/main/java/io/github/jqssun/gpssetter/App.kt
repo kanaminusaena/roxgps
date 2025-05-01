@@ -1,9 +1,9 @@
-package io.github.jqssun.gpssetter
+package com.roxgps
 
 import androidx.appcompat.app.AppCompatDelegate
 import android.app.Application
 import dagger.hilt.android.HiltAndroidApp
-import io.github.jqssun.gpssetter.utils.PrefManager
+import com.roxgps.utils.PrefManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import timber.log.Timber

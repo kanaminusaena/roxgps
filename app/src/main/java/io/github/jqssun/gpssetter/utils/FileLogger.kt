@@ -1,4 +1,4 @@
-package io.github.jqssun.gpssetter.utils
+package com.roxgps.utils
 
 import android.content.Context
 import android.os.Environment

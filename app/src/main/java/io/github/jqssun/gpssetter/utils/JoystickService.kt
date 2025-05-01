@@ -1,4 +1,4 @@
-package io.github.jqssun.gpssetter.utils
+package com.roxgps.utils
 
 import android.annotation.SuppressLint
 import android.app.Service
@@ -8,7 +8,7 @@ import android.graphics.PixelFormat
 import android.os.IBinder
 import android.view.*
 import io.github.controlwear.virtual.joystick.android.JoystickView
-import io.github.jqssun.gpssetter.R
+import com.roxgps.R
 import kotlin.math.cos
 import kotlin.math.sin
 

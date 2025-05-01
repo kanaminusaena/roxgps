@@ -1,4 +1,4 @@
-package io.github.jqssun.gpssetter.room
+package com.roxgps.room
 import androidx.room.*
 import kotlinx.coroutines.flow.Flow
 

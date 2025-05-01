@@ -1,11 +1,11 @@
-package io.github.jqssun.gpssetter.utils
+package com.roxgps.utils
 
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.appcompat.app.AppCompatDelegate
-import io.github.jqssun.gpssetter.BuildConfig
-import io.github.jqssun.gpssetter.gsApp
+import com.roxgps.BuildConfig
+import com.roxgps.gsApp
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope

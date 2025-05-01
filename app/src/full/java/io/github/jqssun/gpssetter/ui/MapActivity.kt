@@ -1,4 +1,4 @@
-package io.github.jqssun.gpssetter.ui
+package com.roxgps.ui
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -15,10 +15,10 @@ import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
-import io.github.jqssun.gpssetter.R
-import io.github.jqssun.gpssetter.utils.FileLogger
-import io.github.jqssun.gpssetter.utils.ext.getAddress
-import io.github.jqssun.gpssetter.utils.ext.showToast
+import com.roxgps.R
+import com.roxgps.utils.FileLogger
+import com.roxgps.utils.ext.getAddress
+import com.roxgps.utils.ext.showToast
 import kotlinx.coroutines.launch
 
 typealias CustomLatLng = LatLng

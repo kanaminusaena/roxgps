@@ -1,4 +1,4 @@
-package io.github.jqssun.gpssetter.room
+package com.roxgps.room
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey

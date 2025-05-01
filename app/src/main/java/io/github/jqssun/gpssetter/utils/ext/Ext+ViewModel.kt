@@ -1,4 +1,4 @@
-package io.github.jqssun.gpssetter.utils.ext
+package com.roxgps.utils.ext
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope

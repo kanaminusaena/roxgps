@@ -1,4 +1,4 @@
-package io.github.jqssun.gpssetter.ui.viewmodel
+package com.roxgps.ui.viewmodel
 
 
 import android.app.DownloadManager
@@ -18,15 +18,15 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import io.github.jqssun.gpssetter.BuildConfig
-import io.github.jqssun.gpssetter.R
-import io.github.jqssun.gpssetter.repository.FavoriteRepository
-import io.github.jqssun.gpssetter.room.Favorite
-import io.github.jqssun.gpssetter.update.UpdateChecker
-import io.github.jqssun.gpssetter.utils.PrefManager
-import io.github.jqssun.gpssetter.utils.ext.onIO
-import io.github.jqssun.gpssetter.utils.ext.onMain
-import io.github.jqssun.gpssetter.utils.ext.showToast
+import com.roxgps.BuildConfig
+import com.roxgps.R
+import com.roxgps.repository.FavoriteRepository
+import com.roxgps.room.Favorite
+import com.roxgps.update.UpdateChecker
+import com.roxgps.utils.PrefManager
+import com.roxgps.utils.ext.onIO
+import com.roxgps.utils.ext.onMain
+import com.roxgps.utils.ext.showToast
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch

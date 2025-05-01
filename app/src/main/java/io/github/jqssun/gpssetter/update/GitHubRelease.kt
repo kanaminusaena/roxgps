@@ -1,4 +1,4 @@
-package io.github.jqssun.gpssetter.update
+package com.roxgps.update
 
 import com.google.gson.annotations.Expose
 import com.google.gson.annotations.SerializedName

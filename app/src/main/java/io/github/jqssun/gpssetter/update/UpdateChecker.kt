@@ -1,9 +1,9 @@
-package io.github.jqssun.gpssetter.update
+package com.roxgps.update
 
 import android.content.Context
 import android.os.Parcelable
-import io.github.jqssun.gpssetter.BuildConfig
-import io.github.jqssun.gpssetter.utils.PrefManager
+import com.roxgps.BuildConfig
+import com.roxgps.utils.PrefManager
 import kotlinx.android.parcel.Parcelize
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
