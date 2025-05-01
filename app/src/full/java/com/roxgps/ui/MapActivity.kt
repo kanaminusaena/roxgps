@@ -20,6 +20,9 @@ import com.roxgps.utils.FileLogger
 import com.roxgps.utils.ext.getAddress
 import com.roxgps.utils.ext.showToast
 import kotlinx.coroutines.launch
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+
 
 typealias CustomLatLng = LatLng
 
@@ -29,14 +32,13 @@ class MapActivity: BaseMapActivity(), OnMapReadyCallback, GoogleMap.OnMapClickLi
     private var mLatLng: LatLng? = null
     private var mMarker: Marker? = null
     
-    override fun setupInsets() {
-        // Hanya di flavor full layout ada id 'map'
-        ViewCompat.setOnApplyWindowInsetsListener(binding.mapContainer.map) { v, insets ->
-            val topInset = insets.getInsets(WindowInsetsCompat.Type.systemBars()).top
-            binding.navView.setPadding(0, topInset, 0, 0)
-            insets
-        }
+    override fun setupMapInsets() {
+    ViewCompat.setOnApplyWindowInsetsListener(binding.mapContainer.map) { view, insets ->
+        val topInset = insets.getInsets(WindowInsetsCompat.Type.systemBars()).top
+        binding.navView.setPadding(0, topInset, 0, 0)
+        insets
     }
+}
 
     override fun hasMarker(): Boolean {
         FileLogger.log("hasMarker() dipanggil. Marker: ${mMarker != null}", "MapActivity", "D")

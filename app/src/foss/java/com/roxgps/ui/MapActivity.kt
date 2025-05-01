@@ -30,6 +30,8 @@ import org.maplibre.android.plugins.annotation.Symbol
 import org.maplibre.android.plugins.annotation.SymbolManager
 import org.maplibre.android.plugins.annotation.SymbolOptions
 import org.maplibre.android.plugins.annotation.OnSymbolDragListener
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 
 typealias CustomLatLng = LatLng
 
@@ -45,14 +47,13 @@ class MapActivity : BaseMapActivity(), OnMapReadyCallback, MapLibreMap.OnMapClic
     private var mMarker: Symbol? = null
     private var symbolManager: SymbolManager? = null
     
-    override fun setupInsets() {
-        // Foss: gunakan id yang memang ada (misal spinner, mapView), atau kosongkan jika tidak relevan
-        ViewCompat.setOnApplyWindowInsetsListener(mapContainerBinding.mapView) { v, insets ->
-            val topInset = insets.getInsets(WindowInsetsCompat.Type.systemBars()).top
-            binding.navView.setPadding(0, topInset, 0, 0)
-            insets
-        }
+    override fun setupMapInsets() {
+    ViewCompat.setOnApplyWindowInsetsListener(mapContainerBinding.mapView) { view, insets ->
+        val topInset = insets.getInsets(WindowInsetsCompat.Type.systemBars()).top
+        binding.navView.setPadding(0, topInset, 0, 0)
+        insets
     }
+}
 
     // Style list
     private val styleList = listOf(
