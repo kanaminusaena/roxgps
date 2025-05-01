@@ -10,8 +10,13 @@ on:
   push:
     branches:
       - 'release/**'
+      - 'develop'
     tags:
       - 'v*.*.*'
+  pull_request:
+    branches:
+      - 'develop'
+      - 'release/**'
   workflow_dispatch:
 
 jobs:
