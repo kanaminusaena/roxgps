@@ -224,29 +224,46 @@ var lon = viewModel.getLng
     }
 
     override fun moveMapToNewLocation(moveNewLocation: Boolean) {
-        FileLogger.log("moveMapToNewLocation($moveNewLocation) dipanggil", "MapActivity", "D")
-        if (moveNewLocation) {
-            FileLogger.log("Move ke lokasi baru: lat=$lat, long=$lon", "MapActivity", "I")
-            mLatLng = LatLng(lat, lon)
-            mLatLng?.let { latLng ->
-                mMap.animateCamera(CameraUpdateFactory.newCameraPosition(
+    FileLogger.log("moveMapToNewLocation($moveNewLocation) dipanggil", "MapActivity", "D")
+    
+    if (moveNewLocation) {
+        FileLogger.log("Move ke lokasi baru: lat=$lat, long=$lon", "MapActivity", "I")
+        
+        // Buat objek LatLng baru berdasarkan koordinat
+        mLatLng = LatLng(lat, lon)
+        
+        mLatLng?.let { latLng ->
+            // Pindahkan kamera ke lokasi baru
+            mMap.animateCamera(
+                CameraUpdateFactory.newCameraPosition(
                     CameraPosition.Builder()
                         .target(latLng)
                         .zoom(18.0)
                         .bearing(0.0)
                         .tilt(0.0)
                         .build()
-                ))
-                mMarker?.apply {
-                    latLng = latLng
-                    symbolManager?.update(this)
-                    FileLogger.log("Marker diupdate ke: lat=${latLng.latitude}, long=${latLng.longitude}", "MapActivity", "I")
+                )
+            )
+            
+            // Perbarui marker hanya jika ada dan symbolManager sudah diinisialisasi
+            mMarker?.let { marker ->
+                if (symbolManager != null) {
+                    marker.latLng = latLng // Pastikan latLng adalah 'var' di kelas Symbol
+                    symbolManager?.update(marker)
+                    FileLogger.log(
+                        "Marker diupdate ke: lat=${latLng.latitude}, long=${latLng.longitude}", 
+                        "MapActivity", 
+                        "I"
+                    )
+                } else {
+                    FileLogger.log("symbolManager belum diinisialisasi!", "MapActivity", "W")
                 }
             }
-        } else {
-            FileLogger.log("Tidak pindah lokasi. lat=$lat, long=$lon", "MapActivity", "I")
         }
+    } else {
+        FileLogger.log("Tidak pindah lokasi. lat=$lat, long=$lon", "MapActivity", "I")
     }
+}
 
     override fun getActivityInstance(): BaseMapActivity {
         FileLogger.log("getActivityInstance() dipanggil", "MapActivity", "D")
