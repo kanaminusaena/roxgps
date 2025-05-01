@@ -71,7 +71,7 @@ abstract class BaseMapActivity: AppCompatActivity() {
     protected var lat by Delegates.notNull<Double>()
     protected var lon by Delegates.notNull<Double>()
     protected val viewModel by viewModels<MainViewModel>()
-    protected open lateinit var binding by lazy { ActivityMapBinding.inflate(layoutInflater) }
+    protected open lateinit var binding: ActivityMapBinding
     protected lateinit var alertDialog: MaterialAlertDialogBuilder
     protected lateinit var dialog: AlertDialog
     protected val update by lazy { viewModel.getAvailableUpdate() }
@@ -120,6 +120,7 @@ abstract class BaseMapActivity: AppCompatActivity() {
         initializeMap()
         checkModuleEnabled()
         checkUpdates()
+        setupInsets() // <-- Panggil method ini, override di activity turunan!
         setupNavView()
         setupButtons()
         setupDrawer()
@@ -130,6 +131,9 @@ abstract class BaseMapActivity: AppCompatActivity() {
         // Register the broadcast receiver
         registerReceiver(stopActionReceiver, IntentFilter("com.roxgps.STOP_ACTION"))
     }
+    
+    /** Override this in each flavor MapActivity for correct insets handling */
+    protected open fun setupInsets() {}
     
     fun performStopButtonClick() {
     binding.stopButton.performClick()

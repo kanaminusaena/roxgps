@@ -44,6 +44,15 @@ class MapActivity : BaseMapActivity(), OnMapReadyCallback, MapLibreMap.OnMapClic
     private var mLatLng: LatLng? = null
     private var mMarker: Symbol? = null
     private var symbolManager: SymbolManager? = null
+    
+    override fun setupInsets() {
+        // Foss: gunakan id yang memang ada (misal spinner, mapView), atau kosongkan jika tidak relevan
+        ViewCompat.setOnApplyWindowInsetsListener(mapContainerBinding.mapView) { v, insets ->
+            val topInset = insets.getInsets(WindowInsetsCompat.Type.systemBars()).top
+            binding.navView.setPadding(0, topInset, 0, 0)
+            insets
+        }
+    }
 
     // Style list
     private val styleList = listOf(
