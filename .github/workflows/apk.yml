@@ -48,35 +48,35 @@ jobs:
           java-version: '17'
           cache: 'gradle'
 
-      - name: Lint (verbose)
-        run: ./gradlew lint --stacktrace --info | tee lint.log
+      - name: Lint (error only, full stacktrace)
+        run: ./gradlew lint --full-stacktrace --quiet 2>lint-error.log
 
-      - name: Print lint log if failed
+      - name: Print lint error log if failed
         if: failure()
-        run: cat lint.log
+        run: cat lint-error.log
 
-      - name: Upload lint log (artifact, optional)
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: lint-log
-          path: lint.log
-
-      - name: Compile Debug (verbose)
-        run: ./gradlew compileDebug --stacktrace --info | tee compile.log
-
-      - name: Print compile log if failed
-        if: failure()
-        run: cat compile.log
-
-      - name: Upload compile log (artifact, optional)
+      - name: Upload lint error log (artifact)
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: compile-log
-          path: compile.log
+          name: lint-error-log
+          path: lint-error.log
 
-      - name: Build APK (verbose log)
+      - name: Compile Debug (error only, full stacktrace)
+        run: ./gradlew compileDebug --full-stacktrace --quiet 2>compile-error.log
+
+      - name: Print compile error log if failed
+        if: failure()
+        run: cat compile-error.log
+
+      - name: Upload compile error log (artifact)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: compile-error-log
+          path: compile-error.log
+
+      - name: Build APK (error only, full stacktrace)
         shell: bash
         env:
           FS_KEYSTORE_FILE: ${{ secrets.STORE }}
@@ -88,19 +88,19 @@ jobs:
           base64 --decode secrets-base64/upload-keystore.jks.base64 > ${{ env.target_path }}/app/upload.jks
           base64 --decode secrets-base64/key.properties.base64 > ${{ env.target_path }}/local.properties
           chmod +x ./gradlew
-          ./gradlew assembleRelease --stacktrace --info | tee build.log
+          ./gradlew assembleRelease --full-stacktrace --quiet 2>build-error.log
           rm ${{ env.target_path }}/app/upload.jks ${{ env.target_path }}/local.properties
 
-      - name: Print Gradle build log if failed
+      - name: Print Gradle build error log if failed
         if: failure()
-        run: cat build.log
+        run: cat build-error.log
 
-      - name: Upload build log (artifact, optional)
+      - name: Upload build error log (artifact)
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: build-log
-          path: build.log
+          name: build-error-log
+          path: build-error.log
 
       - name: Upload APKs (as artifacts)
         uses: actions/upload-artifact@v4
