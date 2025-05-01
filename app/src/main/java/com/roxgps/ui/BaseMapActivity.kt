@@ -188,9 +188,8 @@ abstract class BaseMapActivity: AppCompatActivity() {
 
     private fun setupNavView() {
         // Perbaikan: gunakan binding.mapContainer sebagai target insets jika property "map" tidak tersedia
-        ViewCompat.setOnApplyWindowInsetsListener(binding.mapContainer) { v, insets ->
+        ViewCompat.setOnApplyWindowInsetsListener(binding.mapContainer.root) { view, insets ->
             val topInset = insets.getInsets(WindowInsetsCompat.Type.systemBars()).top
-            val bottomInset = insets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom
             binding.navView.setPadding(0, topInset, 0, 0)
             insets
         }

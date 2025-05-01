@@ -159,8 +159,8 @@ class MapActivity : BaseMapActivity(), OnMapReadyCallback, MapLibreMap.OnMapClic
             }
 
             val zoom = 18.0f
-            lat = viewModel.getLat
-            lon = viewModel.getLng
+            var lat = viewModel.getLat
+var lon = viewModel.getLng
             FileLogger.log("onMapReady: koordinat awal lat=$lat, long=$lon", "MapActivity", "I")
             mLatLng = LatLng(lat, lon)
             mLatLng?.let {

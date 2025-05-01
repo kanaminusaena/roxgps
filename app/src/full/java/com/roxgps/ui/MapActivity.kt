@@ -160,7 +160,7 @@ class MapActivity: BaseMapActivity(), OnMapReadyCallback, GoogleMap.OnMapClickLi
             FileLogger.log("Marker awal di lat=${it.latitude}, long=${it.longitude}", "MapActivity", "I")
         }
 
-        setOnMapClickListener(this)
+        mMap.setOnMapClickListener(this)
         if (viewModel.isStarted) {
             FileLogger.log("ViewModel sudah mulai", "MapActivity", "I")
             mMarker?.let {
