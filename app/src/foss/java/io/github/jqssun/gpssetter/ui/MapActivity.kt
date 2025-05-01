@@ -37,7 +37,7 @@ data class MapStyle(val url: String, val label: String)
 
 class MapActivity : BaseMapActivity(), OnMapReadyCallback, MapLibreMap.OnMapClickListener {
 
-    private lateinit var binding: ActivityMapBinding
+    override private lateinit var binding: ActivityMapBinding
     private lateinit var mapContainerBinding: MapContainerBinding
 
     private lateinit var mMap: MapLibreMap
