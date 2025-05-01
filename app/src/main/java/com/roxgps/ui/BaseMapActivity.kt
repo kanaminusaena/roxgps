@@ -71,7 +71,7 @@ abstract class BaseMapActivity: AppCompatActivity() {
     protected var lat by Delegates.notNull<Double>()
     protected var lon by Delegates.notNull<Double>()
     protected val viewModel by viewModels<MainViewModel>()
-    protected val binding by lazy { ActivityMapBinding.inflate(layoutInflater) }
+    protected open lateinit var binding by lazy { ActivityMapBinding.inflate(layoutInflater) }
     protected lateinit var alertDialog: MaterialAlertDialogBuilder
     protected lateinit var dialog: AlertDialog
     protected val update by lazy { viewModel.getAvailableUpdate() }
