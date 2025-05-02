@@ -16,9 +16,9 @@ import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
-import com.roxgps.R
-import com.roxgps.utils.ext.getAddress
-import com.roxgps.utils.ext.showToast
+import io.github.jqssun.gpssetter.R
+import io.github.jqssun.gpssetter.utils.ext.getAddress
+import io.github.jqssun.gpssetter.utils.ext.showToast
 import kotlinx.coroutines.launch
 
 typealias CustomLatLng = LatLng

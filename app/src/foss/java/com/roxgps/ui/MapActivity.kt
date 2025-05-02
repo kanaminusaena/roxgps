@@ -7,9 +7,9 @@ import android.content.pm.PackageManager
 import android.view.View
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.lifecycleScope
-import com.roxgps.R
-import com.roxgps.utils.ext.getAddress
-import com.roxgps.utils.ext.showToast
+import io.github.jqssun.gpssetter.R
+import io.github.jqssun.gpssetter.utils.ext.getAddress
+import io.github.jqssun.gpssetter.utils.ext.showToast
 import kotlinx.coroutines.launch
 import org.maplibre.android.MapLibre
 import org.maplibre.android.WellKnownTileServer
@@ -24,40 +24,14 @@ import org.maplibre.android.location.modes.RenderMode
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.OnMapReadyCallback
 import org.maplibre.android.maps.SupportMapFragment
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 
 typealias CustomLatLng = LatLng
 
 class MapActivity: BaseMapActivity(), OnMapReadyCallback, MapLibreMap.OnMapClickListener {
 
-    override lateinit var binding: ActivityMapBinding
-    private lateinit var mapContainerBinding: MapContainerBinding
-
     private lateinit var mMap: MapLibreMap
     private var mLatLng: LatLng? = null
     private var mMarker: Marker? = null
-    
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        binding = ActivityMapBinding.inflate(layoutInflater)
-        setContentView(binding.root)
-        
-        // Bind map container setelah setContentView
-        mapContainerBinding = MapContainerBinding.bind(binding.mapContainer)
-        
-        setupMapInsets()
-        initializeMap()
-        setupButtons()
-    }
-    
-    override fun setupMapInsets() {
-        ViewCompat.setOnApplyWindowInsetsListener(mapContainerBinding.mapView) { view, windowInsets ->
-            val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
-            binding.navView.setPadding(0, insets.top, 0, 0)
-            windowInsets
-        }
-    }
 
     override fun hasMarker(): Boolean {
         // TODO: if (!mMarker?.isVisible!!){
