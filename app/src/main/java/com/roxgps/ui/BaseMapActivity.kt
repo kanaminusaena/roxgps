@@ -39,15 +39,15 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.elevation.ElevationOverlayProvider
 import com.google.android.material.progressindicator.LinearProgressIndicator
 import dagger.hilt.android.AndroidEntryPoint
-import io.github.jqssun.gpssetter.BuildConfig
-import io.github.jqssun.gpssetter.R
-import io.github.jqssun.gpssetter.adapter.FavListAdapter
-import io.github.jqssun.gpssetter.databinding.ActivityMapBinding
-import io.github.jqssun.gpssetter.ui.viewmodel.MainViewModel
-import io.github.jqssun.gpssetter.utils.JoystickService
-import io.github.jqssun.gpssetter.utils.NotificationsChannel
-import io.github.jqssun.gpssetter.utils.PrefManager
-import io.github.jqssun.gpssetter.utils.ext.*
+import com.roxgps.BuildConfig
+import com.roxgps.R
+import com.roxgps.adapter.FavListAdapter
+import com.roxgps.databinding.ActivityMapBinding
+import com.roxgps.ui.viewmodel.MainViewModel
+import com.roxgps.utils.JoystickService
+import com.roxgps.utils.NotificationsChannel
+import com.roxgps.utils.PrefManager
+import com.roxgps.utils.ext.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.callbackFlow
@@ -56,7 +56,7 @@ import java.util.regex.Matcher
 import java.util.regex.Pattern
 import kotlin.properties.Delegates
 import androidx.core.app.NotificationManagerCompat
-import io.github.jqssun.gpssetter.receiver.NotificationActionReceiver
+import com.roxgps.receiver.NotificationActionReceiver
 import android.content.BroadcastReceiver
 import android.content.IntentFilter
 import android.os.Build
@@ -93,7 +93,7 @@ abstract class BaseMapActivity: AppCompatActivity() {
     
     private val stopActionReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action == "io.github.jqssun.gpssetter.STOP_ACTION") {
+            if (intent?.action == "com.roxgps.STOP_ACTION") {
                 // Handle the stop action
                 performStopButtonClick()
             }
@@ -126,7 +126,7 @@ abstract class BaseMapActivity: AppCompatActivity() {
             startService(Intent(this, JoystickService::class.java))
         }
         // Register the broadcast receiver
-        registerReceiver(stopActionReceiver, IntentFilter("io.github.jqssun.gpssetter.STOP_ACTION"))
+        registerReceiver(stopActionReceiver, IntentFilter("com.roxgps.STOP_ACTION"))
     }
     
     fun performStopButtonClick() {

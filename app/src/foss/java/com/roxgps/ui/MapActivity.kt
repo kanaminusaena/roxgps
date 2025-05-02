@@ -7,9 +7,9 @@ import android.content.pm.PackageManager
 import android.view.View
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.lifecycleScope
-import io.github.jqssun.gpssetter.R
-import io.github.jqssun.gpssetter.utils.ext.getAddress
-import io.github.jqssun.gpssetter.utils.ext.showToast
+import com.roxgps.R
+import com.roxgps.utils.ext.getAddress
+import com.roxgps.utils.ext.showToast
 import kotlinx.coroutines.launch
 import org.maplibre.android.MapLibre
 import org.maplibre.android.WellKnownTileServer
