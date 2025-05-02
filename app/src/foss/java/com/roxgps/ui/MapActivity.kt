@@ -60,7 +60,7 @@ class MapActivity: BaseMapActivity(), OnMapReadyCallback, MapLibreMap.OnMapClick
         // val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment?
         val mapFragment = SupportMapFragment.newInstance()
         supportFragmentManager.beginTransaction()
-            .replace(R.id.map, mapFragment)
+            .replace(R.id.mapView, mapFragment)
             .commit()
         mapFragment?.getMapAsync(this)
     }

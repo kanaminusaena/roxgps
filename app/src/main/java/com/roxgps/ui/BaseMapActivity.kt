@@ -180,13 +180,15 @@ abstract class BaseMapActivity: AppCompatActivity() {
     }
 
     private fun setupNavView() {
-
-        binding.mapContainer.map.setOnApplyWindowInsetsListener { _, insets ->
-            val topInset: Int = insets.systemWindowInsetTop
-            val bottomInset: Int = insets.systemWindowInsetBottom
-            binding.navView.setPadding(0,topInset,0,0)
-            insets.consumeSystemWindowInsets()
-        }
+    ViewCompat.setOnApplyWindowInsetsListener(binding.mapContainer.map) { _, insets ->
+        val systemBarsInsets = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+        binding.navView.updatePadding(
+            top = systemBarsInsets.top,
+            bottom = systemBarsInsets.bottom
+        )
+        WindowInsetsCompat.CONSUMED
+    }
+}
 
         val progress = binding.search.searchProgress
         binding.search.searchBox.setOnEditorActionListener { v, actionId, _ ->
