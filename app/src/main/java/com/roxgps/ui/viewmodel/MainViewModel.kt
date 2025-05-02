@@ -73,10 +73,10 @@ class MainViewModel @Inject constructor(
     val response: LiveData<Long> = _response
 
 
-    private fun insertNewFavorite(favorite: Favorite) = onIO {
-        _response.postValue(favoriteRepository.addNewFavorite(favorite))
-
-    }
+    private suspend fun insertNewFavorite(favorite: Favorite) = withContext(Dispatchers.IO) {
+    val result = favoriteRepository.addNewFavorite(favorite)
+    _response.postValue(result)
+}
 
     val isXposed = MutableLiveData<Boolean>(true)
     fun updateXposedState() {
@@ -90,9 +90,12 @@ class MainViewModel @Inject constructor(
         favoriteRepository.deleteFavorite(favorite)
     }
 
-    private fun getFavoriteSingle(i : Int) : Favorite {
-        return favoriteRepository.getSingleFavorite(i.toLong())
+    fun getFavoriteSingle(id: Long, callback: (Favorite?) -> Unit) {
+    viewModelScope.launch {
+        val favorite = favoriteRepository.getSingleFavorite(id)
+        callback(favorite)
     }
+}
 
 
     private val _update = MutableStateFlow<UpdateChecker.Update?>(null).apply {
@@ -229,29 +232,28 @@ class MainViewModel @Inject constructor(
         object Failed: State()
     }
 
+    fun storeFavorite(
+    address: String,
+    lat: Double,
+    lon: Double
+) = viewModelScope.launch {
+    val slot = findUnusedSlot() ?: return@launch
+    val favorite = Favorite(id = slot.toLong(), address = address, lat = lat, lng = lon)
+    insertNewFavorite(favorite)
+}
 
-
-     fun storeFavorite(
-        address: String,
-        lat: Double,
-        lon: Double
-    ) = onIO {
-
-            val slot: Int
-            var i = 0
-            while (true) {
-                if(getFavoriteSingle(i) == null) {
-                    slot = i
-                    break
-                } else {
-                    i++
-                }
+private suspend fun findUnusedSlot(): Int? = withContext(Dispatchers.IO) {
+    var slot: Int? = null
+    var i = 0
+    while (true) {
+        val favorite = favoriteRepository.getSingleFavorite(i.toLong())
+        if (favorite == null) {
+            slot = i
+            break
         }
-         insertNewFavorite(Favorite(id = slot.toLong(), address = address, lat = lat, lng = lon))
+        i++
     }
-
-
-
-
+    slot
+}
 
 }

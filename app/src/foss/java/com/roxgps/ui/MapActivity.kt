@@ -40,27 +40,24 @@ class MapActivity: BaseMapActivity(), OnMapReadyCallback, MapLibreMap.OnMapClick
         }
         return false
     }
-    private fun updateMarker(it: LatLng) {
-        // TODO: mMarker?.isVisible = true
-        if (mMarker == null) {
-            mMarker = mMap.addMarker(
-                MarkerOptions().position(it)
-            )
-        } else {
-            mMarker?.position = it!!
-        }
+    private fun updateMarker(latLng: LatLng) {
+    if (mMarker == null) {
+        mMarker = mMap.addMarker(MarkerOptions().position(latLng))
+    } else {
+        mMarker?.position = latLng
     }
-    private fun removeMarker() {
-        mMarker?.remove() // mMarker?.isVisible = false
-        mMarker = null
-    }
+}
+private fun removeMarker() {
+    mMarker?.remove()
+    mMarker = null
+}
     override fun initializeMap() {
         val key = packageManager.getApplicationInfo(packageName, PackageManager.GET_META_DATA).metaData.getString("com.maplibre.AccessToken")
         MapLibre.getInstance(this, key, WellKnownTileServer.Mapbox)
         // val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment?
         val mapFragment = SupportMapFragment.newInstance()
         supportFragmentManager.beginTransaction()
-            .replace(R.id.mapView, mapFragment)
+            .replace(R.id.map, mapFragment)
             .commit()
         mapFragment?.getMapAsync(this)
     }

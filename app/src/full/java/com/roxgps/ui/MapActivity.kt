@@ -35,13 +35,19 @@ class MapActivity: BaseMapActivity(), OnMapReadyCallback, GoogleMap.OnMapClickLi
         }
         return false
     }
-    private fun updateMarker(it: LatLng) {
-        mMarker?.position = it!!
-        mMarker?.isVisible = true
+    private fun updateMarker(latLng: LatLng) {
+    if (mMarker == null) {
+        mMarker = mMap.addMarker(
+            MarkerOptions().position(latLng).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED))
+        )
+    } else {
+        mMarker?.position = latLng
     }
-    private fun removeMarker() {
-        mMarker?.isVisible = false
-    }
+}
+private fun removeMarker() {
+    mMarker?.remove()
+    mMarker = null
+}
     override fun initializeMap() {
         val mapFragment = SupportMapFragment.newInstance()
         supportFragmentManager.beginTransaction()
