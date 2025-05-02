@@ -58,25 +58,41 @@ private fun removeMarker() {
         mapFragment?.getMapAsync(this)
     }
     override fun moveMapToNewLocation(moveNewLocation: Boolean) {
-        if (moveNewLocation) {
-            mLatLng = LatLng(lat, lon)
-            mLatLng.let { latLng ->
-                mMap.animateCamera(CameraUpdateFactory.newCameraPosition(
-                        CameraPosition.Builder()
-                        .target(latLng!!)
-                        .zoom(12.0f)
+    if (moveNewLocation) {
+        // Perbarui lokasi latLng
+        mLatLng = LatLng(lat, lon)
+        mLatLng?.let { latLng ->
+            // Pindahkan kamera ke lokasi baru
+            mMap.animateCamera(
+                CameraUpdateFactory.newCameraPosition(
+                    CameraPosition.Builder()
+                        .target(latLng)
+                        .zoom(18.0f) // Zoom level diperbesar ke 15.0f
                         .bearing(0f)
                         .tilt(0f)
                         .build()
-                ))
+                )
+            )
+
+            // Cek apakah marker tersedia, jika tidak tambahkan marker baru
+            if (mMarker == null) {
+                mMarker = mMap.addMarker(
+                    MarkerOptions()
+                        .position(latLng)
+                        .title("Lokasi") // Judul marker opsional
+                        .visible(true)
+                )
+            } else {
+                // Perbarui posisi marker jika sudah ada
                 mMarker?.apply {
                     position = latLng
                     isVisible = true
-                    showInfoWindow()
+                    showInfoWindow() // Tampilkan info window jika ada
                 }
             }
         }
     }
+}
     override fun onMapReady(googleMap: GoogleMap) {
         mMap = googleMap
         with(mMap){
@@ -96,7 +112,7 @@ private fun removeMarker() {
             mapType = viewModel.mapType
 
 
-            val zoom = 12.0f
+            val zoom = 15.0f
             lat = viewModel.getLat
             lon  = viewModel.getLng
             mLatLng = LatLng(lat, lon)
@@ -150,17 +166,22 @@ private fun removeMarker() {
 
         binding.startButton.setOnClickListener {
     if (mLatLng != null) {
-        viewModel.update(true, lat, lon)
+        // Perbarui status lokasi palsu di ViewModel
+        viewModel.update(true, mLatLng!!.latitude, mLatLng!!.longitude)
 
-        // Perbarui marker
+        // Perbarui marker (jika diperlukan)
         updateMarker(mLatLng!!)
 
-        // Tampilkan tombol stop, sembunyikan tombol start
+        // Pindahkan kamera ke lokasi marker palsu
+        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(mLatLng, 18.0f))
+
+        // Atur visibilitas tombol
         binding.startButton.visibility = View.GONE
         binding.stopButton.visibility = View.VISIBLE
 
         lifecycleScope.launch {
             try {
+                // Ambil alamat berdasarkan lokasi marker palsu
                 mLatLng?.getAddress(getActivityInstance())?.let { addressFlow ->
                     addressFlow.collect { value ->
                         showStartNotification(value)
@@ -173,6 +194,7 @@ private fun removeMarker() {
             }
         }
     } else {
+        // Tampilkan pesan jika lokasi marker tidak tersedia
         showToast(getString(R.string.invalid_location))
     }
 }

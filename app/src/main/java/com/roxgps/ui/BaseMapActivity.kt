@@ -484,20 +484,21 @@ protected fun getLastLocation() {
             fusedLocationClient.lastLocation.addOnCompleteListener(this) { task ->
                 val location: Location? = task.result
                 if (location == null) {
+                    // Minta data lokasi baru jika lokasi terakhir tidak tersedia
                     requestNewLocationData()
                 } else {
                     lat = location.latitude
                     lon = location.longitude
-                    moveMapToNewLocation(true)
+                    moveMapToNewLocation(true) // Pindahkan peta berdasarkan logika marker/lokasi asli
                 }
             }.addOnFailureListener {
-                handleLocationError()
+                handleLocationError() // Tangani kesalahan jika lokasi gagal diperoleh
             }
         } else {
-            handleLocationError()
+            handleLocationError() // Tampilkan pesan jika layanan lokasi tidak aktif
         }
     } else {
-        requestPermissions()
+        requestPermissions() // Minta izin lokasi jika belum diberikan
     }
 }
 

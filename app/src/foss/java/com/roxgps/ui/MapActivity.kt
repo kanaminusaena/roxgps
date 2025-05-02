@@ -181,30 +181,60 @@ private fun removeMarker() {
         }
 
         binding.startButton.setOnClickListener {
-            viewModel.update(true, lat, lon)
-            mLatLng.let {
-                updateMarker(it!!)
-            }
-            binding.startButton.visibility = View.GONE
-            binding.stopButton.visibility = View.VISIBLE
-            lifecycleScope.launch {
-                mLatLng?.getAddress(getActivityInstance())?.let { address ->
-                    address.collect{ value ->
+    if (mLatLng != null) {
+        // Perbarui status lokasi palsu di ViewModel
+        viewModel.update(true, mLatLng!!.latitude, mLatLng!!.longitude)
+
+        // Perbarui marker (jika diperlukan)
+        updateMarker(mLatLng!!)
+
+        // Pindahkan kamera ke lokasi marker palsu
+        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(mLatLng, 18.0f))
+
+        // Atur visibilitas tombol
+        binding.startButton.visibility = View.GONE
+        binding.stopButton.visibility = View.VISIBLE
+
+        lifecycleScope.launch {
+            try {
+                // Ambil alamat berdasarkan lokasi marker palsu
+                mLatLng?.getAddress(getActivityInstance())?.let { addressFlow ->
+                    addressFlow.collect { value ->
                         showStartNotification(value)
                     }
                 }
+                showToast(getString(R.string.location_set))
+            } catch (e: Exception) {
+                e.printStackTrace()
+                showToast(getString(R.string.location_error))
             }
-            showToast(getString(R.string.location_set))
         }
+    } else {
+        // Tampilkan pesan jika lokasi marker tidak tersedia
+        showToast(getString(R.string.invalid_location))
+    }
+}
         binding.stopButton.setOnClickListener {
-            mLatLng.let {
-                viewModel.update(false, it!!.latitude, it.longitude)
-            }
-            removeMarker()
-            binding.stopButton.visibility = View.GONE
-            binding.startButton.visibility = View.VISIBLE
-            cancelNotification()
-            showToast(getString(R.string.location_unset))
-        }
+    if (mLatLng != null) {
+        // Perbarui ViewModel untuk menonaktifkan lokasi
+        viewModel.update(false, mLatLng!!.latitude, mLatLng!!.longitude)
+
+        // Hapus marker dari peta
+        removeMarker()
+
+        // Atur visibilitas tombol
+        binding.stopButton.visibility = View.GONE
+        binding.startButton.visibility = View.VISIBLE
+
+        // Batalkan notifikasi
+        cancelNotification()
+
+        // Tampilkan pesan kepada pengguna
+        showToast(getString(R.string.location_unset))
+    } else {
+        // Tampilkan pesan jika lokasi tidak valid
+        showToast(getString(R.string.invalid_location))
+    }
+}
     }
 }
