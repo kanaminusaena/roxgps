@@ -188,8 +188,6 @@ abstract class BaseMapActivity: AppCompatActivity() {
         )
         WindowInsetsCompat.CONSUMED
     }
-}
-
         val progress = binding.search.searchProgress
         binding.search.searchBox.setOnEditorActionListener { v, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_SEARCH) {
