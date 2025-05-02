@@ -37,10 +37,12 @@ class MapActivity: BaseMapActivity(), OnMapReadyCallback, GoogleMap.OnMapClickLi
     }
     private fun updateMarker(latLng: LatLng) {
     if (mMarker == null) {
+        // Tambahkan marker baru jika belum ada
         mMarker = mMap.addMarker(
             MarkerOptions().position(latLng).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED))
         )
     } else {
+        // Perbarui posisi marker jika sudah ada
         mMarker?.position = latLng
     }
 }
@@ -117,17 +119,16 @@ private fun removeMarker() {
         }
     }
     override fun onMapClick(latLng: LatLng) {
-        mLatLng = latLng
-        mMarker?.let { marker ->
-            mLatLng.let {
-                // marker.isVisible = true
-                updateMarker(it!!)
-                mMap.animateCamera(CameraUpdateFactory.newLatLng(it))
-                lat = it.latitude
-                lon = it.longitude
-            }
-        }
-    }
+    // Perbarui marker ke lokasi yang diklik
+    updateMarker(latLng)
+
+    // Animasi kamera ke lokasi yang diklik
+    mMap.animateCamera(CameraUpdateFactory.newLatLng(latLng))
+
+    // Perbarui nilai lat dan lon
+    lat = latLng.latitude
+    lon = latLng.longitude
+}
 
     override fun getActivityInstance(): BaseMapActivity {
         return this@MapActivity
@@ -148,30 +149,54 @@ private fun removeMarker() {
         }
 
         binding.startButton.setOnClickListener {
-            viewModel.update(true, lat, lon)
-            mLatLng.let {
-                updateMarker(it!!)
-            }
-            binding.startButton.visibility = View.GONE
-            binding.stopButton.visibility = View.VISIBLE
-            lifecycleScope.launch {
-                mLatLng?.getAddress(getActivityInstance())?.let { address ->
-                    address.collect{ value ->
+    if (mLatLng != null) {
+        viewModel.update(true, lat, lon)
+
+        // Perbarui marker
+        updateMarker(mLatLng!!)
+
+        // Tampilkan tombol stop, sembunyikan tombol start
+        binding.startButton.visibility = View.GONE
+        binding.stopButton.visibility = View.VISIBLE
+
+        lifecycleScope.launch {
+            try {
+                mLatLng?.getAddress(getActivityInstance())?.let { addressFlow ->
+                    addressFlow.collect { value ->
                         showStartNotification(value)
                     }
                 }
+                showToast(getString(R.string.location_set))
+            } catch (e: Exception) {
+                e.printStackTrace()
+                showToast(getString(R.string.location_error))
             }
-            showToast(getString(R.string.location_set))
         }
+    } else {
+        showToast(getString(R.string.invalid_location))
+    }
+}
         binding.stopButton.setOnClickListener {
-            mLatLng.let {
-                viewModel.update(false, it!!.latitude, it.longitude)
-            }
-            removeMarker()
-            binding.stopButton.visibility = View.GONE
-            binding.startButton.visibility = View.VISIBLE
-            cancelNotification()
-            showToast(getString(R.string.location_unset))
-        }
+    if (mLatLng != null) {
+        // Perbarui ViewModel untuk menonaktifkan lokasi
+        viewModel.update(false, mLatLng!!.latitude, mLatLng!!.longitude)
+
+        // Hapus marker dari peta
+        removeMarker()
+
+        // Atur visibilitas tombol
+        binding.stopButton.visibility = View.GONE
+        binding.startButton.visibility = View.VISIBLE
+
+        // Batalkan notifikasi
+        cancelNotification()
+
+        // Tampilkan pesan kepada pengguna
+        showToast(getString(R.string.location_unset))
+    } else {
+        // Tampilkan pesan jika lokasi tidak valid
+        showToast(getString(R.string.invalid_location))
+    }
+}
     }
 }

@@ -19,6 +19,8 @@
     <!-- Errors -->
     <string name="error_xposed_module_missing">Xposed module is not enabled</string>
     <string name="error_xposed_module_missing_desc">Enable this module in LSPosed Manager</string>
+    <string name="location_error">Lokasi error 🔞</string>
+    <string name="invalid_location">Lokasi tidak diketahui❗</string>
 
     <!-- About -->
     <string name="about">About</string>
