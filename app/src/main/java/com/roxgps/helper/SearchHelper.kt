@@ -14,7 +14,7 @@ import java.io.IOException
 import java.util.Locale // Perlu untuk Geocoder
 import java.util.regex.Matcher
 import java.util.regex.Pattern
-
+import kotlinx.coroutines.channels.awaitClose
 // Sealed class untuk merepresentasikan status proses search
 // Dipindahkan dari BaseMapActivity
 sealed class SearchProgress {
