@@ -10,7 +10,6 @@ import android.os.Build // Perlu untuk RECEIVER_NOT_EXPORTED
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.roxgps.R // Import R dari project kamu
-import com.roxgps.receiver.NotificationActionReceiver // Import receiver class (file terpisah)
 import com.roxgps.utils.NotificationsChannel // Import objek singleton NotificationsChannel
 
 // Helper class untuk mengelola Notifikasi dan Broadcast Receiver terkait aksinya
@@ -36,9 +35,10 @@ class NotificationHelper(
     // address: teks alamat atau info lokasi yang ditampilkan di notifikasi
     fun showStartNotification(address: String) {
         // Membuat Intent yang akan dikirim saat tombol Stop di notifikasi diklik
-        val stopIntent = Intent(context, NotificationActionReceiver::class.java).apply {
-            action = NotificationsChannel.ACTION_STOP // Set action spesifik untuk menandai intent ini
-            // Bisa tambahkan extra data lain ke intent jika diperlukan
+        val stopIntent = Intent(NotificationsChannel.ACTION_STOP).apply { // <-- UBAH INI!
+             // Tidak perlu lagi: Intent(context, NotificationActionReceiver::class.java)
+             // action = NotificationsChannel.ACTION_STOP // Tidak perlu diset lagi karena sudah di constructor Intent
+             // Bisa tambahkan extra data lain ke intent jika diperlukan
         }
 
         // Membuat PendingIntent dari Intent. PendingIntent ini yang dilekatkan ke tombol di notifikasi.
@@ -58,7 +58,7 @@ class NotificationHelper(
             builder.setContentTitle(context.getString(R.string.location_set)) // Judul notifikasi
             builder.setContentText(address) // Isi teks notifikasi
             builder.setAutoCancel(true) // Notifikasi hilang otomatis saat diklik (meski ongoing, kontennya)
-            builder.setOngoing(true) // Membuat notifikasi ongoing (tidak bisa di-swipe hilang dari panel notifikasi)
+            builder.setOngoing(false) // Membuat notifikasi ongoing (tidak bisa di-swipe hilang dari panel notifikasi)
             builder.setCategory(Notification.CATEGORY_EVENT) // Kategori notifikasi
             builder.priority = NotificationCompat.PRIORITY_HIGH // Prioritas notifikasi
 

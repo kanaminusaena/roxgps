@@ -16,7 +16,8 @@ import com.google.android.material.progressindicator.LinearProgressIndicator
 import com.roxgps.BuildConfig
 import com.roxgps.R // Import R dari project kamu
 import com.roxgps.adapter.FavListAdapter // Butuh adapter favorit
-import com.roxgps.data.model.Favorite // Butuh model Favorite
+import com.roxgps.room.Favorite // Butuh model Favorite, lokasinya di package room
+
 import kotlinx.coroutines.flow.Flow // Butuh Flow kalau FavList dipass sebagai Flow
 // Import yang mungkin dibutuhkan oleh kode dialog custom
 // import android.graphics.drawable.Drawable

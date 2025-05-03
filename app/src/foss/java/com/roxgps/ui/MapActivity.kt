@@ -447,19 +447,6 @@ class MapActivity: BaseMapActivity(), OnMapReadyCallback, MapLibreMap.OnMapClick
         return result // Mengembalikan hasil alamat
     }
 
-    // --- Implementasi abstract method getActivityInstance() ---
-    // Fungsi ini kemungkinan tidak diperlukan lagi jika Context atau referensi Activity
-    // di helper-helper sudah diatur dengan benar menggunakan 'this' dari Activity.
-    // Direkomendasikan untuk menghapus abstract fun ini dari BaseMapActivity
-    // dan implementasinya di sini.
-    override fun getActivityInstance(): BaseMapActivity { // TODO dari kode asli: return this@MapActivity
-         // Asumsi fungsi abstract ini akan dihapus dari BaseMapActivity
-        // Jika tetap ada, implementasi ini sudah benar (mengembalikan instance Activity)
-         return this@MapActivity
-    }
-    // ---------------------------------------------------------
-
-
     // --- FUNGSI MAPLIBRE SPECIFIC LAINNYA ---
 
     // Update atau tambah marker di map MapLibre

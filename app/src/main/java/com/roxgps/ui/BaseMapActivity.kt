@@ -40,7 +40,7 @@ import com.roxgps.BuildConfig
 import com.roxgps.R // Penting untuk resources
 // Import adapter dan model jika masih dipake di listener dialog atau di Activity langsung
 import com.roxgps.adapter.FavListAdapter // Jika adapter dipegang di Activity
-import com.roxgps.data.model.Favorite // Jika model Favorite dipegang/dipakai di Activity
+import com.roxgps.room.Favorite // Jika model Favorite dipegang/dipakai di Activity
 import com.roxgps.databinding.ActivityMapBinding // View Binding
 import com.roxgps.ui.viewmodel.MainViewModel // ViewModel
 import com.roxgps.utils.JoystickService // Jika service di-start dari sini
