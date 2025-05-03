@@ -17,15 +17,16 @@ import com.roxgps.utils.FileLogger
 
 object CompetitorTokenHooker {
 
+        // Method hook utama untuk GoFood, dipanggil dari HookEntry
     fun hook(lpparam: XC_LoadPackage.LoadPackageParam) {
-        if (lpparam.packageName == "com.gojek.app") { // GANTI dengan nama package GoFood yang BENER
-             FileLogger.log("GS_HOOK: Masuk ke package GoFood!", "Gojek", "I") // Ganti log awal
+         FileLogger.log("GS_HOOK: Memasang hook spesifik untuk GoFood!", "Gojek", "I") // Log awal
 
-            hookMethodC(lpparam)
-            hookMethodIntercept(lpparam) // Masih pasang hook intercept juga kalau mau
+        hookMethodC(lpparam) // Panggil method hook Lo.tmK;->c()
+        hookMethodIntercept(lpparam) // Panggil method hook intercept OkHttp
 
-        }
+        // Tambahin panggilan ke method hook GoFood lain kalau ada di sini
     }
+
 
     private fun hookMethodC(lpparam: XC_LoadPackage.LoadPackageParam) {
          try {
