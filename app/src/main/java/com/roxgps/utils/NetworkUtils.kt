@@ -27,4 +27,19 @@ object NetworkUtils {
             val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false // Jika tidak ada capabilities, kembalikan false
 
             // Memeriksa apakah jaringan aktif memiliki salah satu transport (Wi-Fi, Seluler, Ethernet)
-            return
+            return capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
+                   capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) ||
+                   capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
+        } else {
+            // Untuk versi Android di bawah Marshmallow (API < 23) - Menggunakan metode deprecated
+            @Suppress("DEPRECATION") // Menekan warning untuk metode deprecated
+            val activeNetworkInfo = connectivityManager.activeNetworkInfo ?: return false // Jika tidak ada info jaringan aktif, kembalikan false
+            @Suppress("DEPRECATION") // Menekan warning
+            return activeNetworkInfo.isConnected // Mengembalikan status koneksi
+        }
+    }
+
+    // Bisa tambahkan fungsi utility network lain di sini jika diperlukan
+    // fun getNetworkType(context: Context): String { ... }
+    // fun getWifiSSID(context: Context): String? { ... }
+}
