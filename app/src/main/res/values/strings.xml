@@ -66,9 +66,7 @@
     <string name="location_service_disabled">Aktifkan lokasi</string>
     <string name="activate">Activate</string>
     <string name="location_not_select">Lokasi belum di tentukan</string>
-    <string name="update_available">Download tersedia</string>
-    <string name="update_button">Download</string>
+    
     <string name="bs_update_download_completed">Download complete</string>
-    <string name="bs_update_download_failed">Download gagal</string>
-
+    
 </resources>
