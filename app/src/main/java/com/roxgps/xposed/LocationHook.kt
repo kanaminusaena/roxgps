@@ -48,7 +48,7 @@ object LocationHook {
             accuracy = settings.accuracy!!.toFloat()
 
         } catch (e: Exception) {
-            Timber.tag("GPS Setter")
+            Timber.tag("Rox GPS")
                 .e(e, "Failed to get XposedSettings for %s", context.packageName)
         }
     }

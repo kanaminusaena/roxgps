@@ -479,26 +479,34 @@ abstract class BaseMapActivity: AppCompatActivity() {
 @SuppressLint("MissingPermission")
 protected fun getLastLocation() {
     fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
-    if (checkPermissions()) {
-        if (isLocationEnabled()) {
-            fusedLocationClient.lastLocation.addOnCompleteListener(this) { task ->
-                val location: Location? = task.result
-                if (location == null) {
-                    // Minta data lokasi baru jika lokasi terakhir tidak tersedia
-                    requestNewLocationData()
-                } else {
-                    lat = location.latitude
-                    lon = location.longitude
-                    moveMapToNewLocation(true) // Pindahkan peta berdasarkan logika marker/lokasi asli
-                }
-            }.addOnFailureListener {
-                handleLocationError() // Tangani kesalahan jika lokasi gagal diperoleh
-            }
+
+    // Periksa izin lokasi
+    if (!checkPermissions()) {
+        requestPermissions() // Minta izin jika belum diberikan
+        return
+    }
+
+    // Periksa apakah layanan lokasi aktif
+    if (!isLocationEnabled()) {
+        handleLocationError() // Pesan informatif
+        return
+    }
+
+    // Ambil lokasi terakhir
+    fusedLocationClient.lastLocation.addOnCompleteListener(this) { task ->
+        val location: Location? = task.result
+        if (location != null) {
+            // Lokasi terakhir ditemukan
+            lat = location.latitude
+            lon = location.longitude
+            moveMapToNewLocation(true) // Perbarui peta
         } else {
-            handleLocationError() // Tampilkan pesan jika layanan lokasi tidak aktif
+            // Lokasi terakhir tidak ditemukan, minta lokasi baru
+            requestNewLocationData()
         }
-    } else {
-        requestPermissions() // Minta izin lokasi jika belum diberikan
+    }.addOnFailureListener {
+        // Tangani kesalahan saat mengambil lokasi
+        handleLocationError()
     }
 }
 
@@ -518,12 +526,26 @@ protected fun getLastLocation() {
     }
 
     private val mLocationCallback = object : LocationCallback() {
-        override fun onLocationResult(locationResult: LocationResult) {
-            val mLastLocation: Location = locationResult.lastLocation!!
-            lat = mLastLocation.latitude
-            lon = mLastLocation.longitude
+    override fun onLocationResult(locationResult: LocationResult) {
+        val mLastLocation: Location? = locationResult.lastLocation
+
+        if (mLastLocation != null) {
+            val latitude = mLastLocation.latitude
+            val longitude = mLastLocation.longitude
+
+            // Periksa apakah lokasi valid
+            if (latitude != 0.0 && longitude != 0.0) {
+                lat = latitude
+                lon = longitude
+               // println("Lokasi diperbarui: Latitude = $lat, Longitude = $lon")
+            } else {
+                println("Lokasi tidak valid.")
+            }
+        } else {
+            println("Tidak ada lokasi yang tersedia.")
         }
     }
+}
 
     private fun isLocationEnabled(): Boolean {
         val locationManager: LocationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
