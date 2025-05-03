@@ -1,34 +1,40 @@
 package com.roxgps.xposed.hookers // Pastikan package ini bener
 
+// --- TAMBAHKAN IMPORT INI DI SINI ---
+import de.robv.android.xposed.XC_MethodHook
+import de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam // Untuk tipe lpparam
+import de.robv.android.xposed.callbacks.XC_MethodHook.MethodHookParam // Untuk tipe param di after/beforeHookedMethod
+// Untuk param.method.getDeclaringClass().getName()
+import java.lang.reflect.Method // Atau import de.robv.android.xposed.XC_MethodHook.MethodHookParam.method jika XC_MethodHook punya nested class MethodHookParam.method
+// Paling aman import java.lang.reflect.Method
+
+// Import XposedBridge dan XposedHelpers (kayaknya udah ada)
 import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
-import de.robv.android.xposed.callbacks.XC_LoadPackage
-import java.util.Map // Import Map dari Java
-import okhttp3.Interceptor // Import library OkHttp yang relevan
+
+// Import library lain yang lo pakai (OkHttp, Map, FileLogger, dll)
+import java.util.Map
+import okhttp3.Interceptor
 import okhttp3.Request
 import okhttp3.Response
-import okhttp3.Headers
-import okhttp3.ResponseBody
-import okio.Buffer
-import java.nio.charset.Charset
-import com.roxgps.utils.FileLogger
-// Asumsi class FileLogger ada di package com.roxgps.xposed.utils atau yang bisa diimport
-// import com.roxgps.xposed.utils.FileLogger // <-- Pastikan import ini bener!
+// ... import lainnya
+import com.roxgps.utils.FileLogger // Pastikan import ini bener!
+
+// --- AKHIR IMPORT YANG DITAMBAHKAN ---
+
 
 object CompetitorTokenHooker {
 
-        // Method hook utama untuk GoFood, dipanggil dari HookEntry
-    fun hook(lpparam: XC_LoadPackage.LoadPackageParam) {
-         FileLogger.log("GS_HOOK: Memasang hook spesifik untuk GoFood!", "Gojek", "I") // Log awal
+    fun hook(lpparam: LoadPackageParam) { // Tipe lpparam juga pakai LoadPackageParam dari import
+         FileLogger.log("GS_HOOK: Memasang hook spesifik untuk GoFood!", "Gojek", "I")
 
-        hookMethodC(lpparam) // Panggil method hook Lo.tmK;->c()
-        hookMethodIntercept(lpparam) // Panggil method hook intercept OkHttp
-
-        // Tambahin panggilan ke method hook GoFood lain kalau ada di sini
+        hookMethodC(lpparam)
+        hookMethodIntercept(lpparam)
     }
 
+    // ... method hookMethodC() dan hookMethodIntercept() di bawah ...
 
-    private fun hookMethodC(lpparam: XC_LoadPackage.LoadPackageParam) {
+    private fun hookMethodC(lpparam: LoadPackageParam) { // Tipe lpparam pakai LoadPackageParam
          try {
             val tmK_ClassName = "Lo.tmK;" // GANTI kalau nama classnya beda!
             val c_MethodName = "c"
@@ -37,40 +43,39 @@ object CompetitorTokenHooker {
                 tmK_ClassName,
                 lpparam.classLoader,
                 c_MethodName,
-                object : XposedHelpers.XC_MethodHook() {
-                    override fun afterHookedMethod(param: MethodHookParam) {
-                         val className = param.method.getDeclaringClass().getName()
-                         val methodName = param.method.getName()
-                         FileLogger.log("GS_HOOK_C: Hooked after $className->$methodName()", "Gojek", "I") // Ganti log
+                object : XC_MethodHook() { // XC_MethodHook sekarang dikenal
+                    override fun afterHookedMethod(param: MethodHookParam) { // MethodHookParam sekarang dikenal
+                         val className = param.method.getDeclaringClass().getName() // param.method sekarang dikenal
+                         val methodName = param.method.getName() // param.method sekarang dikenal
+                         FileLogger.log("GS_HOOK_C: Hooked after $className->$methodName()", "Gojek", "I")
 
-                         val headersMap = param.result as? Map<String, String>
+                         val headersMap = param.result as? Map<String, String> // param.result sekarang dikenal
 
                          if (headersMap != null) {
-                             FileLogger.log("GS_HOOK_C: --> Hasil Map Header Diterima: $headersMap", "Gojek", "D") // Ganti log (level Debug)
+                             FileLogger.log("GS_HOOK_C: --> Hasil Map Header Diterima: $headersMap", "Gojek", "D")
 
                              val authHeader = headersMap["Authorization"]
                              if (authHeader != null && authHeader.startsWith("Bearer ")) {
                                  val token = authHeader.substringAfter("Bearer ")
-                                 FileLogger.log("GS_HOOK_C: --> TOKEN BEARER: $token", "Gojek", "S") // <-- Ganti log (level Sensitive/Secret)
+                                 FileLogger.log("GS_HOOK_C: --> TOKEN BEARER: $token", "Gojek", "S")
                                  // TODO: Kirim 'token' ini ke aplikasi kontrol RoxGPS lo pake IPC (langkah selanjutnya)
                              } else {
-                                FileLogger.log("GS_HOOK_C: --> Header Authorization tidak ditemukan atau formatnya beda: $authHeader", "Gojek", "W") // Ganti log (level Warning)
+                                FileLogger.log("GS_HOOK_C: --> Header Authorization tidak ditemukan atau formatnya beda: $authHeader", "Gojek", "W")
                              }
                          } else {
-                            FileLogger.log("GS_HOOK_C: --> Hasil method BUKAN Map: ${param.result}", "Gojek", "W") // Ganti log (level Warning)
+                            FileLogger.log("GS_HOOK_C: --> Hasil method BUKAN Map: ${param.result}", "Gojek", "W")
                          }
                     }
                 }
             )
-             FileLogger.log("GS_HOOK_C: Hook Lo.tmK;->c() terpasang.", "Gojek", "I") // Ganti log
+             FileLogger.log("GS_HOOK_C: Hook Lo.tmK;->c() terpasang.", "Gojek", "I")
         } catch (e: Exception) {
-            FileLogger.log("GS_HOOK_C: GAGAL pasang hook Lo.tmK;->c(): ${e.message}", "Gojek", "E") // Ganti log (level Error)
+            FileLogger.log("GS_HOOK_C: GAGAL pasang hook Lo.tmK;->c(): ${e.message}", "Gojek", "E")
         }
     }
-     // ... method hookMethodIntercept() di bawah ini juga diganti log-nya ...
-     // private fun hookMethodIntercept(lpparam: ...) { ... }
-    // ... hook method() di atas ini ...
-    private fun hookMethodIntercept(lpparam: XC_LoadPackage.LoadPackageParam) {
+
+     // method hookMethodIntercept()
+    private fun hookMethodIntercept(lpparam: LoadPackageParam) { // Tipe lpparam pakai LoadPackageParam
          try {
             val interceptorClassName = "com.scp.login.sso.data.network.SSOApiFactory\$httpHeaderInterceptor\$2\$2" // GANTI kalau namanya beda!
             val interceptMethodName = "intercept"
@@ -82,81 +87,48 @@ object CompetitorTokenHooker {
                 lpparam.classLoader,
                 interceptMethodName,
                 chainClass,
-                object : XposedHelpers.XC_MethodHook() {
-                    override fun beforeHookedMethod(param: MethodHookParam) {
-                        val className = param.method.getDeclaringClass().getName()
-                        val methodName = param.method.getName()
-                        FileLogger.log("GS_HOOK_INTERCEPT: Hooked BEFORE $className->$methodName()", "Gojek", "I") // Ganti log
+                object : XC_MethodHook() { // XC_MethodHook sekarang dikenal
+                    override fun beforeHookedMethod(param: MethodHookParam) { // MethodHookParam sekarang dikenal
+                        val className = param.method.getDeclaringClass().getName() // param.method dikenal
+                        val methodName = param.method.getName() // param.method dikenal
+                        FileLogger.log("GS_HOOK_INTERCEPT: Hooked BEFORE $className->$methodName()", "Gojek", "I")
 
                         val chain = param.args[0] as? Interceptor.Chain
 
                         if (chain != null) {
-                            val request = chain.request() // DAPET OBJEK REQUEST ASLI
-                            FileLogger.log("GS_HOOK_INTERCEPT:   --> Req URL: ${request.url}", "Gojek", "D") // Ganti log
-                            FileLogger.log("GS_HOOK_INTERCEPT:   --> Req Method: ${request.method}", "Gojek", "D") // Ganti log
-                            FileLogger.log("GS_HOOK_INTERCEPT:   --> Req Headers: ${request.headers}", "Gojek", "D") // Ganti log
+                            val request = chain.request()
+                            FileLogger.log("GS_HOOK_INTERCEPT:   --> Req URL: ${request.url}", "Gojek", "D")
+                            FileLogger.log("GS_HOOK_INTERCEPT:   --> Req Method: ${request.method}", "Gojek", "D")
+                            FileLogger.log("GS_HOOK_INTERCEPT:   --> Req Headers: ${request.headers}", "Gojek", "D")
 
                             val authHeader = request.header("Authorization")
                              if (authHeader != null && authHeader.startsWith("Bearer ")) {
                                 val token = authHeader.substringAfter("Bearer ")
-                                FileLogger.log("GS_HOOK_INTERCEPT:   --> Req TOKEN: $token", "Gojek", "S") // <-- Ganti log (level Sensitive/Secret)
+                                FileLogger.log("GS_HOOK_INTERCEPT:   --> Req TOKEN: $token", "Gojek", "S")
                                 // TODO: Kirim 'token' ini ke aplikasi kontrol RoxGPS lo pake IPC
                             } else {
                                 FileLogger.log("GS_HOOK_INTERCEPT:   --> Req Header Authorization tidak ditemukan atau formatnya beda: $authHeader", "Gojek", "W")
                             }
-
-                            // Optional: Baca Request Body (hati-hati!)
-                            /*
-                            val requestBody = request.body
-                            if (requestBody != null) {
-                                try {
-                                    val buffer = Buffer()
-                                    requestBody.writeTo(buffer)
-                                    val charset = requestBody.contentType()?.charset(Charset.forName("UTF-8")) ?: Charset.forName("UTF-8")
-                                    FileLogger.log("GS_HOOK_INTERCEPT:   --> Request Body: ${buffer.readString(charset)}", "Gojek", "V") // Level Verbose
-                                } catch (e: Exception) {
-                                    FileLogger.log("GS_HOOK_INTERCEPT: Error baca Request Body: ${e.message}", "Gojek", "E")
-                                }
-                            }
-                             */
                         }
                     }
 
-                    override fun afterHookedMethod(param: MethodHookParam) {
-                         val className = param.method.getDeclaringClass().getName()
-                         val methodName = param.method.getName()
-                         FileLogger.log("GS_HOOK_INTERCEPT: Hooked AFTER $className->$methodName()", "Gojek", "I") // Ganti log
+                    override fun afterHookedMethod(param: MethodHookParam) { // MethodHookParam sekarang dikenal
+                         val className = param.method.getDeclaringClass().getName() // param.method dikenal
+                         val methodName = param.method.getName() // param.method dikenal
+                         FileLogger.log("GS_HOOK_INTERCEPT: Hooked AFTER $className->$methodName()", "Gojek", "I")
 
-                         val response = param.result as? Response
+                         val response = param.result as? Response // param.result dikenal
 
                          if (response != null) {
-                             FileLogger.log("GS_HOOK_INTERCEPT:   --> Resp Code: ${response.code}", "Gojek", "D") // Ganti log
-                             FileLogger.log("GS_HOOK_INTERCEPT:   --> Resp Headers: ${response.headers}", "Gojek", "D") // Ganti log
-
-                             // Optional: Baca Response Body (HATI-HATI! Gunakan buffer.clone() agar tidak merusak stream asli)
-                             /*
-                             val responseBody = response.body
-                             if (responseBody != null) {
-                                 try {
-                                     val source = responseBody.source()
-                                     source.request(Long.MAX_VALUE) // Buffer the entire response
-                                     val buffer = source.buffer()
-                                     val charset = responseBody.contentType()?.charset(Charset.forName("UTF-8")) ?: Charset.forName("UTF-8")
-                                     val responseBodyString = buffer.clone().readString(charset) // CLONE buffer
-                                     FileLogger.log("GS_HOOK_INTERCEPT:   --> Response Body: $responseBodyString", "Gojek", "V") // Level Verbose
-                                     // TODO: Kalau responsenya JSON data restoran, parse string ini di sini!
-                                 } catch (e: Exception) {
-                                     FileLogger.log("GS_HOOK_INTERCEPT: Error baca Response Body: ${e.message}", "Gojek", "E")
-                                 }
-                             }
-                             */
+                             FileLogger.log("GS_HOOK_INTERCEPT:   --> Resp Code: ${response.code}", "Gojek", "D")
+                             FileLogger.log("GS_HOOK_INTERCEPT:   --> Resp Headers: ${response.headers}", "Gojek", "D")
                          }
                     }
                 }
             )
-             FileLogger.log("GS_HOOK_INTERCEPT: Hook intercept() terpasang.", "Gojek", "I") // Ganti log
+             FileLogger.log("GS_HOOK_INTERCEPT: Hook intercept() terpasang.", "Gojek", "I")
         } catch (e: Exception) {
-            FileLogger.log("GS_HOOK_INTERCEPT: GAGAL pasang hook intercept(): ${e.message}", "Gojek", "E") // Ganti log
+            FileLogger.log("GS_HOOK_INTERCEPT: GAGAL pasang hook intercept(): ${e.message}", "Gojek", "E")
         }
     }
 }

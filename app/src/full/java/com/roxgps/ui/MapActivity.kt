@@ -1,313 +1,362 @@
-package com.roxgps.ui
+package com.roxgps.ui // Sesuaikan dengan package Activity kamu
 
-import android.Manifest
-import android.annotation.SuppressLint
-import android.content.pm.PackageManager
-import android.view.View
-import androidx.core.app.ActivityCompat
-import androidx.lifecycle.lifecycleScope
+// --- IMPORTS YANG DIBUTUHKAN OLEH KODE MAPACTIVITY INI ---
+import android.Manifest // Untuk permission
+import android.annotation.SuppressLint // Untuk @SuppressLint
+import android.content.pm.PackageManager // Untuk cek permission result
+// ... import lain dari Android SDK ...
+import android.os.Bundle // Untuk Bundle
+import android.view.View // Untuk View
+import androidx.core.app.ActivityCompat // Untuk cek/request permission (sisa yang di onMapReady akan dihapus)
+import androidx.lifecycle.lifecycleScope // Untuk coroutine lifecycle
+// --- IMPORTS KHUSUS GOOGLE MAPS ---
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
-import com.google.android.gms.maps.model.*
-import com.roxgps.R
-import com.roxgps.utils.ext.getAddress
-import com.roxgps.utils.ext.showToast
-import kotlinx.coroutines.launch
+import com.google.android.gms.maps.model.* // LatLng, Marker, MarkerOptions, BitmapDescriptorFactory, CameraPosition
+// -----------------------------------
+import com.roxgps.R // Import R (resources ID)
+// --- IMPORTS UTILITY / EXTENSION YANG DIPAKAI DI MAPACTIVITY ---
+import com.roxgps.utils.ext.getAddress // Asumsi ekstensi LatLng ke alamat
+import com.roxgps.utils.ext.showToast // Asumsi ekstensi Context ke Toast
+import com.roxgps.utils.NetworkUtils // Utility cek koneksi (jika dipakai di sini selain di Base)
+// ------------------------------------------------------------
+// --- IMPORTS DARI BASEMAPACTIVITY YANG SUDAH DIREFACTOR ---
+import com.roxgps.ui.BaseMapActivity // Import BaseMapActivity yang sudah direfaktor
+// Import helper-helper jika kamu perlu mengaksesnya langsung dari MapActivity (jarang, biasanya lewat Base)
+// import com.roxgps.helper.LocationHelper
+// import com.roxgps.helper.LocationListener // Jika implement listener langsung di sini (biasanya di Base)
+// import com.roxgps.helper.DialogHelper
+// import com.roxgps.helper.NotificationHelper
+// import com.xgps.helper.SearchHelper
+// import com.roxgps.helper.SearchProgress // Jika digunakan langsung di sini
+// ---------------------------------------------------------
+import kotlinx.coroutines.launch // Untuk launch coroutine
+import androidx.appcompat.app.AppCompatActivity // BaseMapActivity extend ini
+// import androidx.lifecycle.ViewModel // Tidak perlu diimpor di sini jika ViewModel diakses lewat properti di BaseMapActivity
+import kotlin.properties.Delegates // Delegates.notNull (di Base)
 
-// Alias ini oke aja buat kejelasan, tapi LatLng bawaan Google Maps itu udah cukup jelas.
-// typealias CustomLatLng = LatLng // <-- Bisa dihapus kalau dirasa tidak perlu
 
-// Pastikan BaseMapActivity punya variabel 'lat' dan 'lon' dengan Delegate.notNull<Double>()
-// seperti yang pernah kita bahas.
-abstract class BaseMapActivity : AppCompatActivity() { // Asumsi extends AppCompatActivity
-    // Contoh di BaseMapActivity:
-    // var lat: Double by Delegates.notNull()
-    // var lon: Double by Delegates.notNull()
-    // ...
-}
+// --- KODE BASEMAPACTIVITY, DUMMY VIEWMODEL & BINDING DI BAWAH INI DIHAPUS KARENA SUDAH PUNYA FILE SENDIRI YANG SUDAH DIREFACTOR ---
+// abstract class BaseMapActivity : AppCompatActivity() { ... } // DIHAPUS
+// class DummyMapViewModel { ... } // DIHAPUS
+// class DummyBinding { ... } // DIHAPUS
+// -------------------------------------------------------------------------------------------------------------------------------
 
 
-class MapActivity : BaseMapActivity(), OnMapReadyCallback, GoogleMap.OnMapClickListener {
+// MapActivity meng-extend BaseMapActivity yang sudah direfaktor
+// BaseMapActivity yang direfaktor sudah mengimplementasikan LocationListener
+class MapActivity : BaseMapActivity(), OnMapReadyCallback, GoogleMap.OnMapClickListener { // Tetap implement interface Google Maps
 
-    private lateinit var mMap: GoogleMap // Akan diinisialisasi di onMapReady, tidak bisa null setelah itu
-    // Variabel mLatLng, bisa null. Menyimpan LatLng lokasi yang sedang aktif/ditampilkan.
-    // Karena ini 'var' (mutable), kompiler Kotlin kadang hati-hati dengan 'smart cast'
-    // saat diakses di konteks concurrency (meskipun di sini utamanya di UI thread).
-    // Penanganan nullability pakai ?.let sudah benar.
+    // Properti GoogleMap dan Marker spesifik untuk implementasi ini
+    private lateinit var mMap: GoogleMap // Objek GoogleMap, dijamin tidak null setelah onMapReady
+    // mLatLng bisa null. Menyimpan LatLng lokasi yang sedang aktif/ditampilkan di Google Maps.
+    // Ini berbeda dari lat/lon di BaseMapActivity yang merupakan state umum.
+    // mLatLng berguna untuk berinteraksi langsung dengan API Google Maps.
     private var mLatLng: LatLng? = null
-    private var mMarker: Marker? = null // Marker di map, bisa null kalau belum ditambah atau sudah dihapus
+    private var mMarker: Marker? = null // Marker di map Google Maps
 
-    // Fungsi ini kayaknya mau cek apakah marker TIDAK terlihat, tapi logikanya terbalik.
-    // hasMarker() biasanya cek apakah marker ADA dan TERLIHAT.
-    // Lo bisa ganti ini sesuai kebutuhan:
-    override fun hasMarker(): Boolean {
-        // Jika mau cek apakah ada marker DAN terlihat:
-        return mMarker?.isVisible == true
-        // Jika mau cek apakah ada marker (terlihat atau tidak):
-        // return mMarker != null
-        // Jika mau cek apakah marker TIDAK terlihat (sesuai kode awal lo, tapi namanya membingungkan):
-        // return mMarker?.isVisible != true
+    // Properti binding diakses dari BaseMapActivity (protected val binding by lazy { ActivityMapBinding.inflate(layoutInflater) })
+    // Kamu tidak perlu mendeklarasikan ulang di sini kecuali jika kamu punya binding layout yang BERBEDA untuk MapActivity ini.
+    // Jika kamu menggunakan layout yang sama dan binding yang sama dengan BaseMapActivity, properti binding di BaseMapActivity sudah cukup.
+    // val binding: ActivityMapBinding // Pastikan ini sudah dideklarasi dan diinisialisasi di BaseMapActivity
+    override fun stopProcess() {
+        // Cek mLatLng, karena logic update ViewModel dan remove marker butuh info lokasi terakhir
+        mLatLng?.let { currentLatLng ->
+            // 1. Update status di ViewModel
+            // ViewModel diakses dari BaseMapActivity. update() adalah fungsi ViewModel.
+            viewModel.update(false, currentLatLng.latitude, currentLatLng.longitude) // Menggunakan currentLatLng (LatLng)
+        }
+        // Jika mLatLng null saat stop diklik, update ViewModel mungkin tidak menyertakan lokasi.
+        // Pastikan ViewModel.update bisa handle null location atau ada logic lain.
+
+        // 2. Hapus marker dari map Google Maps (fungsi di MapActivity)
+        removeMarker()
+
+        // 3. Mengubah tampilan tombol UI (akses binding di MapActivity)
+        binding.startButton.visibility = View.VISIBLE
+        binding.stopButton.visibility = View.GONE
+
+        // 4. Menghentikan notifikasi (fungsi ini ada di BaseMapActivity yang panggil NotificationHelper)
+        cancelNotification() // cancelNotification() ada di BaseMapActivity yang direfaktor
+
+        // 5. Menampilkan Toast (fungsi ini ada di BaseMapActivity)
+        showToast(getString(R.string.location_unset)) // showToast() ada di BaseMapActivity yang direfaktor
     }
 
-    // Dipanggil saat user klik di map
-    override fun onMapClick(latLng: LatLng) {
-        mLatLng = latLng // Set mLatLng dengan lokasi klik (LatLng ini sendiri tidak null)
-        // Karena mLatLng barusan diset ke LatLng non-null, mLatLng?.let { ... } ini akan selalu true.
-        // Lo bisa langsung pakai 'latLng' yang dari parameter method ini di dalam blok ini
-        // atau tetap pakai ?.let (aman, hanya sedikit redundan).
-        mLatLng?.let {
-            updateMarker(it) // Update posisi marker ke lokasi klik
-            mMap.animateCamera(CameraUpdateFactory.newLatLng(it)) // Gerakkan kamera ke lokasi klik
+    // --- IMPLEMENTASI FUNGSI ABSTRACT DARI BASEMAPACTIVITY ---
 
-            // Sinkronisasi ke variabel lat/lon di BaseMapActivity (sudah benar)
-            lat = it.latitude // Latitude dari LatLng (tipe Double) diset ke lat (tipe Double)
-            lon = it.longitude // Longitude dari LatLng (tipe Double) diset ke lon (tipe Double)
+    // Implementasi hasMarker: Cek apakah marker ada dan terlihat di Google Maps
+    override fun hasMarker(): Boolean {
+        return mMarker?.isVisible == true
+    }
 
-            // Fetch alamat dari lokasi klik menggunakan Coroutine
+    // Implementasi initializeMap: Setup Google Map Fragment
+    override fun initializeMap() {
+        // Menggunakan SupportMapFragment untuk Google Maps
+        val mapFragment = SupportMapFragment.newInstance()
+        supportFragmentManager.beginTransaction()
+            .replace(R.id.map, mapFragment) // R.id.map harus ada di layout kamu
+            .commit()
+        // Meminta objek GoogleMap secara asynchronous
+        mapFragment.getMapAsync(this) // 'this' di sini adalah MapActivity yang implement OnMapReadyCallback
+    }
+
+    // Implementasi moveMapToNewLocation: Pindahkan kamera map Google Maps ke koordinat baru
+    // lat dan lon diambil dari properti di BaseMapActivity yang sudah diupdate oleh LocationHelper
+    override fun moveMapToNewLocation(moveNewLocation: Boolean) {
+        // lat dan lon harus sudah punya nilai Double karena Delegates.notNull di Base class
+        if (moveNewLocation && ::mMap.isInitialized) { // Pastikan mMap sudah diinisialisasi
+            // Membuat objek LatLng Google Maps dari lat dan lon
+            val targetLatLng = LatLng(lat, lon)
+
+            // Optional: Update mLatLng di sini jika mLatLng selalu merepresentasikan lokasi di tengah layar/marker
+            mLatLng = targetLatLng
+
+            // Menggerakkan kamera map Google Maps
+            mMap.animateCamera(
+                CameraUpdateFactory.newCameraPosition(
+                    CameraPosition.Builder()
+                        .target(targetLatLng) // Target koordinat
+                        .zoom(18.0f) // Level zoom
+                        .bearing(0f) // Orientasi (utara ke atas)
+                        .tilt(0f) // Sudut pandang
+                        .build()
+                )
+            )
+
+            // Mengupdate posisi marker yang sudah ada atau membuatnya jika belum ada
+            // Jika marker belum ada, updateMarker akan menambahkannya
+             updateMarker(targetLatLng) // Membutuhkan LatLng
+
+            // Fetch alamat dari lokasi baru menggunakan Coroutine
             lifecycleScope.launch {
-                // it.getAddress(this@MapActivity) mengembalikan Flow<String>
-                // .collect { address -> ... } akan dijalankan setiap kali ada nilai baru dari Flow (harusnyasih sekali aja untuk getAddress)
-                it.getAddress(this@MapActivity)?.collect { address ->
-                    showToast("Alamat: $address") // Tampilkan alamat
-                }
-                // Catatan: Pastikan ekstensi getAddress() ini async/suspend dan mengembalikan Flow dengan benar
+                 // Fungsi getAddress() ini adalah extension function (asumsi ada di com.roxgps.utils.ext)
+                val address = fetchAddress(targetLatLng) // Mengambil alamat dari LatLng
+                showToast("Alamat: $address") // Menampilkan Toast
             }
         }
     }
 
-    // Update atau tambah marker di map
-    private fun updateMarker(latLng: LatLng, title: String = "Lokasi") {
+    // Implementasi setupButtons: Menetapkan click listeners untuk tombol-tombol
+    // Panggilan fungsi di sini DIUBAH agar sesuai dengan BaseMapActivity yang sudah direfaktor (menggunakan helper atau logic baru di Base)
+    @SuppressLint("MissingPermission") // Mungkin masih perlu kalau ada akses permission langsung di sini (seharusnya tidak)
+    override fun setupButtons() {
+        // Listener untuk tombol Tambah Favorit
+        binding.addfavorite.setOnClickListener {
+            // Memanggil fungsi addFavoriteAction() di BaseMapActivity yang sudah direfaktor
+            // Logic ini nanti akan memanggil dialogHelper.showAddFavoriteDialog
+            addFavoriteAction() // Fungsi ini sekarang ada di BaseMapActivity yang direfaktor
+        }
+
+        // Listener untuk tombol Dapatkan Lokasi
+        binding.getlocation.setOnClickListener {
+            // Memanggil fungsi di BaseMapActivity yang trigger request lokasi via LocationHelper
+            // Fungsi ini akan memanggil locationHelper.requestLastKnownLocation()
+            requestLocation() // Asumsikan ada fungsi requestLocation() di BaseMapActivity yang direfaktor
+
+            // Update map (animasi kamera) berdasarkan lokasi BARU yang didapat dari LocationHelper
+            // seharusnya dilakukan di onLocationResult di BaseMapActivity, BUKAN di sini setelah panggil request.
+            // Jadi, kode animasi kamera di sini dihapus.
+            // mLatLng?.let { ... animateCamera ... } // DIHAPUS
+        }
+
+        // Listener untuk tombol Start Proses (misal: start simulasi lokasi)
+        binding.startButton.setOnClickListener {
+            mLatLng?.let { currentLatLng -> // Pastikan mLatLng (lokasi terakhir yang diketahui/diset) tidak null
+                // Update status dan koordinat di ViewModel (ViewModel diakses dari BaseMapActivity)
+                viewModel.update(true, currentLatLng.latitude, currentLatLng.longitude)
+
+                // Update marker di map Google Maps
+                updateMarker(currentLatLng, "Harapan Palsu") // Menggunakan currentLatLng (LatLng)
+
+                // Gerakkan kamera
+                mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(currentLatLng, 15.0f)) // Menggunakan currentLatLng (LatLng)
+
+                // Tampilkan/Sembunyikan Button UI spesifik MapActivity ini
+                binding.startButton.visibility = View.GONE // Sembunyikan Start
+                binding.stopButton.visibility = View.VISIBLE // Tampilkan Stop
+
+                // Fetch alamat dan tampilkan notifikasi awal menggunakan Coroutine
+                lifecycleScope.launch {
+                    try {
+                        val address = fetchAddress(currentLatLng) // Fetch alamat dari currentLatLng (LatLng)
+                        // Panggil fungsi di BaseMapActivity yang menggunakan NotificationHelper
+                        // BaseMapActivity yang direfaktor akan memanggil notificationHelper.showStartNotification()
+                        showStartNotification(address) // Fungsi ini sekarang ada di BaseMapActivity yang direfaktor
+                        showToast(getString(R.string.location_set)) // Tampilkan toast sukses
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        showToast(getString(R.string.location_error)) // Tampilkan toast error
+                    }
+                }
+            } ?: showToast(getString(R.string.invalid_location)) // Jika mLatLng null, tampilkan toast
+        }
+
+        // Listener untuk tombol Stop Proses
+        binding.stopButton.setOnClickListener {
+            stopProcess() // <-- Panggil fungsi stopProcess() yang baru di MapActivity ini
+        }
+    }
+
+    // --- FUNGSI GOOGLE MAPS SPECIFIC YANG TERSISA DI MAPACTIVITY INI ---
+
+    // Dipanggil saat GoogleMap siap digunakan
+    @SuppressLint("MissingPermission") // Suppress warning karena permission dicek dan diminta oleh LocationHelper (via BaseActivity)
+    override fun onMapReady(googleMap: GoogleMap) {
+        mMap = googleMap // Simpan referensi GoogleMap
+
+        // --- LOGIC PERMISSION LOKASI DI SINI DIHAPUS KARENA SUDAH DITANGANI LOCATIONHELPER ---
+        // if (ActivityCompat.checkSelfPermission(...) { ... } else { ... } // DIHAPUS
+        // -------------------------------------------------------------------------------
+
+        // Setelah map siap, kita bisa aktifkan layer "My Location" JIKA izin sudah diberikan
+        // Status izin bisa didapat dari LocationHelper.checkLocationPermissions()
+        // atau setelah onPermissionGranted() di BaseMapActivity dipanggil.
+        if (locationHelper.checkLocationPermissions()) { // Panggil check permission dari helper via Base
+             mMap.isMyLocationEnabled = true // Aktifkan layer "My Location" Google Maps
+             // Optional: Kalau mau langsung tampilkan lokasi user di map saat onMapReady DAN izin ada
+             // locationHelper.requestLastKnownLocation() // Panggil request lokasi via Base
+        } else {
+             // Jika izin belum ada, layer "My Location" tidak diaktifkan dulu.
+             // Akan diaktifkan nanti di onPermissionGranted() di BaseActivity jika izin diberikan.
+        }
+
+
+        // Konfigurasi setting UI GoogleMap
+        mMap.apply {
+            setTrafficEnabled(true)
+            uiSettings.apply {
+                isMyLocationButtonEnabled = false // Tombol "My Location" bawaan
+                isZoomControlsEnabled = false // Tombol zoom bawaan
+                isCompassEnabled = false // Kompas bawaan
+            }
+            // Padding map agar tidak terhalang UI (misal AppBar atau tombol)
+            setPadding(0, 80, 0, 0) // Sesuaikan padding dengan tinggi UI elemen kamu
+
+            // Set tipe map dari ViewModel (ViewModel diakses dari BaseMapActivity)
+            mapType = viewModel.mapType // mapType diasumsikan ada di ViewModel
+
+            // --- Tentukan posisi awal map ---
+            // Ambil lat/lon awal dari ViewModel (properti di BaseMapActivity yang sudah diinisialisasi)
+            val initialLatLng = LatLng(lat, lon) // Membuat LatLng dari lat/lon
+
+            // Set mLatLng awal (opsional, jika mLatLng perlu merepresentasikan posisi awal)
+            mLatLng = initialLatLng
+
+            // Tambahkan marker awal (invisible, tidak bisa digeser)
+            mMarker = mMap.addMarker(
+                MarkerOptions()
+                    .position(initialLatLng) // Posisi awal marker
+                    .draggable(false) // Tidak bisa digeser
+                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)) // Icon marker
+                    .visible(false) // Awalnya tidak terlihat
+            )
+
+            // Gerakkan kamera map ke lokasi awal
+            animateCamera(CameraUpdateFactory.newLatLngZoom(initialLatLng, 15.0f)) // Animasi kamera
+
+            // Fetch alamat dari lokasi awal menggunakan Coroutine
+            lifecycleScope.launch {
+                val address = fetchAddress(initialLatLng) // Mengambil alamat
+                showToast("Alamat awal: $address") // Menampilkan Toast
+            }
+             // -------------------------------
+
+            // Menetapkan listener saat map diklik
+            setOnMapClickListener(this@MapActivity) // 'this@MapActivity' karena listener di kelas ini
+            // Bisa tambahkan listener lain jika perlu, misal:
+            // setOnMarkerClickListener(...)
+            // setOnCameraIdleListener(...)
+        }
+    }
+
+    // Dipanggil saat user klik di map (implementasi dari OnMapClickListener)
+    override fun onMapClick(latLng: LatLng) {
+        // latLng dari callback ini adalah LatLng lokasi yang diklik
+        mLatLng = latLng // Update mLatLng dengan lokasi klik
+
+        // Karena mLatLng baru saja di-set, dia tidak null.
+        // Menggunakan 'let' untuk kejelasan, atau bisa langsung pakai 'latLng' parameter.
+        mLatLng?.let { clickedLatLng ->
+            // Mengupdate posisi marker yang sudah ada
+            updateMarker(clickedLatLng) // Menggunakan clickedLatLng (LatLng)
+
+            // Menggerakkan kamera map ke lokasi klik
+            mMap.animateCamera(CameraUpdateFactory.newLatLng(clickedLatLng)) // Menggunakan clickedLatLng (LatLng)
+
+            // Sinkronisasi lat/lon di BaseMapActivity dengan lokasi klik
+            lat = clickedLatLng.latitude // lat (Double) diupdate
+            lon = clickedLatLng.longitude // lon (Double) diupdate
+
+            // Fetch alamat dari lokasi klik menggunakan Coroutine
+            lifecycleScope.launch {
+                val address = fetchAddress(clickedLatLng) // Mengambil alamat dari clickedLatLng (LatLng)
+                showToast("Alamat: $address") // Menampilkan Toast
+            }
+        }
+    }
+
+
+    // Fetch alamat secara asynchronous
+    // Fungsi ini mengambil LatLng, memanggil extension getAddress(), dan mengembalikan String alamat.
+    // Fungsi getAddress() diasumsikan ada di file utility (misal di com.roxgps.utils.ext) dan mengembalikan Flow<String> atau sejenisnya.
+    private suspend fun fetchAddress(latLng: LatLng): String { // Menerima LatLng
+        var result = "Alamat tidak ditemukan"
+        try {
+            // Memanggil extension function getAddress() pada LatLng.
+            // getAddress() diasumsikan adalah suspend function yang menghasilkan Flow<String>
+            latLng.getAddress(this@MapActivity)?.collect { address -> // Menggunakan latLng (LatLng) dan Context
+                 result = address // Update hasil saat alamat didapat dari Flow
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            result = "Gagal mendapatkan alamat: ${e.message}"
+        }
+        return result // Mengembalikan hasil alamat
+    }
+
+    // --- FUNGSI GOOGLE MAPS SPECIFIC LAINNYA ---
+
+    // Update atau tambah marker di map Google Maps
+    // Membutuhkan LatLng. Pastikan argumen yang diberikan tipenya LatLng.
+    private fun updateMarker(latLng: LatLng, title: String = "Lokasi") { // Menerima LatLng
         if (mMarker == null) {
             // Jika marker belum ada, tambahkan marker baru
             mMarker = mMap.addMarker(
                 MarkerOptions()
-                    .position(latLng) // Set posisi marker (membutuhkan LatLng)
-                    .title(title)
-                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)) // Icon default merah
+                    .position(latLng) // Posisi marker (membutuhkan LatLng)
+                    .title(title) // Judul marker
+                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)) // Icon marker
+                    .draggable(true) // Jadikan marker bisa digeser (opsional)
+                    .visible(true) // Pastikan terlihat
             )
-            mMarker?.showInfoWindow() // Tampilkan info window marker
+            mMarker?.showInfoWindow() // Tampilkan info window
+            // Optional: Tambahkan listener geser marker jika draggable = true
+            // mMap.setOnMarkerDragListener(...)
         } else {
-            // Jika marker sudah ada, update propertinya
-            mMarker?.apply { // Gunakan apply scope biar lebih ringkas
-                position = latLng // Update posisi (membutuhkan LatLng)
-                isVisible = true // Pastikan marker terlihat
+            // Jika marker sudah ada, update posisinya
+            mMarker?.apply {
+                position = latLng // Posisi marker (membutuhkan LatLng)
+                isVisible = true // Pastikan terlihat
                 this.title = title // Update judul
                 showInfoWindow() // Tampilkan info window
             }
         }
     }
 
-    // Hapus marker dari map
+    // Hapus marker dari map Google Maps
     private fun removeMarker() {
-        mMarker?.remove() // Hapus marker jika tidak null
-        mMarker = null // Set mMarker jadi null setelah dihapus
+        mMarker?.remove() // Hapus marker
+        mMarker = null // Set properti marker jadi null
     }
 
-    // Inisialisasi Map (dipanggil dari luar, misal onCreate)
-    override fun initializeMap() {
-        // Tambahkan fragment map ke activity
-        val mapFragment = SupportMapFragment.newInstance()
-        supportFragmentManager.beginTransaction()
-            .replace(R.id.map, mapFragment) // Replace container R.id.map dengan fragment map
-            .commit()
-        // Minta objek GoogleMap secara asynchronous
-        mapFragment.getMapAsync(this) // 'this' refers to MapActivity implementing OnMapReadyCallback
-    }
+    // ... Tambahkan override fungsi lifecycle lain jika perlu (onPause, onStop, onSaveInstanceState, onActivityResult)
+    // Misalnya, simpan status map di onSaveInstanceState
+    // override fun onSaveInstanceState(outState: Bundle) { ... super.onSaveInstanceState(outState) }
 
-    // Pindah kamera map ke lokasi baru
-    override fun moveMapToNewLocation(moveNewLocation: Boolean) {
-        if (moveNewLocation) {
-            // Bikin objek LatLng dari lat dan lon (dari BaseMapActivity)
-            // lat dan lon harus sudah punya nilai Double karena pakai Delegates.notNull
-            val localLatLng = LatLng(lat, lon)
-            // Set mLatLng. Sekali lagi, mLatLng?.let di bawah ini akan selalu true.
-            mLatLng = localLatLng
-            mLatLng?.let { latLng ->
-                // Gerakkan kamera ke lokasi baru dengan zoom dan properti kamera lainnya
-                mMap.animateCamera(
-                    CameraUpdateFactory.newCameraPosition(
-                        CameraPosition.Builder()
-                            .target(latLng) // Target kamera ke LatLng baru
-                            .zoom(18.0f) // Level zoom
-                            .bearing(0f)
-                            .tilt(0f)
-                            .build()
-                    )
-                )
-                // Update marker (jika ada) ke lokasi baru
-                mMarker?.apply {
-                    position = latLng // Set posisi marker
-                    isDraggable = true // Jadikan marker bisa digeser (jika perlu)
-                    isVisible = true // Pastikan marker terlihat
-                }
+    // ... Tambahkan override onRequestPermissionsResult jika masih dipakai untuk permission LAIN selain lokasi (permission lokasi sudah di LocationHelper)
+    // override fun onRequestPermissionsResult(...) { ... }
 
-                // Fetch alamat dari lokasi baru menggunakan Coroutine
-                lifecycleScope.launch {
-                    val address = fetchAddress(latLng) // Panggil suspend function fetchAddress
-                    showToast("Alamat: $address") // Tampilkan alamat
-                }
-            }
-        }
-    }
-
-    // Dipanggil saat GoogleMap sudah siap digunakan
-    @SuppressLint("MissingPermission") // Anotasi ini menandai kalau permission check dilakukan secara manual di dalam method
-    override fun onMapReady(googleMap: GoogleMap) {
-        mMap = googleMap // Simpan objek GoogleMap
-
-        // Cek dan minta permission lokasi jika belum diizinkan
-        if (ActivityCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_FINE_LOCATION // Permission lokasi akurat
-            ) == PackageManager.PERMISSION_GRANTED // Jika permission sudah diberikan
-        ) {
-            mMap.isMyLocationEnabled = true // Aktifkan layer "My Location" (titik biru lokasi user)
-        } else {
-            // Jika belum, minta permission dari user
-            ActivityCompat.requestPermissions(
-                this,
-                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), // Minta permission ACCESS_FINE_LOCATION
-                99 // Request code
-            )
-        }
-
-        // Konfigurasi properti map lainnya
-        mMap.apply {
-            setTrafficEnabled(true) // Tampilkan informasi lalu lintas
-            uiSettings.apply {
-                isMyLocationButtonEnabled = false // Matikan tombol "My Location" bawaan (karena kita mungkin pakai tombol custom)
-                isZoomControlsEnabled = false // Matikan tombol zoom bawaan
-                isCompassEnabled = false // Matikan kompas bawaan
-            }
-            setPadding(0, 80, 0, 0) // Set padding (misal untuk menghindari UI overlap)
-            mapType = viewModel.mapType // Set tipe map (Normal, Satellite, Hybrid, Terrain) dari ViewModel
-
-            val zoom = 15.0f // Level zoom awal
-            // Ambil lat/lon awal dari ViewModel (sudah Double dari BaseMapActivity)
-            lat = viewModel.getLat
-            lon = viewModel.getLng
-            val initialLatLng = LatLng(lat, lon) // Bikin LatLng awal (dari Double, aman)
-            mLatLng = initialLatLng // Set mLatLng awal
-
-            // Tambahkan marker awal tapi disembunyikan (visible = false)
-            mMarker = mMap.addMarker(
-                MarkerOptions()
-                    .position(initialLatLng) // Set posisi awal marker
-                    .draggable(false) // Tidak bisa digeser
-                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED))
-                    .visible(false) // Mulai dalam keadaan tersembunyi
-            )
-
-            // Gerakkan kamera ke lokasi awal dengan zoom
-            animateCamera(CameraUpdateFactory.newLatLngZoom(initialLatLng, zoom))
-
-            // Fetch alamat awal dan tampilkan (menggunakan Coroutine)
-            lifecycleScope.launch {
-                // initialLatLng adalah LatLng (sudah Double). getAddress() butuh Context.
-                // Error Type Mismatch (Float vs Double) di baris 192:
-                // Error ini mungkin terjadi di bagian SINI atau di method fetchAddress().
-                // Pastikan SEMUA nilai koordinat yang dipakai untuk membuat LatLng atau memanggil method
-                // yang butuh Double (seperti LatLng(lat, lon), atau method getAddress() itu sendiri
-                // jika parameternya LatLng atau Double) adalah DOUBLE.
-                // Contoh: Jika sumber lat atau lon di ViewModel tiba-tiba Float,
-                // pastikan dikonversi .toDouble() sebelum dipakai di LatLng().
-                // Misalnya, JIKA error di baris ini (atau di dalam getAddress/fetchAddress)
-                // itu karena lo ngasih Float value dari viewModel:
-                // val latFloatFromViewModel: Float = viewModel.someFloatLat // <-- Contoh JIKA sumbernya Float
-                // val lonFloatFromViewModel: Float = viewModel.someFloatLon // <-- Contoh JIKA sumbernya Float
-                // val initialLatLng = LatLng(latFloatFromViewModel.toDouble(), lonFloatFromViewModel.toDouble()) // <-- KONVERSI!
-                // Karena di kode lo Lat/Lon dari ViewModel sudah diset ke Double di 'lat'/'lon',
-                // pembuatan initialLatLng dari 'lat'/'lon' ini seharusnya AMAN (sudah Double).
-                // Error di baris 192 kemungkinan di pemakaian 'initialLatLng' ini atau 'it' (LatLng)
-                // di method getAddress() atau di method fetchAddress() jika di sana ada kode yang salah mengolah tipe data.
-                // Trace baris 192, lihat data apa yang dipakai dan pastikan tipenya Double.
-                initialLatLng.getAddress(this@MapActivity)?.collect { address ->
-                    showToast("Alamat awal: $address") // Tampilkan alamat awal
-                }
-            }
-
-            setOnMapClickListener(this@MapActivity) // Set listener klik map
-        }
-    }
-
-    // Mengembalikan instance MapActivity (kayaknya buat keperluan Dependency Injection atau sejenisnya)
-    override fun getActivityInstance(): BaseMapActivity = this
-
-    // Fetch alamat secara asynchronous (suspend function)
-    // Dipanggil dari moveMapToNewLocation dan startButton click
-    private suspend fun fetchAddress(latLng: LatLng): String {
-        var result = "Alamat tidak ditemukan"
-        // customLatLng di sini cuma alias, tidak mengubah tipe LatLng
-        // val customLatLng = CustomLatLng(latLng.latitude, latLng.longitude) // <-- Line 192 KEMUNGKINAN DI SEKITAR SINI ATAU DI DALAM getAddress/fetchAddress
-        // Jika error type mismatch di baris 192 terjadi saat membuat LatLng:
-        // Pastikan latLng.latitude dan latLng.longitude itu Double (memang sudah Double karena LatLng).
-        // Error lebih mungkin saat *pemakaian* customLatLng atau latLng ini di method getAddress.
-        // Misalnya, JIKA getAddress menerima Float:
-        // customLatLng.getAddress(this@MapActivity, customLatLng.latitude.toFloat(), customLatLng.longitude.toFloat()) <-- INI AKAN ERROR kalau getAddress butuh Double
-        // Pastikan signature getAddress() itu terima Double atau LatLng.
-        // customLatLng.getAddress(this@MapActivity)?.collect { address -> // Baris asli lo kayaknya begini
-        //    result = address
-        // }
-        // Solusi paling pasti: cek signature method getAddress() dan method lain yang dipanggil di dalamnya.
-        // Pastikan semua operasi dan parameter yang butuh Double memang menerima Double.
-
-        // Kode asli lo:
-        latLng.getAddress(this@MapActivity)?.collect { address ->
-             result = address
-        }
-        return result
-    }
-
-    @SuppressLint("MissingPermission") // Anotasi ini menandai kalau permission check dilakukan secara manual
-    override fun setupButtons() {
-        binding.addfavorite.setOnClickListener { // Button tambah favorit
-            addFavoriteDialog() // Panggil fungsi tambah favorit (kayaknya dari BaseMapActivity)
-        }
-
-        binding.getlocation.setOnClickListener { // Button dapatkan lokasi terakhir
-            getLastLocation() // Panggil fungsi dapatkan lokasi terakhir (kayaknya dari BaseMapActivity)
-            // Setelah dapat lokasi, mLatLng mungkin diset di getLastLocation() atau di listener lokasi
-            mLatLng?.let {
-                mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(it, 18.0f)) // Gerakkan kamera ke lokasi jika mLatLng ada
-            }
-        }
-
-        binding.startButton.setOnClickListener { // Button mulai (set lokasi palsu)
-            mLatLng?.let { latLng -> // Pastikan mLatLng sudah ada (user sudah klik map atau dapat lokasi)
-                viewModel.update(true, latLng.latitude, latLng.longitude) // Update ViewModel: set isStarted=true, lat, lon
-                updateMarker(latLng, "Harapan Palsu") // Update marker (judul "Harapan Palsu" sesuai screenshot 😂)
-                mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 15.0f)) // Gerakkan kamera
-                binding.startButton.visibility = View.GONE // Sembunyikan start button
-                binding.stopButton.visibility = View.VISIBLE // Tampilkan stop button
-
-                // Fetch alamat dan tampilkan notifikasi/toast
-                lifecycleScope.launch {
-                    try {
-                        val address = fetchAddress(latLng) // Fetch alamat (menggunakan lokasi dari mLatLng)
-                        showStartNotification(address) // Tampilkan notifikasi start (kayaknya dari BaseMapActivity)
-                        showToast(getString(R.string.location_set)) // Tampilkan toast "Lokasi diset"
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                        showToast(getString(R.string.location_error)) // Tampilkan toast error
-                    }
-                }
-            } ?: showToast(getString(R.string.invalid_location)) // Jika mLatLng null, tampilkan toast error
-        }
-
-        binding.stopButton.setOnClickListener { // Button berhenti
-            mLatLng?.let { // Pastikan mLatLng ada
-                viewModel.update(false, it.latitude, it.longitude) // Update ViewModel: set isStarted=false
-            }
-            removeMarker()
-            binding.stopButton.visibility = View.GONE
-            binding.startButton.visibility = View.VISIBLE
-            cancelNotification()
-            showToast(getString(R.string.location_unset)) // Tampilkan toast "Lokasi dihapus"
-            // Catatan: Kode untuk menampilkan kembali start/stop button setelah stop belum ada di sini.
-            // binding.startButton.visibility = View.VISIBLE
-            // binding.stopButton.visibility = View.GONE // Tambahin kalau perlu
-        }
-    }
 }

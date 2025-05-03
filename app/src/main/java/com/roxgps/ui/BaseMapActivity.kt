@@ -1,5 +1,6 @@
 package com.roxgps.ui
 
+// --- IMPORTS YANG DIBUTUHKAN OLEH KODE YANG TERSISA DI ACTIVITY ---
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Notification
@@ -7,17 +8,14 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
-import android.location.Address
-import android.location.Geocoder
-import android.location.Location
-import android.location.LocationManager
+import android.location.Location // Masih perlu untuk tipe data di listener
 import android.os.Bundle
-import android.os.Looper
+import android.os.Looper // Mungkin masih perlu
 import android.provider.Settings
 import android.view.View
 import android.view.inputmethod.EditorInfo
-import android.widget.EditText
-import android.widget.TextView
+import android.widget.EditText // Jika custom dialog/searchbar XML di-inflate di sini
+import android.widget.TextView // Jika custom dialog XML di-inflate di sini
 import android.widget.Toast
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
@@ -25,138 +23,212 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.AppCompatButton
+import androidx.appcompat.widget.AppCompatButton // Jika custom dialog XML di-inflate di sini
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.view.*
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
-import com.google.android.gms.location.*
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import androidx.recyclerview.widget.LinearLayoutManager // Jika layout manager dibikin di sini
+import androidx.recyclerview.widget.RecyclerView // Jika custom dialog XML di-inflate di sini
+import com.google.android.material.dialog.MaterialAlertDialogBuilder // Jika dialog custom UI dibikin di sini
 import com.google.android.material.elevation.ElevationOverlayProvider
-import com.google.android.material.progressindicator.LinearProgressIndicator
+import com.google.android.material.progressindicator.LinearProgressIndicator // Jika custom dialog XML di-inflate di sini
 import dagger.hilt.android.AndroidEntryPoint
 import com.roxgps.BuildConfig
-import com.roxgps.R
-import com.roxgps.adapter.FavListAdapter
-import com.roxgps.databinding.ActivityMapBinding
-import com.roxgps.ui.viewmodel.MainViewModel
-import com.roxgps.utils.JoystickService
-import com.roxgps.utils.NotificationsChannel
-import com.roxgps.utils.PrefManager
-import com.roxgps.utils.ext.*
-import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.flow.callbackFlow
-import java.io.IOException
-import java.util.regex.Matcher
-import java.util.regex.Pattern
-import kotlin.properties.Delegates
+import com.roxgps.R // Penting untuk resources
+// Import adapter dan model jika masih dipake di listener dialog atau di Activity langsung
+import com.roxgps.adapter.FavListAdapter // Jika adapter dipegang di Activity
+import com.roxgps.data.model.Favorite // Jika model Favorite dipegang/dipakai di Activity
+import com.roxgps.databinding.ActivityMapBinding // View Binding
+import com.roxgps.ui.viewmodel.MainViewModel // ViewModel
+import com.roxgps.utils.JoystickService // Jika service di-start dari sini
+import com.roxgps.utils.PrefManager // Jika dipakai di sini
+import com.roxgps.utils.ext.* // Jika ada extension functions yang tersisa dan dipakai
+// --- IMPORTS HELPER DAN UTILITY BARU ---
+import com.roxgps.helper.LocationHelper
+import com.roxgps.helper.LocationListener // Listener untuk LocationHelper
+import com.roxgps.helper.DialogHelper
+import com.roxgps.helper.NotificationHelper
+import com.roxgps.helper.SearchHelper
+import com.roxgps.helper.SearchProgress // Sealed class dari SearchHelper
+import com.roxgps.utils.NetworkUtils // Utility untuk cek koneksi
+import com.roxgps.utils.NotificationsChannel // Objek singleton channel notifikasi
+// ... import lain ...
+import kotlinx.coroutines.* // Import coroutines
+import kotlinx.coroutines.channels.awaitClose // Mungkin masih perlu kalau ada callbackFlow di sisa kode
+import kotlinx.coroutines.flow.callbackFlow // Mungkin masih perlu kalau ada callbackFlow di sisa kode
+import kotlinx.coroutines.flow.collect // Untuk collect Flow
+import kotlinx.coroutines.flow.Flow // Untuk tipe data Flow
+import java.io.IOException // Untuk exception handling
+import java.util.regex.Matcher // Jika regex masih dipakai di sisa kode
+import java.util.regex.Pattern // Jika regex masih dipakai di sisa kode
+import kotlin.properties.Delegates // Untuk Delegated Properties (by notNull, by lazy)
+// ... import notifikasi dan snackbar ...
 import androidx.core.app.NotificationManagerCompat
-import com.roxgps.receiver.NotificationActionReceiver
+import com.roxgps.receiver.NotificationActionReceiver // Receiver class (meskipun objeknya di helper)
 import android.content.BroadcastReceiver
 import android.content.IntentFilter
 import android.os.Build
-import com.google.android.material.snackbar.Snackbar
-import android.app.PendingIntent
+import com.google.android.material.snackbar.Snackbar // Untuk Snackbar
+import android.app.PendingIntent // Untuk PendingIntent
 
-@AndroidEntryPoint
-abstract class BaseMapActivity: AppCompatActivity() {
+// Catatan: Pastikan semua import yang dibutuhkan oleh kode di bawah ini sudah tercantum.
+// Import tambahan mungkin diperlukan tergantung implementasi detail helper atau fungsi yang tersisa.
 
-    protected var lat by Delegates.notNull<Double>()
-    protected var lon by Delegates.notNull<Double>()
-    protected val viewModel by viewModels<MainViewModel>()
-    protected val binding by lazy { ActivityMapBinding.inflate(layoutInflater) }
-    protected lateinit var alertDialog: MaterialAlertDialogBuilder
-    protected lateinit var dialog: AlertDialog
-    protected val update by lazy { viewModel.getAvailableUpdate() }
 
-   // private val notificationsChannel by lazy { NotificationsChannel() }
-    private val notificationsChannel = NotificationsChannel
-    private var favListAdapter: FavListAdapter = FavListAdapter()
-    private var xposedDialog: AlertDialog? = null
-    private lateinit var fusedLocationClient: FusedLocationProviderClient
-    private val PERMISSION_ID = 42
+@AndroidEntryPoint // Anotasi Hilt
+// --- IMPLEMENT INTERFACE LISTENER DARI HELPER YANG DIPAKAI ---
+abstract class BaseMapActivity: AppCompatActivity(), LocationListener { // Implement LocationListener
+// Implement listener lain jika ada helper lain yang butuh komunikasi balik pake listener
+// , SomeOtherHelper.SomeOtherListener
+// ------------------------------------------------------------
 
-    private val elevationOverlayProvider by lazy {
-        ElevationOverlayProvider(this)
-    }
+    // --- PROPERTI-PROPERTI YANG MASIH DI ACTIVITY (UI STATE, VIEW MODEL, BINDING, DSB) ---
+    protected var lat by Delegates.notNull<Double>() // State lat/lon (bisa dipertimbangkan ke ViewModel)
+    protected var lon by Delegates.notNull<Double>() // State lat/lon (bisa dipertimbangkan ke ViewModel)
+    protected val viewModel by viewModels<MainViewModel>() // ViewModel (penting)
+    protected val binding by lazy { ActivityMapBinding.inflate(layoutInflater) } // View Binding (penting)
+    protected val update by lazy { viewModel.getAvailableUpdate() } // Data update (observable dari ViewModel)
 
-    private val headerBackground by lazy {
+    private val notificationsChannel = NotificationsChannel // Objek Singleton Channel Notifikasi (tetap di sini)
+    private var favListAdapter: FavListAdapter = FavListAdapter() // Adapter untuk list favorit (dipegang di Activity)
+    private var xposedDialog: AlertDialog? = null // Referensi dialog Xposed (untuk dismiss)
+
+    private val elevationOverlayProvider by lazy { ElevationOverlayProvider(this) } // Utility Material Design
+    private val headerBackground by lazy { // Utility Material Design
         elevationOverlayProvider.compositeOverlayWithThemeSurfaceColorIfNeeded(
             resources.getDimension(R.dimen.bottom_sheet_elevation)
         )
     }
-    
-    private val stopActionReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action == "com.roxgps.STOP_ACTION") {
-                // Handle the stop action
-                performStopButtonClick()
-            }
-        }
+
+    // --- INSTANSIASI HELPER-HELPER YANG BARU DIBIKIN ---
+    // Dideklarasi di sini, diinisialisasi di onCreate()
+    private lateinit var locationHelper: LocationHelper
+    private lateinit var dialogHelper: DialogHelper
+    private lateinit var notificationHelper: NotificationHelper
+    private lateinit var searchHelper: SearchHelper
+    // Jika ada helper lain, tambahkan di sini
+    // private lateinit var someOtherHelper: SomeOtherHelper
+    // ----------------------------------------------------
+
+    // --- BROADCAST RECEIVER SUDAH PINDAH KE NOTIFICATIONHELPER ---
+    // private val stopActionReceiver = object : BroadcastReceiver() { ... } // DIHAPUS
+    // ----------------------------------------------------------
+
+    // --- FUNGSI YANG DIPANGGIL OLEH LAMBDA DARI NOTIFICATIONHELPER ---
+    // Ini adalah aksi yang dilakukan Activity saat tombol stop notifikasi diklik
+    // Visibility diubah jadi public/internal agar bisa diakses lambda di helper
+    fun performStopButtonClick() {
+        binding.stopButton.performClick() // Masih simulasi klik tombol UI. Bisa diganti panggil stopProcessingLogic()
+        // Saran: Identifikasi logic inti "stop", bikin fungsi private, panggil fungsi itu di sini & di listener klik tombol UI
+        // stopProcessingLogic()
     }
 
-    protected abstract fun getActivityInstance(): BaseMapActivity
-    protected abstract fun hasMarker(): Boolean
-    protected abstract fun initializeMap()
-    protected abstract fun setupButtons()
-    protected abstract fun moveMapToNewLocation(moveNewLocation: Boolean)
+    protected abstract fun hasMarker(): Boolean // Dipakai di addFavoriteAction (cek apakah ada marker di map)
+    protected abstract fun initializeMap() // Inisialisasi Map (implementasi spesifik Map API)
+    protected abstract fun setupButtons() // Setup Tombol (implementasi spesifik UI/logic tombol)
+    protected abstract fun moveMapToNewLocation(moveNewLocation: Boolean) // Pindah Map ke koordinat (implementasi spesifik Map API)
+    // ------------------------------------------------------------
+    // --- FUNGSI ABSTRACT BARU UNTUK LOGIKA INTI STOP PROSES ---
+    // Implementasi akan ada di subclass (MapActivity)
+    protected abstract fun stopProcess()
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Setup Edge-to-Edge dan Window Flags
         enableEdgeToEdge(navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT))
-
         WindowCompat.setDecorFitsSystemWindows(window, false)
-        lifecycleScope.launchWhenCreated {
-            setContentView(binding.root)
-        }
+        // Panggil setContentView LANGSUNG, tidak di coroutine
+        setContentView(binding.root)
+
+        // Setup Toolbar
         setSupportActionBar(binding.toolbar)
-        initializeMap()
-        checkModuleEnabled()
-        checkUpdates()
-        setupNavView()
-        setupButtons()
-        setupDrawer()
-        checkNotifPermission()
+
+        // --- INISIALISASI SEMUA HELPER SETELAH setContentView ---
+        locationHelper = LocationHelper(this, this) // Context, LocationListener (Activity itu sendiri)
+        dialogHelper = DialogHelper(this, layoutInflater) // Context, LayoutInflater
+        // Context, objek Channel Notifikasi, dan lambda aksi Stop
+        // Lambda ini sekarang memanggil fungsi abstract stopProcess()
+        notificationHelper = NotificationHelper(this, notificationsChannel) {
+            stopProcess() // <-- Panggil fungsi abstract stopProcess()
+        }
+        searchHelper = SearchHelper(this) // Context
+        // Inisialisasi helper lain jika ada
+        // someOtherHelper = SomeOtherHelper(this, ...)
+        // ------------------------------------------------------
+
+        // --- PANGGILAN FUNGSI-FUNGSI SETUP AWAL ACTIVITY ---
+        initializeMap() // Fungsi abstract - implementasi di subclass
+        checkModuleEnabled() // Cek Xposed (panggil dialogHelper di dalamnya)
+        checkUpdates() // Cek Update (panggil dialogHelper di dalamnya)
+        setupNavView() // Setup NavView Listeners (panggil searchHelper & dialogHelper di dalamnya)
+        setupButtons() // Fungsi abstract - implementasi di subclass
+        setupDrawer() // Setup Drawer Toggle
+        checkNotifPermission() // Cek Permission Notifikasi (masih di sini, perlu review pake DialogHelper?)
+
+        // Cek PrefManager dan start Service (Utility? Bisa dipindah?)
         if (PrefManager.isJoystickEnabled){
             startService(Intent(this, JoystickService::class.java))
         }
-        // Register the broadcast receiver
-        registerReceiver(stopActionReceiver, IntentFilter("com.roxgps.STOP_ACTION"))
-    }
-    
-    fun performStopButtonClick() {
-    binding.stopButton.performClick()
-}
-    
-    private fun checkNotifPermission() {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(
-                this,
-                arrayOf(Manifest.permission.POST_NOTIFICATIONS),
-                PERMISSION_ID
-            )
-        }
-    } else if (!NotificationManagerCompat.from(this).areNotificationsEnabled()) {
-        val alertDialog = MaterialAlertDialogBuilder(this)
-            .setTitle("Enable Notifications")
-            .setMessage("This app requires notifications for optimal functionality. Please enable notifications in the settings.")
-            .setPositiveButton("Open Settings") { _, _ ->
-                val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
-                intent.putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
-                startActivity(intent)
+        // --- REGISTER RECEIVER VIA HELPER ---
+        notificationHelper.registerReceiver()
+        // ----------------------------------
+        // --- PANGGIL FUNGSI-FUNGSI OBSERVASI DATA DARI VIEWMODEL ---
+        // Pastikan fungsi-fungsi ini dipanggil agar UI bereaksi terhadap perubahan data
+        observeFavoriteResponse() // Observasi hasil simpan favorit
+        // checkUpdates() juga mengandung observasi viewModel.update
+        // getAllUpdatedFavList() // Jika perlu load awal dan observasi list favorit
+        lifecycleScope.launch { // Contoh panggil load awal list favorit jika perlu
+            lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED){ // Collect safely
+                 viewModel.doGetUserDetails() // Load data awal favorit (jika belum di ViewModel init)
+                 viewModel.allFavList.collect { // Observasi list favorit
+                    favListAdapter.submitList(it) // Update adapter list favorit (UI)
+                 }
             }
-            .setNegativeButton("Done", null)
-            .create()
-        alertDialog.show()
+        }
+        // --------------------------------------------------------
+        // Optional: Panggil request lokasi awal pas onCreate/onResume
+        // locationHelper.requestLastKnownLocation()
     }
-}
 
+    // --- FUNGSI-FUNGSI SETUP UI ACTIVITY YANG TERSISA ---
+
+    // Cek Permission Notifikasi (masih di sini, perlu review pake DialogHelper?)
+    // Logic ini mencakup cek permission dan menampilkan dialog penjelasan jika perlu.
+    // Dialog penjelasan sebaiknya menggunakan DialogHelper.
+    private fun checkNotifPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                    // PERMISSION_ID // ID ini hanya untuk onRequestPermissionsResult (sudah dihapus untuk lokasi), bisa pake ID lain atau handle pake Activity Result API kalau mau
+                    100 // Contoh ID permission notifikasi baru
+                )
+            }
+        } else if (!NotificationManagerCompat.from(this).areNotificationsEnabled()) {
+            // --- GUNAKAN DIALOGHELPER UNTUK MENAMPILKAN DIALOG INI ---
+            // Ganti kode MaterialAlertDialogBuilder(...) dengan panggilan ke dialogHelper
+            dialogHelper.showAlertDialog( // Contoh pemanggilan fungsi di DialogHelper (perlu diimplement di DialogHelper)
+                title = "Enable Notifications", // Hardcoded string? Sebaiknya dari R.string
+                message = "This app requires notifications for optimal functionality. Please enable notifications in the settings.", // Hardcoded string? Sebaiknya dari R.string
+                positiveButtonText = "Open Settings", // Hardcoded string? Sebaiknya dari R.string
+                onPositiveButtonClick = {
+                    val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                    intent.putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+                    startActivity(intent)
+                },
+                negativeButtonText = "Done", // Hardcoded string? Sebaiknya dari R.string
+                onNegativeButtonClick = null // Null listener
+            )
+            // ----------------------------------------------------
+        }
+    }
+
+    // Setup Drawer Toggle (masih di sini, ngurusin interaksi DrawerLayout sama Toolbar)
     private fun setupDrawer() {
         supportActionBar?.setDisplayShowTitleEnabled(false)
         val mDrawerToggle = object : ActionBarDrawerToggle(
@@ -168,424 +240,318 @@ abstract class BaseMapActivity: AppCompatActivity() {
         ) {
             override fun onDrawerClosed(view: View) {
                 super.onDrawerClosed(view)
-                invalidateOptionsMenu()
+                invalidateOptionsMenu() // Refresh menu (kalau ada menu di toolbar)
             }
 
             override fun onDrawerOpened(drawerView: View) {
                 super.onDrawerOpened(drawerView)
-                invalidateOptionsMenu()
+                invalidateOptionsMenu() // Refresh menu
             }
         }
-        binding.container.setDrawerListener(mDrawerToggle)
+        // Metode setDrawerListener sudah deprecated, gunakan addDrawerListener
+        // binding.container.setDrawerListener(mDrawerToggle)
+        binding.container.addDrawerListener(mDrawerToggle)
+        mDrawerToggle.syncState() // Sinkronkan status toggle dengan drawer
     }
 
+    // Setup NavView Listeners (masih di sini, ngurusin interaksi di dalam NavigationView)
+    // Termasuk Search Bar Listener (panggil SearchHelper) dan Item Menu Listener (panggil DialogHelper/start Activity)
     private fun setupNavView() {
-    ViewCompat.setOnApplyWindowInsetsListener(binding.mapContainer.map) { _, insets ->
-        val systemBarsInsets = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-        binding.navView.updatePadding(
-            top = systemBarsInsets.top,
-            bottom = systemBarsInsets.bottom
-        )
-        WindowInsetsCompat.CONSUMED
-    }
-        val progress = binding.search.searchProgress
+        // --- LOGIC INSETS (TETAP DI SINI) ---
+        ViewCompat.setOnApplyWindowInsetsListener(binding.mapContainer.map) { _, insets ->
+            val systemBarsInsets = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            binding.navView.updatePadding(
+                top = systemBarsInsets.top,
+                bottom = systemBarsInsets.bottom
+            )
+            WindowInsetsCompat.CONSUMED
+        }
+        // ----------------------------------
+
+        // --- LOGIC SEARCH BAR LISTENER (MEMANGGIL SEARCHHELPER DAN UPDATE UI) ---
+        val progress = binding.search.searchProgress // Referensi ke UI progress
         binding.search.searchBox.setOnEditorActionListener { v, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_SEARCH) {
-                if (isNetworkConnected()) {
-                    lifecycleScope.launch(Dispatchers.Main) {
+                // Panggil Utility cek koneksi
+                if (NetworkUtils.isNetworkConnected(this)) { // Gunakan NetworkUtils
+                    lifecycleScope.launch(Dispatchers.Main) { // Launch coroutine di Main thread
                         val getInput = v.text.toString()
                         if (getInput.isNotEmpty()){
-                            getSearchAddress(getInput).let {
-                                it.collect { result ->
+                            // Panggil fungsi search dari SearchHelper dan collect Flow hasilnya
+                            searchHelper.getSearchAddress(getInput)
+                                .collect { result ->
+                                    // Update UI atau State berdasarkan hasil dari helper
                                     when(result) {
                                         is SearchProgress.Progress -> {
                                             progress.visibility = View.VISIBLE
                                         }
                                         is SearchProgress.Complete -> {
                                             progress.visibility = View.GONE
-                                            lat = result.lat
-                                            lon = result.lon
-                                            moveMapToNewLocation(true)
+                                            lat = result.lat // Update state lat/lon di Activity
+                                            lon = result.lon // Update state lat/lon di Activity
+                                            moveMapToNewLocation(true) // Panggil fungsi abstract update map
                                         }
                                         is SearchProgress.Fail -> {
                                             progress.visibility = View.GONE
-                                            showToast(result.error!!)
+                                            showToast(result.error!!) // Tampilkan Toast error
                                         }
                                     }
                                 }
-                            }
                         }
                     }
                 } else {
-                    showToast(getString(R.string.no_internet))
+                    showToast(getString(R.string.no_internet)) // Tampilkan Toast no internet
                 }
-                return@setOnEditorActionListener true
+                return@setOnEditorActionListener true // Consume event
             }
-            return@setOnEditorActionListener false
+            return@setOnEditorActionListener false // Tidak consume event
         }
+        // -----------------------------------------------------------------------
 
+
+        // --- LOGIC NAVIGATION ITEM LISTENER (MEMANGGIL DIALOGHELPER ATAU START ACTIVITY) ---
         binding.navView.setNavigationItemSelectedListener {
             when(it.itemId){
                 R.id.get_favorite -> {
-                    openFavoriteListDialog()
+                    // Panggil fungsi show dialog favorit dari DialogHelper
+                    // Logic yang dilakukan setelah item dipilih atau dihapus ada di dalam lambda
+                     dialogHelper.showFavoriteListDialog(
+                         favList = viewModel.allFavList, // Pass data Flow favorit dari ViewModel
+                         onItemClick = { favorite ->
+                             // Logic saat item favorit diklik di dialog: update state dan update map
+                             lat = favorite.lat!!
+                             lon = favorite.lng!!
+                             moveMapToNewLocation(true)
+                             // Dialog dismissal bisa dihandle di dalam DialogHelper atau di sini
+                             // Jika DialogHelper mengembalikan instance dialog, bisa didismiss di sini
+                             // dialogInstanceDariFavList?.dismiss()
+                         },
+                         onItemDelete = { favorite ->
+                             // Logic saat tombol delete di item favorit diklik: panggil ViewModel
+                             viewModel.deleteFavorite(favorite)
+                         }
+                         // Jika DialogHelper perlu lifecycleScope buat collect Flow, pass di sini
+                         // lifecycleScope = lifecycleScope
+                     )
+                    true // Consume event klik
                 }
                 R.id.settings -> {
+                    // Start Activity Settings
                     startActivity(Intent(this,ActivitySettings::class.java))
+                    true // Consume event klik
                 }
                 R.id.about -> {
-                    aboutDialog()
+                    // Panggil fungsi show about dialog dari DialogHelper
+                    dialogHelper.showAboutDialog()
+                    true // Consume event klik
                 }
+                else -> false // Untuk item menu lain yang tidak dihandle
             }
-            binding.container.closeDrawer(GravityCompat.START)
-            true
+            binding.container.closeDrawer(GravityCompat.START) // Tutup drawer setelah klik item
+            true // Return true untuk menandakan event sudah dihandle
         }
+        // ----------------------------------------------------------------------------------
     }
 
+    // Cek Xposed Module Enabled (masih di sini, panggil dialogHelper di dalamnya)
+    // Logic ini mengamati state Xposed dari ViewModel dan menampilkan dialog jika modul tidak aktif.
     private fun checkModuleEnabled(){
         viewModel.isXposed.observe(this) { isXposed ->
-    if (!isXposed) {
-        xposedDialog?.dismiss()
-        xposedDialog = MaterialAlertDialogBuilder(this).run {
-            setTitle(R.string.error_xposed_module_missing)
-            setMessage(R.string.error_xposed_module_missing_desc)
-            setCancelable(true)
-            show()
+            if (!isXposed) {
+                xposedDialog?.dismiss() // Dismiss dialog sebelumnya jika ada
+                // --- GUNAKAN DIALOGHELPER UNTUK MENAMPILKAN DIALOG INI ---
+                // Ganti kode MaterialAlertDialogBuilder(...) dengan panggilan ke dialogHelper
+                xposedDialog = dialogHelper.showAlertDialog( // Contoh pemanggilan fungsi di DialogHelper (perlu diimplement di DialogHelper)
+                     title = getString(R.string.error_xposed_module_missing), // Gunakan string resources
+                     message = getString(R.string.error_xposed_module_missing_desc), // Gunakan string resources
+                     positiveButtonText = "OK", // Tombol OK
+                     onPositiveButtonClick = null,
+                     isCancelable = true // Bisa dicancel
+                     // Helper harus mengembalikan instance AlertDialog agar bisa disimpan di xposedDialog
+                 )
+                // ----------------------------------------------------
+            } else {
+                 xposedDialog?.dismiss() // Dismiss dialog jika modul aktif
+            }
         }
     }
-}
-    }
 
+    // Lifecycle onResume
     override fun onResume() {
         super.onResume()
-        viewModel.updateXposedState()
-        checkNotifPermission()
+        viewModel.updateXposedState() // Update state Xposed di ViewModel
+        checkNotifPermission() // Cek Permission Notifikasi (dipanggil lagi setiap resume)
+        // Optional: Panggil request lokasi di resume
+        // locationHelper.requestLastKnownLocation()
     }
-    
+
+    // Lifecycle onDestroy (Cleanup)
     override fun onDestroy() {
         super.onDestroy()
-        // Unregister the broadcast receiver to avoid memory leaks
-        unregisterReceiver(stopActionReceiver)
+        // --- UNREGISTER RECEIVER VIA HELPER ---
+        notificationHelper.unregisterReceiver()
+        // ------------------------------------
+
+        // --- STOP LOCATION UPDATES VIA HELPER ---
+        locationHelper.stopLocationUpdates()
+        // --------------------------------------
+
+        // Dismiss Xposed dialog kalau masih tampil saat Activity hancur
+        xposedDialog?.dismiss()
+
+        // Cleanup resources lain jika ada
+        // Tidak perlu dismiss dialog yang dibuat lokal di dalam fungsi, GC akan urus
     }
 
-    protected fun aboutDialog(){
-        alertDialog = MaterialAlertDialogBuilder(this)
-        layoutInflater.inflate(R.layout.about,null).apply {
-            val  titlele = findViewById<TextView>(R.id.design_about_title)
-            val  version = findViewById<TextView>(R.id.design_about_version)
-            val  info = findViewById<TextView>(R.id.design_about_info)
-            titlele.text = getString(R.string.app_name)
-            version.text = BuildConfig.VERSION_NAME
-            info.text = getString(R.string.about_info)
-        }.run {
-            alertDialog.setView(this)
-            alertDialog.show()
-        }
+    // --- IMPLEMENTASI INTERFACE LOCATIONLISTENER DARI LOCATIONHELPER ---
+    // Kode ini dijalankan saat LocationHelper berhasil mendapatkan lokasi
+    override fun onLocationResult(location: Location) {
+        lat = location.latitude // Update state lat di Activity
+        lon = location.longitude // Update state lon di Activity
+        moveMapToNewLocation(true) // Panggil fungsi abstract untuk update map
+        // println("Lokasi diperbarui dari helper: Latitude = $lat, Longitude = $lon") // Komen debugging
+        // showToast("Lokasi diperbarui!") // Contoh: Tampilkan Toast
     }
 
-    protected fun addFavoriteDialog() {
-        alertDialog =  MaterialAlertDialogBuilder(this).apply {
-            val view = layoutInflater.inflate(R.layout.dialog,null)
-            val editText = view.findViewById<EditText>(R.id.search_edittxt)
-            setTitle(getString(R.string.add_fav_dialog_title))
-            setPositiveButton(getString(R.string.dialog_button_add)) { _, _ ->
-                val s = editText.text.toString()
-                if (hasMarker()){
-                  showToast(getString(R.string.location_not_select))
-                }else{
-                    viewModel.storeFavorite(s, lat, lon)
-                    viewModel.response.observe(getActivityInstance()){
-                        if (it == (-1).toLong()) showToast(getString(R.string.cant_save)) else showToast(getString(R.string.save))
-                    }
-                }
-            }
-            setView(view)
-            show()
-        }
+    // Kode ini dijalankan saat LocationHelper melaporkan error lokasi
+    override fun onLocationError(message: String) {
+        // Panggil fungsi UI error handling (tetap di Activity)
+        handleLocationError() // Menampilkan Snackbar error lokasi
+        // Opsional: Tampilkan pesan error dari helper
+        // showToast("Error Lokasi: $message") // Membutuhkan fungsi showToast
     }
 
-    private fun openFavoriteListDialog() {
-        getAllUpdatedFavList()
-        alertDialog = MaterialAlertDialogBuilder(this)
-        alertDialog.setTitle(getString(R.string.favorites))
-        val view = layoutInflater.inflate(R.layout.fav,null)
-        val rcv = view.findViewById<RecyclerView>(R.id.favorites_list)
-        rcv.layoutManager = LinearLayoutManager(this)
-        rcv.adapter = favListAdapter
-        favListAdapter.onItemClick = {
-            it.let {
-                lat = it.lat!!
-                lon = it.lng!!
-            }
-            moveMapToNewLocation(true)
-            if (dialog.isShowing) dialog.dismiss()
-
-        }
-        favListAdapter.onItemDelete = {
-            viewModel.deleteFavorite(it)
-        }
-        alertDialog.setView(view)
-        dialog = alertDialog.create()
-        dialog.show()
-
+    // Kode ini dijalankan saat izin lokasi diberikan setelah diminta
+    override fun onPermissionGranted() {
+        showToast("Izin lokasi diberikan!") // Tampilkan Toast
+        // Optional: Langsung coba request lokasi lagi setelah izin dikasih
+        // locationHelper.requestLastKnownLocation()
     }
 
-    private fun getAllUpdatedFavList(){
-        lifecycleScope.launch {
-            lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED){
-                viewModel.doGetUserDetails()
-                viewModel.allFavList.collect {
-                    favListAdapter.submitList(it)
-                }
-            }
-        }
-
+    // Kode ini dijalankan saat izin lokasi ditolak oleh pengguna
+    override fun onPermissionDenied() {
+        showToast("Izin lokasi ditolak. Fitur lokasi tidak dapat digunakan.") // Tampilkan Toast
+        // Opsional: Disable tombol atau fitur yang butuh lokasi
     }
+    // ----------------------------------------------------------------
 
-    private fun checkUpdates(){
-        lifecycleScope.launchWhenResumed {
-            viewModel.update.collect{
-                if (it!= null){
-                    updateDialog()
-                }
-            }
-        }
-    }
 
-    private fun updateDialog(){
-        alertDialog = MaterialAlertDialogBuilder(this)
-        alertDialog.setTitle(R.string.update_available)
-        alertDialog.setMessage(update?.changelog)
-        alertDialog.setPositiveButton(getString(R.string.update_button)) { _, _ ->
-            MaterialAlertDialogBuilder(this).apply {
-                val view = layoutInflater.inflate(R.layout.update_dialog, null)
-                val progress = view.findViewById<LinearProgressIndicator>(R.id.update_download_progress)
-                val cancel = view.findViewById<AppCompatButton>(R.id.update_download_cancel)
-                setView(view)
-                cancel.setOnClickListener {
-                    viewModel.cancelDownload(getActivityInstance())
-                    dialog.dismiss()
-                }
-                lifecycleScope.launch {
-                    viewModel.downloadState.collect {
-                        when (it) {
-                            is MainViewModel.State.Downloading -> {
-                                if (it.progress > 0) {
-                                    progress.isIndeterminate = false
-                                    progress.progress = it.progress
-                                }
-                            }
-                            is MainViewModel.State.Done -> {
-                                viewModel.openPackageInstaller(getActivityInstance(), it.fileUri)
-                                viewModel.clearUpdate()
-                                dialog.dismiss()
-                            }
-                            is MainViewModel.State.Failed -> {
-                                Toast.makeText(
-                                    getActivityInstance(),
-                                    R.string.bs_update_download_failed,
-                                    Toast.LENGTH_LONG
-                                ).show()
-                                dialog.dismiss()
-
-                            }
-                            else -> {}
-                        }
-                    }
-                }
-                update?.let { it ->
-                    viewModel.startDownload(getActivityInstance(), it)
-                } ?: run {
-                    dialog.dismiss()
-                }
-            }.run {
-                dialog = create()
-                dialog.show()
-            }
-        }
-        dialog = alertDialog.create()
-        dialog.show()
-    }
-
-    private suspend fun getSearchAddress(address: String) = callbackFlow {
-        withContext(Dispatchers.IO){
-            trySend(SearchProgress.Progress)
-            val matcher: Matcher =
-                Pattern.compile("[-+]?\\d{1,3}([.]\\d+)?, *[-+]?\\d{1,3}([.]\\d+)?").matcher(address)
-
-            if (matcher.matches()){
-                delay(3000)
-                trySend(SearchProgress.Complete(matcher.group().split(",")[0].toDouble(),matcher.group().split(",")[1].toDouble()))
-            }else {
-                val geocoder = Geocoder(getActivityInstance())
-                val addressList: List<Address>? = geocoder.getFromLocationName(address,3)
-
-                try {
-                    addressList?.let {
-                        if (it.size == 1){
-                           trySend(SearchProgress.Complete(addressList[0].latitude, addressList[0].longitude))
-                        }else {
-                            trySend(SearchProgress.Fail(getString(R.string.address_not_found)))
-                        }
-                    }
-                } catch (io : IOException){
-                    trySend(SearchProgress.Fail(getString(R.string.no_internet)))
-                }
-            }
-        }
-        awaitClose { this.cancel() }
-    }
-
-    protected fun showStartNotification(address: String) {
-    val stopIntent = Intent(this, NotificationActionReceiver::class.java).apply {
-        action = NotificationsChannel.ACTION_STOP
-    }
-    val stopPendingIntent: PendingIntent = PendingIntent.getBroadcast(
-        this,
-        0,
-        stopIntent,
-        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-    )
-
-    notificationsChannel.showNotification(this) {
-        it.setSmallIcon(R.drawable.ic_stop)
-        it.setContentTitle(getString(R.string.location_set))
-        it.setContentText(address)
-        it.setAutoCancel(true)
-        it.setOngoing(true)
-        it.setCategory(Notification.CATEGORY_EVENT)
-        it.priority = NotificationCompat.PRIORITY_HIGH
-        it.addAction(
-            R.drawable.ic_stop,
-            getString(R.string.stop),
-            stopPendingIntent
-        )
-    }
-}
-
-    protected fun cancelNotification(){
-        notificationsChannel.cancelAllNotifications(this)
-    }
-
+    // --- FUNGSI UI ERROR HANDLING (Dipanggil dari LocationListener) ---
+    // Fungsi ini tetap di Activity karena dia menampilkan UI (Snackbar)
     private fun handleLocationError() {
-    Snackbar.make(binding.root, "Location services are disabled.", Snackbar.LENGTH_LONG)
-        .setAction("Enable") {
-            val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
-            startActivity(intent)
-        }
-        .show()
-}
-
-    // Get current location
-@SuppressLint("MissingPermission")
-protected fun getLastLocation() {
-    fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
-
-    // Periksa izin lokasi
-    if (!checkPermissions()) {
-        requestPermissions() // Minta izin jika belum diberikan
-        return
-    }
-
-    // Periksa apakah layanan lokasi aktif
-    if (!isLocationEnabled()) {
-        handleLocationError() // Pesan informatif
-        return
-    }
-
-    // Ambil lokasi terakhir
-    fusedLocationClient.lastLocation.addOnCompleteListener(this) { task ->
-        val location: Location? = task.result
-        if (location != null) {
-            // Lokasi terakhir ditemukan
-            lat = location.latitude
-            lon = location.longitude
-            moveMapToNewLocation(true) // Perbarui peta
-        } else {
-            // Lokasi terakhir tidak ditemukan, minta lokasi baru
-            requestNewLocationData()
-        }
-    }.addOnFailureListener {
-        // Tangani kesalahan saat mengambil lokasi
-        handleLocationError()
-    }
-}
-
-    @SuppressLint("MissingPermission")
-    private fun requestNewLocationData() {
-        val mLocationRequest = LocationRequest()
-        mLocationRequest.priority = LocationRequest.PRIORITY_HIGH_ACCURACY
-        mLocationRequest.interval = 0
-        mLocationRequest.fastestInterval = 0
-        mLocationRequest.numUpdates = 1
-
-        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
-        fusedLocationClient.requestLocationUpdates(
-            mLocationRequest, mLocationCallback,
-            Looper.myLooper()
-        )
-    }
-
-    private val mLocationCallback = object : LocationCallback() {
-    override fun onLocationResult(locationResult: LocationResult) {
-        val mLastLocation: Location? = locationResult.lastLocation
-
-        if (mLastLocation != null) {
-            val latitude = mLastLocation.latitude
-            val longitude = mLastLocation.longitude
-
-            // Periksa apakah lokasi valid
-            if (latitude != 0.0 && longitude != 0.0) {
-                lat = latitude
-                lon = longitude
-               // println("Lokasi diperbarui: Latitude = $lat, Longitude = $lon")
-            } else {
-                println("Lokasi tidak valid.")
+         Snackbar.make(binding.root, "Layanan lokasi dinonaktifkan.", Snackbar.LENGTH_LONG) // Gunakan binding.root untuk view
+            .setAction("Aktifkan") {
+                val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+                startActivity(intent)
             }
-        } else {
-            println("Tidak ada lokasi yang tersedia.")
+            .show()
+    }
+    // ---------------------------------------------------------------
+
+    // --- LOGIC YANG DIPICU DARI CALLBACK DIALOGHELPER ATAU LISTENER LAIN ---
+
+    // Logic Add Favorite (Dipanggil dari lambda DialogHelper.showAddFavoriteDialog)
+     protected fun addFavoriteAction() { // Nama fungsi diubah biar lebih jelas ini aksi
+         // Panggil dialogHelper untuk menampilkan dialog input nama favorit
+         // Pass lambda yang berisi logic setelah input diterima
+         dialogHelper.showAddFavoriteDialog { inputText ->
+             // Logic yang dijalankan saat tombol "Add" di dialog diklik
+             // Cek hasMarker() (fungsi abstract)
+             if (hasMarker()){
+                 showToast(getString(R.string.location_not_select))
+             }else{
+                 // Panggil ViewModel untuk menyimpan favorit
+                 viewModel.storeFavorite(inputText, lat, lon)
+                 // Observasi hasil simpan di observeFavoriteResponse()
+             }
+         }
+         // Observasi hasil simpan favorit dilakukan di fungsi terpisah (observeFavoriteResponse)
+     }
+
+    // Logic Observasi Hasil Simpan Favorit (Dipanggil di onCreate)
+     private fun observeFavoriteResponse() {
+         viewModel.response.observe(this@BaseMapActivity) { result -> // Gunakan this@BaseMapActivity
+             if (result == (-1).toLong()) {
+                 showToast(getString(R.string.cant_save))
+             } else {
+                 showToast(getString(R.string.save))
+             }
+         }
+     }
+
+    // Logic Update Check (Dipanggil di onCreate)
+    // Mengamati viewModel.update dan menampilkan dialog update jika tersedia
+     private fun checkUpdates(){
+        lifecycleScope.launchWhenResumed { // Observe saat Activity dalam keadaan Resumed
+            viewModel.update.collect{ updateInfo -> // updateInfo adalah data update dari ViewModel
+                if (updateInfo != null){
+                    // Panggil dialogHelper untuk menampilkan dialog update
+                    // Pass data updateInfo dan lambda untuk aksi Cancel
+                    val updateDialogInstance = dialogHelper.showUpdateDialog(
+                        updateInfo = updateInfo.changelog, // Pass changelog ke dialog
+                        onCancelClicked = {
+                             // Logic saat tombol Cancel di dialog diklik: panggil ViewModel untuk cancel download
+                             viewModel.cancelDownload(this@BaseMapActivity) // Pass context
+                             // Dismiss dialog bisa dihandle di callback download state
+                             // updateDialogInstance?.dismiss() // Jika simpan referensi dialog
+                         }
+                        // Jika logic progress/state download di helper, pass viewModel.downloadState dan lifecycleScope
+                        // updateState = viewModel.downloadState,
+                        // lifecycleScope = lifecycleScope
+                    )
+
+                    // Jika logic progress/state download di Activity (atau ViewModel),
+                    // Activity yang observe viewModel.downloadState dan update UI dialog
+                    // Ini butuh referensi ke UI progress indicator di dalam dialog.
+                    // Bisa simpan referensi dialogView atau dialogInstance dan cari view-nya.
+                     lifecycleScope.launch {
+                         viewModel.downloadState.collect { state ->
+                             when (state) {
+                                 is MainViewModel.State.Downloading -> {
+                                     // Cari progress indicator di dialog dan update
+                                     // updateDialogInstance?.findViewById<LinearProgressIndicator>(R.id.update_download_progress)?.apply {
+                                     //    isIndeterminate = false
+                                     //    progress = state.progress
+                                     // }
+                                 }
+                                 is MainViewModel.State.Done -> {
+                                     // dismiss dialog
+                                     // updateDialogInstance?.dismiss()
+                                     viewModel.openPackageInstaller(this@BaseMapActivity, state.fileUri)
+                                     viewModel.clearUpdate()
+                                 }
+                                 is MainViewModel.State.Failed -> {
+                                     // dismiss dialog
+                                     // updateDialogInstance?.dismiss()
+                                     showToast(getString(R.string.bs_update_download_failed))
+                                 }
+                                 else -> {} // State Idle
+                             }
+                         }
+                     }
+                }
+            }
         }
     }
-}
+    // Logic Favorite List Item Click / Delete (Logic ini ada di dalam setupNavView listener untuk R.id.get_favorite)
+    // Logic ini dipicu oleh lambda onItemClick dan onItemDelete dari dialogHelper.showFavoriteListDialog
+    // ... (kode di setupNavView sudah menunjukkan ini) ...
+    // ----------------------------------------------------------------------------------
 
-    private fun isLocationEnabled(): Boolean {
-        val locationManager: LocationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) || locationManager.isProviderEnabled(
-            LocationManager.NETWORK_PROVIDER
-        )
-    }
 
-    private fun checkPermissions(): Boolean {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED &&
-            ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-        ) {
-            return true
-        }
-        return false
-    }
+    // --- FUNGSI UTILITY (SUDAH DIPINDAH) ---
+    // fun isNetworkConnected(): Boolean { ... } // DIHAPUS, Panggil dari NetworkUtils.isNetworkConnected(this)
+    // ------------------------------------
 
-    private fun requestPermissions() {
-        ActivityCompat.requestPermissions(
-            this,
-            arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION),
-            PERMISSION_ID
-        )
-    }
+    // SearchProgress sealed class sudah dipindah ke SearchHelper
+    // NotificationActionReceiver class (tetap ada sebagai file terpisah)
 
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+    // Catatan: Fungsi extension 'showToast' dan 'isNetworkConnected' (kalau aslinya extension)
+    // perlu dipastikan bisa diakses dari Activity ini. Kalau dipindah ke file Utils,
+    // pastikan file tersebut diimport dan fungsi/propertinya bisa diakses.
+    // showToast() di kode asli adalah extension function (kemungkinan ada di ext/File.kt)
+    // Kalau isNetworkConnected() di kode asli juga extension function,
+    // panggilannya dari NetworkUtils.isNetworkConnected(this) mungkin perlu disesuaikan
+    // kalau mau tetap jadi extension function di tempat baru.
 
-        if ((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
-            getLastLocation()
-        }
-    }
-}
-
-sealed class SearchProgress {
-    object Progress : SearchProgress()
-    data class Complete(val lat: Double , val lon : Double) : SearchProgress()
-    data class Fail(val error: String?) : SearchProgress()
 }
