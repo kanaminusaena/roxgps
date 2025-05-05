@@ -1,16 +1,3 @@
-        <service
-            android:name=".service.RoxGpsAidlService"
-            android:enabled="true"
-            android:exported="true"
-            android:permission="com.roxgps.permission.BIND_LOKALISASI_SERVICE"> <intent-filter>
-                <action android:name="com.roxgps.ipc.IRoxGpsService" />
-            </intent-filter> </service> ```
-
-Dengan menambahkan `>` setelah atribut `android:permission`, tag `<service>` pembuka jadi valid, dan `<intent-filter>` menjadi elemen anak di dalamnya.
-
-Ini dia kode **LENGKAP** file **`app/src/main/AndroidManifest.xml`** kamu yang sudah diperbaiki:
-
-```xml
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
@@ -30,6 +17,7 @@ Ini dia kode **LENGKAP** file **`app/src/main/AndroidManifest.xml`** kamu yang s
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <application
         android:name=".App"
         android:allowBackup="true"
@@ -55,18 +43,18 @@ Ini dia kode **LENGKAP** file **`app/src/main/AndroidManifest.xml`** kamu yang s
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
          <service
             android:name=".utils.JoystickService"
             android:exported="false" />
+
         <service
             android:name=".service.RoxGpsAidlService"
             android:enabled="true"
             android:exported="true"
             android:permission="com.roxgps.permission.BIND_LOKALISASI_SERVICE"> <intent-filter>
                 <action android:name="com.roxgps.ipc.IRoxGpsService" />
-           </intent-filter>
-        </service>
-        <meta-data
+            </intent-filter> </service> <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyDJHl2fdyya0PuEY-LRFUZM71pijfZN6IE" />
         <meta-data
@@ -81,5 +69,5 @@ Ini dia kode **LENGKAP** file **`app/src/main/AndroidManifest.xml`** kamu yang s
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/provider_paths" />
         </provider>
-        </application>
+    </application>
 </manifest>
