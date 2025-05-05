@@ -1,13 +1,57 @@
+// app/build.gradle
+
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
     id 'com.google.android.libraries.mapsplatform.secrets-gradle-plugin'
-    id 'dagger.hilt.android.plugin'
-    id 'kotlin-parcelize'
-    id 'com.google.devtools.ksp'
+    id 'com.google.dagger.hilt.android' // ID plugin Hilt yang baru
+    id 'org.jetbrains.kotlin.plugin.parcelize' // ID plugin Parcelize yang baru
+    id 'com.google.devtools.ksp' // KSP
 }
 
-def tagName = '1.0'
+// >>> Mulai Logika Ambil Info dari Git <<<
+def gitTagName = "1.0-dev" // Default version name jika Git command gagal atau tidak ada tag
+def gitCommitCount = 1 // Default version code jika Git command gagal atau tidak ada commit
+
+try {
+    // --- Ambil Tag Git Terbaru ---
+    def processTag = "git describe --tags --abbrev=0".execute()
+    processTag.waitFor() // Tunggu sampai perintah Git selesai Tag
+
+    if (processTag.exitValue() == 0) { // Cek jika perintah Tag sukses
+        def tag = processTag.text.trim() // Ambil output (tag name), hapus whitespace
+        if (!tag.isEmpty()) {
+            gitTagName = tag // Gunakan tag Git jika berhasil didapat
+        } else {
+            logger.warn("Tidak ada tag Git yang ditemukan. Menggunakan default version name: ${gitTagName}")
+        }
+    } else {
+        logger.warn("Gagal menjalankan perintah Git 'git describe --tags --abbrev=0'. Menggunakan default version name: ${gitTagName}")
+        // logger.error("Git Error (Tag): " + processTag.errorStream.text) // Opsi: Log error output
+    }
+
+    // --- Ambil Jumlah Commit ---
+    // 'git rev-list --count HEAD' akan menghitung jumlah commit dari HEAD
+    def processCommitCount = "git rev-list --count HEAD".execute()
+    processCommitCount.waitFor() // Tunggu sampai perintah Git selesai Commit Count
+
+    if (processCommitCount.exitValue() == 0) { // Cek jika perintah Commit Count sukses
+         def count = processCommitCount.text.trim()
+         try {
+              gitCommitCount = count.toInteger() // Konversi hasil count ke integer
+         } catch (NumberFormatException e) {
+              logger.error("Gagal mengkonversi jumlah commit ke integer: ${count}. Menggunakan default version code: ${gitCommitCount}")
+         }
+    } else {
+        logger.warn("Gagal menjalankan perintah Git 'git rev-list --count HEAD'. Menggunakan default version code: ${gitCommitCount}")
+        // logger.error("Git Error (Commit Count): " + processCommitCount.errorStream.text) // Opsi: Log error output
+    }
+
+} catch (Exception e) {
+    logger.warn("Error saat menjalankan perintah Git: ${e.message}. Menggunakan default version: ${gitTagName} (${gitCommitCount})")
+}
+// >>> Akhir Logika Ambil Info dari Git <<<
+
 
 android {
     compileSdk 34
@@ -16,17 +60,21 @@ android {
         applicationId "com.roxgps"
         minSdk 27
         targetSdk 34
-        versionCode 6
-        versionName tagName
-        buildConfigField("String", "TAG_NAME", "\"${tagName}\"")
+        versionCode gitCommitCount // <-- Otomatis dari jumlah commit
+        versionName gitTagName // <-- Otomatis dari tag Git terbaru
+        buildConfigField("String", "TAG_NAME", "\"${gitTagName}\"") // <-- Gunakan variabel dari Git
+        buildConfigField("int", "VERSION_CODE", "${gitCommitCount}") // <-- Opsi: Tambah BuildConfig field untuk version code
     }
 
     splits {
         abi {
             enable true
             reset()
-            include "arm64-v8a"
-            universalApk false
+            // Tambahkan arsitektur lain yang ingin lo support
+            include "armeabi-v7a", "arm64-v8a" // <-- Tambah armeabi-v7a
+            // Opsi: Tambah x86 dan x86_64 jika butuh
+            // include "armeabi-v7a", "arm64-v8a", "x86", "x86_64"
+            universalApk false // True untuk satu APK universal, False untuk APK per ABI
         }
     }
 
@@ -48,8 +96,17 @@ android {
 
             enableV1Signing true
             enableV2Signing true
-            enableV3Signing true
+            enableV3Signing true // Hanya jika targetSdk >= 28
+            // enableV4Signing true // Jika targetSdk >= 30
         }
+        // Debug signing config - Gradle defaultnya sudah ada, tapi bisa didefinisikan eksplisit jika perlu kustomisasi.
+        // Kalau tidak ada kustomisasi, blok ini tidak wajib, tapi penambahan signingConfig di buildTypes tetap berguna.
+         debug {
+            keyAlias keystoreProperties['keyAlias']
+            keyPassword keystoreProperties['keyPassword']
+            storeFile file(keystoreProperties['storeFile'])
+            storePassword keystoreProperties['storePassword']
+         }
     }
 
     buildTypes {
@@ -61,6 +118,11 @@ android {
         }
         debug {
             minifyEnabled false
+            // Debuggable defaultnya true untuk debug buildType
+            // debuggable true // Tidak wajib ditulis karena default
+
+            // Mengaitkan debug build type dengan signing config debug default
+            signingConfig signingConfigs.debug // <-- Ditambahkan untuk eksplisit signing debug
         }
     }
 
@@ -70,10 +132,10 @@ android {
     }
 
     kotlinOptions {
-        jvmTarget = "17"
+        jvmTarget = "17" // Pastikan sesuai dengan compileOptions
         freeCompilerArgs += [
             '-Xjvm-default=all',
-            '-Xallow-jvm-ir-serialization',
+            '-Xallow-jvm-ir-serialization', // Mungkin tidak diperlukan lagi di versi Kotlin yang lebih baru
         ]
     }
 
@@ -87,36 +149,41 @@ android {
         foss {
             dimension "version"
             applicationIdSuffix ".foss"
-            versionNameSuffix "-foss"
+            versionNameSuffix "-foss" // Opsi: hapus ini jika versionName sudah pakai tag Git
+                                      // Jika tidak dihapus, versionName akan jadi "${gitTagName}-foss"
         }
         full {
             dimension "version"
             isDefault true
             applicationIdSuffix ".full"
-            versionNameSuffix "-full"
+            versionNameSuffix "-full" // Opsi: hapus ini jika versionName sudah pakai tag Git
+                                      // Jika tidak dihapus, versionName akan jadi "${gitTagName}-full"
         }
     }
 
-    namespace 'com.roxgps'
+    // TODO: Jika versi MapLibre atau Google Play Services perlu disesuaikan per targetSdk,
+    //       gunakan configurations atau logic lain di sini.
+
+    namespace 'com.roxgps' // Pastikan namespace sesuai
 }
 
 dependencies {
-    // Xposed dependencies (temporary fix)
+    // Xposed dependencies (temporary fix) - Tetap sama
     compileOnly 'de.robv.android.xposed:api:82'
-    compileOnly 'com.github.deltazefiro:XposedBridge:main-SNAPSHOT'
+    compileOnly 'com.github.deltazefiro:XposedBridge:main-SNAPSHOT' // Pastikan repositori JitPack ada di settings.gradle
     implementation 'org.lsposed.hiddenapibypass:hiddenapibypass:4.3'
 
-    // MicroG (foss) and MapLibre
+    // MicroG (foss) and MapLibre - Tetap sama
     fossImplementation 'org.microg.gms:play-services-location:0.3.6.244735'
     fossImplementation 'org.maplibre.gl:android-sdk:11.8.2'
 
-    // Google Play Services (full)
+    // Google Play Services (full) - Tetap sama
     fullImplementation 'com.google.android.gms:play-services-location:21.0.1'
     fullImplementation 'com.google.android.gms:play-services-maps:18.1.0'
 
-    // AndroidX dependencies
+    // AndroidX dependencies - Tetap sama
     implementation 'androidx.core:core-ktx:1.9.0'
-    implementation 'androidx.appcompat:appcompat:1.7.0-alpha01'
+    implementation 'androidx.appcompat:appcompat:1.7.0-alpha01' // alpha release, hati-hati jika butuh stabilitas
     implementation 'androidx.activity:activity-ktx:1.7.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     implementation 'androidx.preference:preference:1.2.0'
@@ -130,18 +197,18 @@ dependencies {
     implementation 'androidx.fragment:fragment-ktx:1.5.7'
     implementation 'com.google.android.material:material:1.9.0'
 
-    // Hilt dependencies
-    implementation 'com.google.dagger:hilt-android:2.45'
-    kapt 'com.google.dagger:hilt-compiler:2.45'
-    kapt 'androidx.hilt:hilt-compiler:1.0.0'
+    // Hilt dependencies (PINDAH DARI KAPT KE KSP)
+    implementation 'com.google.dagger:hilt-android:2.45' // Tetap sama
+    ksp 'com.google.dagger:hilt-compiler:2.45' // Hilt Compiler via KSP
+    ksp 'androidx.hilt:hilt-compiler:1.0.0' // AndroidX Hilt Compiler via KSP
 
-    // Timber
+    // Timber - Tetap sama
     implementation 'com.jakewharton.timber:timber:5.0.1'
 
-    // Retrofit
+    // Retrofit - Tetap sama
     implementation 'com.squareup.retrofit2:retrofit:2.9.0'
     implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
 
-    // Virtual Joystick
+    // Virtual Joystick - Tetap sama
     implementation 'com.github.lukkass222:virtual-joystick-android:1.13.5'
 }
