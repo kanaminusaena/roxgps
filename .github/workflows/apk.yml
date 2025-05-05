@@ -28,11 +28,12 @@ jobs:
       - name: Extract version from build.gradle (tagName)
         id: version
         run: |
-          TAG_NAME=$(grep -m 1 "def tagName" ${{ env.main_project_module }}/build.gradle | sed "s/def tagName *= *['\"]\\([0-9.]*\\)['\"]/\1/")
+          TAG_NAME=$(grep -m 1 "def gitTagName" app/build.gradle | sed "s/def gitTagName *= *['\"]\\([^'\"]*\\)['\"]/\1/")
           if [ -z "$TAG_NAME" ]; then
             echo "GAGAL mendapatkan tagName dari build.gradle"
             exit 1
           fi
+          
           echo "version=$TAG_NAME" >> $GITHUB_ENV
           echo "VERSION=$TAG_NAME"
 
