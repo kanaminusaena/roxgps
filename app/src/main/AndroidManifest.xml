@@ -32,8 +32,7 @@
             android:name=".ui.ActivitySettings"
             android:exported="false"
             android:label="@string/title_activity_settings"
-            android:launchMode="singleTop"
-        </activity>
+            android:launchMode="singleTop" />
 
         <activity
             android:name=".ui.MapActivity"
@@ -44,7 +43,7 @@
             </intent-filter>
         </activity>
 
-         <service
+        <service
             android:name=".utils.JoystickService"
             android:exported="false" />
 
@@ -52,14 +51,19 @@
             android:name=".service.RoxGpsAidlService"
             android:enabled="true"
             android:exported="true"
-            android:permission="com.roxgps.permission.BIND_LOKALISASI_SERVICE"> <intent-filter>
+            android:permission="com.roxgps.permission.BIND_LOKALISASI_SERVICE">
+            <intent-filter>
                 <action android:name="com.roxgps.ipc.IRoxGpsService" />
-            </intent-filter> </service> <meta-data
+            </intent-filter>
+        </service>
+
+        <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyDJHl2fdyya0PuEY-LRFUZM71pijfZN6IE" />
         <meta-data
             android:name="com.maplibre.AccessToken"
             android:value="pk.eyJ1IjoiZGVsdGFjaat;" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.provider"
