@@ -102,6 +102,10 @@ android {
         // Debug signing config - Gradle defaultnya sudah ada, tapi bisa didefinisikan eksplisit jika perlu kustomisasi.
         // Kalau tidak ada kustomisasi, blok ini tidak wajib, tapi penambahan signingConfig di buildTypes tetap berguna.
          debug {
+            def keystorePropertiesFile = rootProject.file("local.properties")
+            def keystoreProperties = new Properties()
+            keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+            
             keyAlias keystoreProperties['keyAlias']
             keyPassword keystoreProperties['keyPassword']
             storeFile file(keystoreProperties['storeFile'])
