@@ -13,23 +13,23 @@ interface FavoriteDao {
 
     // Untuk update single favorite
     @Update
-    suspend fun updateUserDetails(favorite: Favorite)
+    suspend fun updateFavorite(favorite: Favorite) // TODO: Rename method to updateFavorite
 
     // Delete single favorite
     @Delete
-    suspend fun deleteSingleFavorite(favorite: Favorite)
+    suspend fun deleteFavorite(favorite: Favorite) // TODO: Rename method to deleteFavorite
 
     // Mendapatkan semua favorit yang dimasukkan ke database Room
     // Dikembalikan sebagai Flow untuk observasi reaktif dari ViewModel/UI.
     // ORDER BY id DESC: mengurutkan dari ID terbesar ke terkecil.
-    @Transaction // Anotasi Transaction mungkin tidak diperlukan untuk query SELECT sederhana ini, tapi tidak berbahaya.
-    @Query("SELECT * FROM favorite ORDER BY id DESC")
+    // @Transaction // <-- DIHAPUS (Tidak perlu untuk SELECT sederhana)
+    @Query("SELECT * FROM Favorite ORDER BY id DESC") // <<< PERBAIKAN KRUSIAL DI SINI: 'favorite' diganti 'Favorite'
     fun getAllFavorites() : Flow<List<Favorite>>
 
     // Mendapatkan single favorite berdasarkan ID
     // Mengembalikan Favorite? (nullable) karena query mungkin tidak menemukan data
-    @Transaction // Anotasi Transaction mungkin tidak diperlukan untuk query SELECT tunggal sederhana ini, tapi tidak berbahaya.
-    @Query("SELECT * FROM favorite WHERE id = :id ORDER BY id DESC") // ORDER BY juga tidak perlu untuk single result, tapi biarkan saja.
-    suspend fun getSingleFavorite(id: Long) : Favorite? // <-- PERBAIKAN KRUSIAL: Return type jadi Favorite? (nullable)
+    // @Transaction // <-- DIHAPUS (Tidak perlu untuk SELECT tunggal sederhana)
+    @Query("SELECT * FROM Favorite WHERE id = :id") // <<< PERBAIKAN KRUSIAL DI SINI: 'favorite' diganti 'Favorite'. ORDER BY id DESC juga tidak perlu untuk single result.
+    suspend fun getSingleFavorite(id: Long) : Favorite? // Return type jadi Favorite? (nullable)
 
 }

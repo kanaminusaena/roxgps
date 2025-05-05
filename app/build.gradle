@@ -138,8 +138,7 @@ android {
     kotlinOptions {
         jvmTarget = "17" // Pastikan sesuai dengan compileOptions
         freeCompilerArgs += [
-            '-Xjvm-default=all',
-            '-Xallow-jvm-ir-serialization', // Mungkin tidak diperlukan lagi di versi Kotlin yang lebih baru
+            '-Xjvm-default=all'
         ]
     }
 
