@@ -5,7 +5,7 @@
     <permission
         android:name="com.roxgps.permission.BIND_LOKALISASI_SERVICE"
         android:label="Bind Service"
-        android:description="Allows binding to the pek location service provided by RoxGPS app."
+        android:description="@string/roxgps_service_desc"
         android:protectionLevel="signature" />
 
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />

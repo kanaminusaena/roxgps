@@ -2,7 +2,8 @@
 
     <!-- Home -->
     <string name="app_name">RoxGPS</string>
-    <string name="xposed_desc">A GPS setter based on the Xposed framework.</string>
+    <string name="xposed_desc">A Rox GPS based on the Xposed framework.</string>
+    <string name="roxgps_service_desc">Allows binding to the pek location service provided by RoxGPS app.</string>
     <string name="search">Search</string>
     <string name="address">United States</string>
     <string name="favorites">Favorites</string>
