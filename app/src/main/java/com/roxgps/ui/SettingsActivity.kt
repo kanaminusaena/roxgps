@@ -30,8 +30,21 @@ import com.roxgps.databinding.ActivitySettingsBinding
 import com.roxgps.utils.JoystickService
 import com.roxgps.utils.PrefManager
 import com.roxgps.utils.ext.showToast
+import androidx.activity.viewModels // Untuk delegate viewModels()
+import androidx.lifecycle.Lifecycle // Untuk repeatOnLifecycle
+import androidx.lifecycle.lifecycleScope // Untuk lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle // Untuk repeatOnLifecycle
+import kotlinx.coroutines.launch // Untuk launch coroutine
+import com.roxgps.ui.viewmodel.MainViewModel // Import ViewModel
 
 class ActivitySettings : AppCompatActivity() {
+
+    // Dapatkan instance ViewModel menggunakan delegate Hilt
+    private val viewModel: MainViewModel by viewModels() // Inject ViewModel
+
+
+    // ... Binding View atau findViewById ...
+     private lateinit var textViewGojekToken: TextView // Contoh TextView untuk menampilkan token
 
     private val binding by lazy {
         ActivitySettingsBinding.inflate(layoutInflater)
@@ -101,8 +114,65 @@ class ActivitySettings : AppCompatActivity() {
                 }
             }
         )
+        
+         // ... Setup View Binding atau setContentView ...
+
+        // Inisialisasi View (misal findViewByID)
+         textViewGojekToken = findViewById(R.id.textViewGojekToken) // <-- ID TextView di layout lo
+
+
+        // =====================================================================
+        // Mengamati StateFlow dari ViewModel (dari Repositories)
+        // =====================================================================
+
+        // Mengamati status hook module Xposed
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) { // Amati saat Activity/Fragment STARTED
+                viewModel.isModuleHooked.collect { isHooked ->
+                    // Update UI berdasarkan status hook
+                    // Log.d("SettingsActivity", "Module hooked status: $isHooked")
+                    // Tampilkan status hook di UI
+                }
+            }
+        }
+
+        // Mengamati error hook terakhir
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.lastHookError.collect { errorMsg ->
+                    // Tampilkan error di UI (misal Toast, Snackbar, atau TextView error)
+                    // Log.e("SettingsActivity", "Hook error: $errorMsg")
+                }
+            }
+        }
+
+        // =====================================================================
+        // Mengamati Token Gojek dari ViewModel
+        // =====================================================================
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.gojekToken.collect { token ->
+                    // Update UI dengan token Gojek
+                    if (token != null) {
+                        textViewGojekToken.text = "Gojek Token: ${token.take(10)}..." // Tampilkan beberapa karakter pertama
+                        // Opsi: Simpan token di PrefManager jika UI ini yang mengaturnya
+                    } else {
+                        textViewGojekToken.text = "Gojek Token: N/A" // Tampilkan status jika token null
+                    }
+                    // Log.d("SettingsActivity", "Gojek Token updated.")
+                }
+            }
+        }
+        // TODO: Tambahkan pengamatan StateFlow atau event lain dari ViewModel
 
     }
+    
+    // TODO: Tambahkan method untuk trigger fetchGojekToken() dari UI (misal di tombol refresh)
+     // fun onRefreshTokenButtonClick() {
+     //     viewModel.fetchGojekToken()
+     // }
+
+    // TODO: Tambahkan interaksi UI lainnya
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         if (item.itemId == android.R.id.home) {

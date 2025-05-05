@@ -10,7 +10,7 @@ import com.roxgps.R
 
 object NotificationsChannel {
     const val ACTION_STOP = "com.roxgps.ACTION_STOP"
-    const val CHANNEL_ID = "gps_setter_channel"
+    const val CHANNEL_ID = "rox_gps_channel"
     const val NOTIFICATION_ID = 123
 
     private fun createChannelIfNeeded(context: Context) {

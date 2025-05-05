@@ -1,34 +1,43 @@
 package com.roxgps.helper // Pastikan package ini sesuai dengan struktur folder kamu
 
-import android.content.Context
-import android.content.Intent
-import android.net.Uri
-import android.view.LayoutInflater
-import android.view.View
-import android.widget.EditText
-import android.widget.TextView
-import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.widget.AppCompatButton
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.android.material.progressindicator.LinearProgressIndicator
-import com.roxgps.BuildConfig
-import com.roxgps.R // Import R dari project kamu
+// =====================================================================
+// Import Library untuk DialogHelper
+// =====================================================================
+
+import android.content.Context // Untuk Context (Activity context)
+import android.content.Intent // Untuk Intent (jika perlu Intent dari dialog, misal buka Settings)
+import android.net.Uri // Untuk Uri (jika perlu dari dialog, misal buka Settings)
+import android.view.LayoutInflater // Untuk meng-inflate layout dialog
+import android.view.View // Untuk View
+import android.widget.EditText // Untuk EditText di layout dialog
+import android.widget.TextView // Untuk TextView di layout dialog
+import androidx.appcompat.app.AlertDialog // Untuk AlertDialog standar
+import androidx.appcompat.widget.AppCompatButton // Untuk Button di layout dialog
+import androidx.recyclerview.widget.LinearLayoutManager // Untuk RecyclerView
+import androidx.recyclerview.widget.RecyclerView // Untuk RecyclerView di layout dialog
+import com.google.android.material.dialog.MaterialAlertDialogBuilder // Untuk dialog style Material
+import com.google.android.material.progressindicator.LinearProgressIndicator // Untuk ProgressBar Material di layout dialog
+import com.roxgps.BuildConfig // Untuk BuildConfig.VERSION_NAME
+import com.roxgps.R // Import R dari project kamu (resources: layout, string, id)
 import com.roxgps.adapter.FavListAdapter // Butuh adapter favorit
-import com.roxgps.room.Favorite // Mengimpor Favorite dari package ROOM, sesuai keputusan kita
-import kotlinx.coroutines.flow.Flow // Butuh Flow kalau FavList dipass sebagai Flow (opsional, tergantung implementasi)
-import androidx.lifecycle.LifecycleCoroutineScope // Jika perlu collect Flow di helper (opsional)
+import com.roxgps.room.Favorite // Mengimpor Favorite dari package ROOM (model data favorit)
+// import kotlinx.coroutines.flow.Flow // Jika perlu Flow di helper (opsional, tapi tidak disarankan)
+// import androidx.lifecycle.LifecycleCoroutineScope // Jika perlu Scope di helper (opsional, tapi tidak disarankan)
 
-
-// Helper class buat ngurusin semua logika tampilan dialog
-class DialogHelper(
-    private val context: Context, // Context Activity
-    private val layoutInflater: LayoutInflater // LayoutInflater dari Activity
+// Anotasi @Inject constructor() agar Hilt bisa menyediakan instance
+class DialogHelper @Inject constructor(
+    // Hilt bisa menyediakan Context
+    @ActivityContext // Scope-nya Activity, jadi pakai @ActivityContext
+    private val context: Context // Context Activity diperlukan untuk MaterialAlertDialogBuilder
+    // LayoutInflater DIPINDAHKAN dari constructor ke method show...Dialog yang membutuhkannya
 ) {
 
-    // --- FUNGSI showAlertDialog: Untuk dialog alert umum ---
+    // =====================================================================
+    // Fungsi Dasar: showAlertDialog (untuk dialog alert umum dengan custom view)
+    // =====================================================================
+    // Method ini tidak berubah, tapi sekarang menerima LayoutInflater
     fun showAlertDialog(
+        layoutInflater: LayoutInflater, // Menerima LayoutInflater di sini
         title: String? = null,
         message: String? = null,
         positiveButtonText: String? = null,
@@ -38,11 +47,11 @@ class DialogHelper(
         isCancelable: Boolean = true,
         customView: View? = null
     ): AlertDialog {
-        val builder = MaterialAlertDialogBuilder(context)
+        val builder = MaterialAlertDialogBuilder(context) // Menggunakan context dari constructor
 
         if (title != null) builder.setTitle(title)
         if (message != null) builder.setMessage(message)
-        if (customView != null) builder.setView(customView)
+        if (customView != null) builder.setView(customView) // View sudah di-inflate di method spesifik
 
         if (positiveButtonText != null) {
             builder.setPositiveButton(positiveButtonText) { dialog, which ->
@@ -59,13 +68,19 @@ class DialogHelper(
         builder.setCancelable(isCancelable)
 
         val dialog = builder.create()
-        dialog.show()
+        // dialog.show() // Jangan panggil show di sini, kembalikan dialog biar pemanggil yang panggil show()
         return dialog
     }
 
-    // --- FUNGSI showAboutDialog ---
-    fun showAboutDialog() {
-        val view = layoutInflater.inflate(R.layout.about, null).apply {
+    // =====================================================================
+    // Fungsi Spesifik Dialog
+    // Logic tampilan di sini, Logic Aksi di Lambda/Activity.
+    // Semua method show...Dialog sekarang mengembalikan AlertDialog dan TIDAK langsung show()
+    // =====================================================================
+
+    // --- FUNGSI createAboutDialog --- (Nama diubah jadi create)
+    fun createAboutDialog(layoutInflater: LayoutInflater): AlertDialog { // Menerima LayoutInflater
+        val view = layoutInflater.inflate(R.layout.about, null).apply { // Menggunakan LayoutInflater yang diterima
             val titlele = findViewById<TextView>(R.id.design_about_title)
             val version = findViewById<TextView>(R.id.design_about_version)
             val info = findViewById<TextView>(R.id.design_about_info)
@@ -74,114 +89,132 @@ class DialogHelper(
             info.text = context.getString(R.string.about_info)
         }
 
-        showAlertDialog(
+        // Menggunakan showAlertDialog dasar. Mengembalikan dialog, tidak show()
+        return showAlertDialog(
+            layoutInflater = layoutInflater, // Pass LayoutInflater
             title = context.getString(R.string.app_name),
             customView = view,
-            positiveButtonText = "OK" // Menggunakan teks literal untuk tombol OK umum
+            positiveButtonText = "OK"
         )
     }
 
-    // --- FUNGSI showAddFavoriteDialog ---
-    fun showAddFavoriteDialog(onAddClicked: (String) -> Unit) {
-        val view = layoutInflater.inflate(R.layout.dialog, null) // Asumsi layout dialog ini punya EditText dg id search_edittxt
+    // --- FUNGSI createAddFavoriteDialog --- (Nama diubah jadi create)
+    fun createAddFavoriteDialog(layoutInflater: LayoutInflater, onAddClicked: (String) -> Unit): AlertDialog { // Menerima LayoutInflater
+        val view = layoutInflater.inflate(R.layout.dialog, null) // Menggunakan LayoutInflater yang diterima
         val editText = view.findViewById<EditText>(R.id.search_edittxt)
 
-        showAlertDialog(
+        // Menggunakan showAlertDialog dasar. Mengembalikan dialog, tidak show()
+        return showAlertDialog(
+            layoutInflater = layoutInflater, // Pass LayoutInflater
             title = context.getString(R.string.add_fav_dialog_title),
             customView = view,
-            positiveButtonText = context.getString(R.string.dialog_button_add), // Menggunakan resource string
+            positiveButtonText = context.getString(R.string.dialog_button_add),
             onPositiveButtonClick = {
                 val s = editText.text.toString()
                 onAddClicked(s)
             },
-            negativeButtonText = context.getString(R.string.dialog_button_cancel) // Menggunakan resource string
+            negativeButtonText = context.getString(R.string.dialog_button_cancel)
         )
     }
 
-    // --- FUNGSI showFavoriteListDialog ---
+    // --- FUNGSI createFavoriteListDialog --- (Nama diubah jadi create)
     // favList: Terima data sebagai List<Favorite> dari Activity/ViewModel
-    fun showFavoriteListDialog(
-        favList: List<Favorite>, // Menggunakan Favorite dari package com.roxgps.room
-        onItemClick: (Favorite) -> Unit,
-        onItemDelete: (Favorite) -> Unit
+    fun createFavoriteListDialog(
+        layoutInflater: LayoutInflater, // Menerima LayoutInflater
+        favList: List<Favorite>, // Menerima data
+        onItemClick: (Favorite) -> Unit, // Menerima callback
+        onItemDelete: (Favorite) -> Unit // Menerima callback
     ): AlertDialog {
-        val view = layoutInflater.inflate(R.layout.fav, null) // Asumsi layout ini punya RecyclerView dg id favorites_list
+        val view = layoutInflater.inflate(R.layout.fav, null) // Menggunakan LayoutInflater yang diterima
         val rcv = view.findViewById<RecyclerView>(R.id.favorites_list)
 
-        val favListAdapter = FavListAdapter() // Menggunakan adapter yang sudah ada
-        rcv.layoutManager = LinearLayoutManager(context)
+        val favListAdapter = FavListAdapter() // Menggunakan adapter
+        rcv.layoutManager = LinearLayoutManager(context) // Menggunakan context dari constructor
         rcv.adapter = favListAdapter
 
         favListAdapter.onItemClick = { favorite ->
             onItemClick(favorite)
-            // Logika dismiss dialog setelah klik item biasanya di Activity
+            // Logic dismiss dialog setelah klik item tetap di Activity melalui callback
         }
-        favListAdapter.onItemDelete = onItemDelete
+        favListAdapter.onItemDelete = onItemDelete // Menyetel callback delete
 
-        favListAdapter.submitList(favList) // Menggunakan List<Favorite> yang diterima
+        favListAdapter.submitList(favList) // Menggunakan data list
 
-        val dialog = MaterialAlertDialogBuilder(context)
-            .setTitle(context.getString(R.string.favorites)) // Menggunakan resource string
+        // Menggunakan MaterialAlertDialogBuilder langsung (tidak lewat showAlertDialog umum) karena ada tombol negatif. Mengembalikan dialog, tidak show()
+        val dialog = MaterialAlertDialogBuilder(context) // Menggunakan context dari constructor
+            .setTitle(context.getString(R.string.favorites))
             .setView(view)
-            .setNegativeButton(context.getString(R.string.dialog_button_close), null) // Contoh tombol Close
+            .setNegativeButton(context.getString(R.string.dialog_button_close), null)
             .create()
 
-        dialog.show()
-        return dialog
+        return dialog // Mengembalikan instance dialog
     }
-     // Catatan: Layout 'fav' harus punya string "dialog_button_close"
-    // Tambahkan di strings.xml: <string name="dialog_button_close">Tutup</string>
 
-
-    // --- FUNGSI showUpdateDialog ---
-    fun showUpdateDialog(
-        updateInfo: String?,
-        onCancelClicked: () -> Unit
-        // updateState: Flow<MainViewModel.State>? = null, // Jika logic state di helper
-        // lifecycleScope: LifecycleCoroutineScope? = null // Jika logic state di helper
+    // --- FUNGSI createUpdateDialog --- (Nama diubah jadi create)
+    // Dialog utama Update
+    fun createUpdateDialog(
+        layoutInflater: LayoutInflater, // Menerima LayoutInflater
+        updateInfo: String?, // Data
+        onUpdateClicked: () -> Unit, // Callback tombol Update
+        onCancelClicked: () -> Unit // Callback tombol Batal (untuk dialog download)
     ): AlertDialog {
-         val dialogView = layoutInflater.inflate(R.layout.update_dialog, null) // Asumsi layout ini punya progressbar dan tombol cancel
+         // Menggunakan MaterialAlertDialogBuilder langsung. Mengembalikan dialog, tidak show()
+         val mainDialog = MaterialAlertDialogBuilder(context) // Menggunakan context dari constructor
+             .setTitle(R.string.update_available)
+             .setMessage(updateInfo)
+             .setPositiveButton(context.getString(R.string.update_button)) { _, _ ->
+                 // Aksi klik tombol Update: Panggil lambda callback
+                 onUpdateClicked() // Memanggil lambda onUpdateClicked
+
+                 // Di sini, tampilkan dialog download yang TERPISAH di Activity, BUKAN di helper.
+                 // Helper bisa menyediakan fungsi createDownloadProgressDialog().
+             }
+             .setNegativeButton(context.getString(R.string.dialog_button_cancel), null)
+             .create()
+
+         return mainDialog // Mengembalikan dialog utama
+     }
+
+     // --- FUNGSI createDownloadProgressDialog --- (Fungsi baru untuk dialog progress download)
+     // Dialog untuk progress download
+     fun createDownloadProgressDialog(layoutInflater: LayoutInflater, onCancelClicked: () -> Unit): AlertDialog { // Menerima LayoutInflater
+         // Meng-inflate layout dialog download custom
+         val dialogView = layoutInflater.inflate(R.layout.update_dialog, null) // Menggunakan LayoutInflater yang diterima
          val progressIndicator = dialogView.findViewById<LinearProgressIndicator>(R.id.update_download_progress)
          val cancelButton = dialogView.findViewById<AppCompatButton>(R.id.update_download_cancel)
 
-         cancelButton.setOnClickListener {
-             onCancelClicked()
-             // Logika dismiss dialog di Activity berdasarkan state atau callback cancel
+         cancelButton.setOnClickListener { // Listener tombol Batal
+             onCancelClicked() // Memanggil lambda onCancelClicked
+             // Logika dismiss dialog TIDAK di sini, tapi di Activity,
+             // saat Activity menerima update state "Cancelled" atau "Failed" dari ViewModel.
          }
 
-         // Jika logic progress/state download di helper dan pass Flow/Scope:
-         // lifecycleScope?.launch {
-         //      updateState?.collect { state ->
-         //          when(state) {
-         //              is MainViewModel.State.Downloading -> {
-         //                  progressIndicator.isIndeterminate = false
-         //                  progressIndicator.progress = state.progress
-         //              }
-         //              // Tambah logic buat state Done dan Failed (dismiss dialog, dll)
-         //          }
-         //      }
-         // }
-         // Jika logic progress di Activity, Activity yang observe state dan update dialogView (disarankan)
-
-
-         val dialog = MaterialAlertDialogBuilder(context)
-             .setTitle(R.string.update_available) // Menggunakan resource string
-             .setMessage(updateInfo)
-             .setPositiveButton(context.getString(R.string.update_button)) { _, _ ->
-                 // Aksi klik tombol Update: sebaiknya trigger event/lambda ke Activity
-                 // yang akan memulai proses download (logic download di Activity/ViewModel)
-                 // onUpdateClicked() // Contoh: panggil lambda start download
-             }
-             .setView(dialogView)
+         // Membuat dialog download progress. Mengembalikan dialog, tidak show()
+         val dialog = MaterialAlertDialogBuilder(context) // Menggunakan context dari constructor
+             .setTitle(R.string.update_available) // Judul dialog (bisa disesuaikan)
+             .setView(dialogView) // View custom dialog download
+             .setCancelable(false) // Biasanya dialog download tidak bisa dicancel pakai tombol back
              .create()
 
-         dialog.show()
-         return dialog
+         return dialog // Mengembalikan instance dialog download
      }
 
 
-    // Fungsi helper untuk dismiss dialog (opsional, bisa dilakukan di Activity)
-    fun dismissDialog(dialog: AlertDialog?) {
-       dialog?.dismiss()
-    }
+    // --- FUNGSI createXposedMissingDialog --- (Nama diubah jadi create)
+    // Logic diambil dari implementasi showXposedMissingDialog di MapActivity.
+    fun createXposedMissingDialog(): AlertDialog { // Tidak perlu parameter LayoutInflater jika tidak pakai custom layout di sini
+         // Menggunakan MaterialAlertDialogBuilder langsung. Mengembalikan dialog, tidak show()
+         val dialog = MaterialAlertDialogBuilder(context) // Menggunakan context dari constructor
+             .setTitle(R.string.error_xposed_module_missing)
+             .setMessage(R.string.error_xposed_module_missing_desc)
+             .setCancelable(true)
+             .create()
+
+         return dialog // Mengembalikan instance dialog
+     }
+
+     // Fungsi helper untuk dismiss dialog (opsional, bisa dilakukan di Activity yang punya referensi dialog)
+     // fun dismissDialog(dialog: AlertDialog?) {
+     //    dialog?.dismiss()
+     // }
 }
