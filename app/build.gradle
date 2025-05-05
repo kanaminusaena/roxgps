@@ -116,7 +116,7 @@ dependencies {
 
     implementation 'androidx.core:core-ktx:1.9.0'
     implementation 'androidx.appcompat:appcompat:1.7.0-alpha01'
-    implementation 'androidx.activity:activity-ktx:1.X.Y'
+    implementation 'androidx.activity:activity-ktx:1.11.0-rc01'
     implementation 'androidx.constraintlayout:constraintlayout:2.2.0-alpha05'
     implementation 'androidx.preference:preference:1.2.0'
     implementation 'androidx.datastore:datastore-preferences:1.0.0'
@@ -127,14 +127,14 @@ dependencies {
     implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:2.6.0-alpha04"
     implementation "androidx.lifecycle:lifecycle-livedata-ktx:2.6.0-alpha04"
     // Kalo BaseMapActivity atau MapActivity butuh ComponentActivity atau ViewModel dari Hilt
-    implementation("androidx.hilt:hilt-lifecycle-viewmodel:1.Z.A") // Deprecated, pakai androidx.hilt:hilt-navigation-fragment jika Fragment
+    implementation("androidx.hilt:hilt-lifecycle-viewmodel:2.9.0-rc01") // Deprecated, pakai androidx.hilt:hilt-navigation-fragment jika Fragment
     // Cukup `@AndroidEntryPoint` dan `@Inject ViewModel` di Activity/Fragment
-    implementation("androidx.fragment:fragment-ktx:1.Z.A") // Jika pakai Fragment
+    implementation("androidx.fragment:fragment-ktx:1.8.6") // Jika pakai Fragment
     implementation "com.google.android.material:material:1.12.0"
-    implementation "com.google.dagger:hilt-android:2.XX"
-    // ksp "com.google.dagger:hilt-compiler:2.XX"
-    kapt("com.google.dagger:hilt-compiler:2.XX") // Gunakan versi Hilt terbaru
-    kapt("androidx.hilt:hilt-compiler:1.Y.Z") // Gunakan versi Hilt AndroidX terbaru
+    implementation "com.google.dagger:hilt-android:2.56.2"
+    // ksp "com.google.dagger:hilt-compiler:2.56.2"
+    kapt("com.google.dagger:hilt-compiler:2.56.2") // Gunakan versi Hilt terbaru
+    kapt("androidx.hilt:hilt-compiler:1.2.0") // Gunakan versi Hilt AndroidX terbaru
 
     // timber
     implementation 'com.jakewharton.timber:timber:5.0.1'

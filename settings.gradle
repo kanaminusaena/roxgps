@@ -2,7 +2,6 @@ pluginManagement {
     repositories {
         gradlePluginPortal()
         google()
-        jcenter()
         mavenCentral()
     }
 }
@@ -11,10 +10,9 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        jcenter()
         maven { url "https://api.xposed.info/" }
         maven { url 'https://jitpack.io' }
     }
 }
-rootProject.name = "Gps Setter"
+rootProject.name = "Rox Gps"
 include ':app'
