@@ -1,3 +1,16 @@
+        <service
+            android:name=".service.RoxGpsAidlService"
+            android:enabled="true"
+            android:exported="true"
+            android:permission="com.roxgps.permission.BIND_LOKALISASI_SERVICE"> <intent-filter>
+                <action android:name="com.roxgps.ipc.IRoxGpsService" />
+            </intent-filter> </service> ```
+
+Dengan menambahkan `>` setelah atribut `android:permission`, tag `<service>` pembuka jadi valid, dan `<intent-filter>` menjadi elemen anak di dalamnya.
+
+Ini dia kode **LENGKAP** file **`app/src/main/AndroidManifest.xml`** kamu yang sudah diperbaiki:
+
+```xml
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
@@ -49,8 +62,7 @@
             android:name=".service.RoxGpsAidlService"
             android:enabled="true"
             android:exported="true"
-            android:permission="com.roxgps.permission.BIND_LOKALISASI_SERVICE"
-            <intent-filter>
+            android:permission="com.roxgps.permission.BIND_LOKALISASI_SERVICE"> <intent-filter>
                 <action android:name="com.roxgps.ipc.IRoxGpsService" />
            </intent-filter>
         </service>
