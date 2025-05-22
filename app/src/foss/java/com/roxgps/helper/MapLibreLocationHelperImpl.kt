@@ -587,14 +587,14 @@ class MapLibreLocationHelperImpl @Inject constructor(
     @SuppressLint("MissingPermission")
     override fun getRealLocationUpdates(): Flow<Location> = callbackFlow {
         if (!checkLocationPermissions()) {
-            Timber.e("${com.roxgps.helper.GoogleLocationHelperImpl.Companion.TAG}: Location permissions not granted for getRealLocationUpdates flow.")
+            Timber.e("${TAG}: Location permissions not granted for getRealLocationUpdates flow.")
             close(IllegalStateException("Location permissions not granted"))
             return@callbackFlow
         }
 
         // Pastikan layanan lokasi aktif
         if (!isLocationServiceEnabled()) {
-            Timber.e("${com.roxgps.helper.GoogleLocationHelperImpl.Companion.TAG}: Location services disabled for getRealLocationUpdates flow.")
+            Timber.e("${TAG}: Location services disabled for getRealLocationUpdates flow.")
             close(IllegalStateException("Location services disabled"))
             return@callbackFlow
         }
@@ -609,14 +609,14 @@ class MapLibreLocationHelperImpl @Inject constructor(
         val flowLocationCallback = object : LocationCallback() {
             override fun onLocationResult(locationResult: LocationResult) {
                 locationResult.lastLocation?.let { location ->
-                    Timber.v("${com.roxgps.helper.GoogleLocationHelperImpl.Companion.TAG}: Real Location Flow: ${location.latitude}, ${location.longitude}")
+                    Timber.v("${TAG}: Real Location Flow: ${location.latitude}, ${location.longitude}")
                     trySend(location) // Memancarkan lokasi ke Flow
                 }
             }
 
             override fun onLocationAvailability(locationAvailability: LocationAvailability) {
                 if (!locationAvailability.isLocationAvailable) {
-                    Timber.w("${com.roxgps.helper.GoogleLocationHelperImpl.Companion.TAG}: Real Location Flow: Location availability changed to unavailable.")
+                    Timber.w("${TAG}: Real Location Flow: Location availability changed to unavailable.")
                     // Anda bisa memilih untuk menutup Flow di sini atau hanya log peringatan.
                     // Jika Anda ingin Flow terus mencoba, jangan tutup di sini.
                 }
