@@ -1,124 +1,170 @@
-package com.roxgps.xposed // Pastikan package ini sesuai
+package com.roxgps.xposed // Sesuaikan package dengan package modul Xposed kamu
+
+// === Import Library untuk AIDL Binding ===
+// ========================================
+
+// === Import Library untuk AIDL Binding ===
+// ========================================
+
+// === Import Interface AIDL yang Dihasilkan ===
+// Pastikan file IRoxAidlService.aidl sudah dicopy ke src/main/aidl di proyek Xposed Module kamu.
+// ===============================================
+
+// TODO: Import kelas LocationHook kamu
+import android.annotation.SuppressLint
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.content.ServiceConnection
+import android.os.IBinder
+import android.os.RemoteException
+import com.roxgps.BuildConfig
+import com.roxgps.IRoxAidlService
+import de.robv.android.xposed.IXposedHookLoadPackage
+import de.robv.android.xposed.XposedBridge
+import de.robv.android.xposed.callbacks.XC_LoadPackage
 
 // =====================================================================
-// Import Library HookEntry
+// Kelas Utama Xposed Hook
+// Mengimplementasikan IXposedHookLoadPackage untuk menangani pemuatan package.
+// Bertanggung jawab untuk:
+// 1. Mendeteksi package aplikasi utama.
+// 2. Melakukan AIDL Binding ke RoxAidlService.
+// 3. Menyediakan objek IRoxAidlService ke LocationHook.
+// 4. Memulai proses hooking metode lokasi melalui LocationHook.
 // =====================================================================
-
-import de.robv.android.xposed.IXposedHookLoadPackage // Xposed Hook Interface
-import de.robv.android.xposed.XposedBridge // Xposed Logging & Utilities
-// Tidak perlu import XC_MethodHook, XposedHelpers, ComponentName, Context, Intent, ServiceConnection, IBinder, Log, IRoxGpsService, FakeLocationData
-// karena logic AIDL binding dan hooking pindah ke LocationHook.
-// import de.robv.android.xposed.XC_MethodHook
-// import de.robv.android.xposed.XposedHelpers
-// import android.content.ComponentName
-// import android.content.Context
-// import android.content.Intent
-// import android.content.ServiceConnection
-// import android.os.IBinder
-// import android.util.Log
-// import com.roxgps.ipc.IRoxGpsService // Import ini dipindah ke LocationHook
-
-import com.roxgps.BuildConfig // Import BuildConfig untuk Package ID aplikasi lo
-import com.roxgps.utils.FileLogger // Import FileLogger jika digunakan. Pastikan FileLogger adalah object atau bisa diakses statis.
-
-// Import class hooker spesifik lainnya
-import com.roxgps.xposed.hookers.KampretTokenHooker // GANTI package/nama class ini kalau beda!
-
-// Import class hooker Location (Object atau Class)
-import com.roxgps.xposed.hookers.LocationHook // <-- IMPORT LocationHook yang akan mengurus lokasi & AIDL!
-
-
-// =====================================================================
-// Kelas Utama Xposed Module (Entry Point)
-// Bertanggung jawab mendeteksi package dan mendelegasikan proses hooking.
-// =====================================================================
-
 class HookEntry : IXposedHookLoadPackage {
 
-    // =====================================================================
-    // Properti untuk AIDL Service Binding (Dipindahkan ke LocationHook)
-    // =====================================================================
-    // private var lokasiPalsuService: IRoxGpsService? = null // <-- DIPINDAH KE LocationHook
-    // private val lokasiPalsuServiceConnection = object : ServiceConnection { /* ... */ } // <-- DIPINDAH KE LocationHook
+    // TODO: Ganti dengan package name aplikasi utama kamu (menggunakan BuildConfig lebih aman)
+    private val MY_APPLICATION_PACKAGE_NAME = BuildConfig.APPLICATION_ID // <<< Menggunakan BuildConfig.APPLICATION_ID
 
+    // Referensi ke objek IRoxAidlService yang terikat (bound).
+    // Ini akan diisi di onServiceConnected dan digunakan oleh LocationHook.
+    // Dibuat nullable karena awalnya null.
+    private var roxAidlService: IRoxAidlService? = null
 
-    // =====================================================================
-    // Metode handleLoadPackage - Entry Point Hook
-    // =====================================================================
+    // Implementasi ServiceConnection untuk menangani status binding
+    private val serviceConnection = object : ServiceConnection {
+        // Dipanggil saat koneksi ke Service berhasil dibuat
+        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+            // Mendapatkan objek IRoxAidlService dari IBinder yang diterima
+            roxAidlService = IRoxAidlService.Stub.asInterface(service) // Mengkonversi IBinder ke AIDL interface
+            XposedBridge.log("RoxGpsXposed: AIDL Service Connected. Binder obtained.") // Log di logcat Xposed
 
-    override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
-         // Log awal saat module diload ke package manapun
-         // Menggunakan XposedBridge.log atau FileLogger (konsisten salah satu)
-         XposedBridge.log("RoxGpsXposed: Loaded package: ${lpparam.packageName}") // Menggunakan XposedBridge.log
-         // FileLogger.log("Loaded package: ${lpparam.packageName}", "XposedLog", "I") // Jika pakai FileLogger
+            // === Berikan objek IRoxAidlService ke LocationHook ===
+            // LocationHook butuh objek ini untuk memanggil getLatestFakeLocation(), setHookStatus, dll.
+            LocationHook.setAidlService(roxAidlService) // <<< Panggil metode di LocationHook untuk set Service
 
-        // --- Cek package aplikasi lo sendiri (RoxGPS App) ---
-        // Inisialisasi AIDL Binding hanya dilakukan saat module diload di proses RoxGPS.
-        if (lpparam.packageName == BuildConfig.APPLICATION_ID) {
-            XposedBridge.log("RoxGpsXposed: Masuk ke package RoxGPS!")
-            // FileLogger.log("Masuk ke package RoxGPS: ${lpparam.packageName}", "XposedLog", "I") // Jika pakai FileLogger
-
-            // Panggil metode di LocationHook untuk memulai proses binding AIDL
-            // LocationHook akan mengurus mendapatkan Context dan melakukan binding.
-            LocationHook.initAidlBinding(lpparam) // <-- Panggil LocationHook untuk BINDING!
-
-            // Hook spesifik RoxGPS (jika ada dan masih diperlukan setelah refaktor)
-            // Biarkan hook internal di sini jika memang dibutuhkan di proses RoxGPS.
-            // XposedHelpers.findAndHookMethod("com.roxgps.ui.viewmodel.MainViewModel", lpparam.classLoader, "updateXposedState", object : XC_MethodHook() {
-            //     override fun beforeHookedMethod(param: MethodHookParam) {
-            //         param.result = null // Pertahankan hook lama
-            //     }
-            // })
-             // TODO: Tambahkan hook internal RoxGPS lainnya jika ada
-
-            // Tidak perlu panggil LocationHook.initHooks/performHooking di sini,
-            // karena hooking lokasi (yang butuh AIDL) tidak terjadi di proses RoxGPS sendiri.
-            return // Hentikan proses handleLoadPackage untuk package RoxGPS
+            // === Laporkan status binding berhasil ke aplikasi utama (opsional tapi disarankan) ===
+            // Panggil metode di RoxAidlService via AIDL untuk memberi tahu aplikasi utama
+            // bahwa binding dari sisi hook berhasil.
+            try {
+                // Panggil setHookStatus(true) untuk memberi tahu aplikasi utama bahwa hook aktif di proses ini
+                roxAidlService?.setHookStatus(true) // Contoh: laporkan hook aktif di proses target
+                XposedBridge.log("RoxGpsXposed: Reported hook status (true) via AIDL.")
+                // TODO: Jika ada metode lain di AIDL untuk melaporkan status binding spesifik, panggil di sini.
+                //       Misal, jika HookStatus.kt juga dicopy ke proyek Xposed:
+                //       import com.roxgps.xposed.HookStatus
+                //       roxAidlService?.reportHookStatus(HookStatus.BoundAndReady.javaClass.name) // Kirim nama kelas Enum/Sealed Class
+            } catch (e: RemoteException) {
+                XposedBridge.log("RoxGpsXposed: RemoteException while reporting hook status: ${e.message}")
+            } catch (e: Exception) {
+                XposedBridge.log("RoxGpsXposed: Exception while reporting hook status: ${e.message}")
+            }
+            // ================================================================================
         }
 
-        // --- Cek package aplikasi Target (yang mengonsumsi lokasi) ---
-        // Daftar package target lokasi palsu. Daftar ini bisa juga disimpan di LocationHook.
-        val targetLocationPackages = listOf(
-            "com.google.android.apps.maps", // Google Maps
-            "com.waze", // Waze
-            // TODO: Tambahkan package aplikasi lain yang mau lo palsukan lokasinya
-            // "com.nianticlabs.pokemongo", // Pokemon Go (Contoh)
-            // "com.jogja.ojekonline" // Contoh aplikasi ojol
-        )
+        // Dipanggil saat koneksi ke Service terputus secara tidak terduga (misal, proses aplikasi utama crash)
+        override fun onServiceDisconnected(name: ComponentName?) {
+            roxAidlService = null // Set objek AIDL menjadi null karena koneksi putus
+            XposedBridge.log("RoxGpsXposed: AIDL Service Disconnected unexpectedly.") // Log di logcat Xposed
 
-        // Jika package yang di-load ada di daftar target lokasi palsu
-        if (targetLocationPackages.contains(lpparam.packageName)) {
-            XposedBridge.log("RoxGpsXposed: Target location package found: ${lpparam.packageName}. Delegating to LocationHook.")
-            // FileLogger.log("Target location package found: ${lpparam.packageName}. Delegating to LocationHook.", "RoxGpsXposed", "I") // Jika pakai FileLogger
+            // === Beri tahu LocationHook bahwa koneksi terputus ===
+            // LocationHook perlu tahu agar tidak mencoba memanggil metode AIDL yang null.
+            LocationHook.setAidlService(null) // <<< Beri tahu LocationHook bahwa Service null
 
-            // --- Mendelegasikan proses hooking lokasi ke LocationHook ---
-            // Panggil method inisialisasi di LocationHook untuk package target ini.
-            // LocationHook akan menyimpan ClassLoader dan menunggu Service AIDL siap.
-            LocationHook.initHooksForTargetPackage(lpparam) // <-- Panggil LocationHook untuk HOOKING!
-
-            // return // Optional: Jika tidak ada hook lain di luar LocationHook untuk package ini
+            // TODO: Laporkan status koneksi terputus ke aplikasi utama jika memungkinkan (sulit jika Service mati/proses crash)
         }
-
-        // --- Hook untuk aplikasi Target Lain (Non-Lokasi), contoh GoFood ---
-        // GANTI "com.gojek.app" dengan nama package GoFood yang BENAR
-        else if (lpparam.packageName == "com.gojek.app") {
-             XposedBridge.log("RoxGpsXposed: Target GoFood package found: ${lpparam.packageName}. Initiating competitor hook.")
-             // FileLogger.log("Masuk ke package GoFood: ${lpparam.packageName}", "Gojek", "I") // Jika pakai FileLogger
-             // Panggil method hook yang ada di class KampretTokenHooker
-             KampretTokenHooker.hook(lpparam) // <-- Panggil hooker GoFood di sini!
-            // return // Optional: Jika tidak ada hook lain untuk package ini
-        }
-
-        // TODO: Tambahkan cek package lain jika ada hook spesifik untuk package lain
+        // TODO: Pertimbangkan override onBindingDied (API 26+) dan onNullBinding (API 28+)
     }
 
-    // =====================================================================
-    // Metode Internal untuk Binding Service AIDL (DIPINDAHKAN KE LocationHook)
-    // =====================================================================
-    /*
-    private fun bindToRoxGPSService(appContext: Context) { ... } // <-- DIPINDAHKAN KE LocationHook
-    private fun unbindFromRoxGPSService(appContext: Context) { ... } // <-- DIPINDAHKAN KE LocationHook
-    */
 
-    // Metode Lain HookEntry jika ada
+    // Metode utama yang dipanggil oleh Xposed Framework saat sebuah package dimuat
+    @SuppressLint("PrivateApi")
+    override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
+        // Log nama package yang sedang dimuat
+        XposedBridge.log("RoxGpsXposed: Loaded package: ${lpparam.packageName}")
+
+        // === Cek apakah package yang dimuat adalah aplikasi utama kita (target hook) ===
+        if (lpparam.packageName == MY_APPLICATION_PACKAGE_NAME) {
+            XposedBridge.log("RoxGpsXposed: Target application package found: $MY_APPLICATION_PACKAGE_NAME. Attempting AIDL binding and location hooking.")
+
+            // === Implementasikan AIDL Binding ke RoxAidlService (di dalam blok ini) ===
+
+            // 1. Buat Intent untuk Service AIDL
+            val serviceIntent = Intent(IRoxAidlService::class.java.name).apply {
+                component = ComponentName(MY_APPLICATION_PACKAGE_NAME, "com.roxgps.service.RoxAidlService") // <<< Set ComponentName ke Service di aplikasi utama
+                // Optional: Tambahkan hook extra jika Service AIDL membutuhkannya saat binding
+            }
+
+            // 2. Dapatkan Context aplikasi target (gunakan cara yang paling stabil di Xposed)
+            // Menggunakan refleksi (ActivityThread.currentApplication()) adalah cara umum,
+            // meskipun ada warning API internal. Metode lain mungkin menggunakan XposedHelpers atau XposedBridge.
+            val appContext: Context? = try {
+                // Ini cara refleksi yang tadi kita bahas, seringkali berhasil di Xposed
+                @Suppress("PrivateApi")
+                lpparam.classLoader.loadClass("android.app.ActivityThread")
+                    .getMethod("currentApplication")
+                    .invoke(null) as Context
+            } catch (e: Exception) {
+                XposedBridge.log("RoxGpsXposed: Failed to get application context for binding: ${e.message}")
+                null
+            }
+            // Opsi lain (jika Xposed/library bantu menyediakan): AndroidAppHelper.currentApplication()
+
+
+            // 3. Lakukan Binding ke Service
+            if (appContext != null) {
+                try {
+                    // Bind ke Service. Gunakan flag BIND_AUTO_CREATE agar Service dibuat jika belum berjalan.
+                    val bindSuccess = appContext.bindService(
+                        serviceIntent, // Intent Service
+                        serviceConnection, // Implementasi ServiceConnection
+                        Context.BIND_AUTO_CREATE // Flag binding: buat Service jika belum ada
+                    )
+                    if (bindSuccess) {
+                        XposedBridge.log("RoxGpsXposed: bindService call successful. Waiting for onServiceConnected...")
+                        // onServiceConnected akan dipanggil jika binding berhasil
+                    } else {
+                        XposedBridge.log("RoxGpsXposed: bindService call returned false. Binding failed immediately.")
+                        LocationHook.setAidlService(null) // Pastikan LocationHook tidak punya referensi null
+                        // TODO: Laporkan error binding ke aplikasi utama jika memungkinkan (sulit dari sini)
+                    }
+                } catch (e: Exception) {
+                    XposedBridge.log("RoxGpsXposed: Exception during bindService call: ${e.message}")
+                    LocationHook.setAidlService(null) // Pastikan LocationHook tidak punya referensi null
+                    // TODO: Laporkan error binding ke aplikasi utama jika memungkinkan
+                }
+            } else {
+                XposedBridge.log("RoxGpsXposed: Application context is null, cannot bind to Service.")
+                LocationHook.setAidlService(null) // Pastikan LocationHook tidak punya referensi null
+                // TODO: Laporkan error binding ke aplikasi utama jika memungkinkan
+            }
+
+            // === Mulai proses hooking metode lokasi melalui LocationHook (di dalam blok ini) ===
+            // LocationHook akan menggunakan objek roxAidlService yang diset di onServiceConnected.
+            LocationHook.initHooks(lpparam) // <<< Panggil metode inisialisasi hook di LocationHook
+
+        } else {
+            // Jika package yang dimuat BUKAN aplikasi utama kita
+            // Lakukan hooking lain jika diperlukan di package ini
+            // XposedBridge.log("RoxGpsXposed: Not target package, skipping AIDL binding and location hooking.")
+        }
+    }
+
+    // TODO: Tambahkan metode lain jika diperlukan di kelas HookEntry ini.
+    // Contoh: Metode untuk unbind Service saat proses aplikasi utama dimatikan (jarang perlu, sistem biasanya handle)
+
+    // Catatan: Pastikan proyek Xposed Module kamu punya dependency yang benar
+    // untuk Xposed API dan juga AIDL interface yang dihasilkan dari file .aidl aplikasi utama.
 }

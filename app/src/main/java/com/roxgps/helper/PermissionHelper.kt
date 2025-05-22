@@ -4,19 +4,17 @@ package com.roxgps.helper // Pastikan package ini sesuai
 // Import Library untuk PermissionHelper
 // =====================================================================
 
-import android.Manifest // Untuk permission Manifest
-import android.content.Context // Untuk Context
-import android.content.Intent // Untuk Intent (misal buka settings)
-import android.content.pm.PackageManager // Untuk PackageManager
-import android.net.Uri // Untuk Uri (buka settings aplikasi)
-import android.os.Build // Untuk cek versi Android
-import android.provider.Settings // Untuk Settings
-import androidx.activity.ComponentActivity // Menggunakan ComponentActivity untuk Activity Result APIs
-import androidx.activity.result.ActivityResultLauncher // Untuk tipe Activity Result Launcher
-import androidx.activity.result.contract.ActivityResultContracts // Untuk cara modern minta permission
-import androidx.core.app.ActivityCompat // Untuk cek permission cara lama (masih dipakai)
-import androidx.core.content.ContextCompat // Untuk cek permission cara modern (Context-based)
-import androidx.core.app.NotificationManagerCompat // Untuk cek notifikasi enabled
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
+import android.provider.Settings
+import androidx.activity.ComponentActivity
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
+import javax.inject.Inject
+
 // import com.roxgps.ui.BaseMapActivity // Tidak perlu import BaseMapActivity spesifik jika pakai ComponentActivity
 
 // =====================================================================
@@ -43,7 +41,9 @@ interface PermissionResultListener {
  *
  * @param activity Instance dari [ComponentActivity] yang digunakan untuk memeriksa dan mendaftarkan Activity Result Launcher.
  */
-class PermissionHelper(private val activity: ComponentActivity) { // Pakai ComponentActivity biar lebih fleksibel
+class PermissionHelper @Inject constructor( // <-- Tambahkan @Inject constructor() di sini
+    private val activity: ComponentActivity
+) { // Pakai ComponentActivity biar lebih fleksibel
 
     // Listener untuk mengirim hasil permission kembali.
     // Helper perlu tahu listener mana yang aktif saat request terakhir.
@@ -127,7 +127,7 @@ class PermissionHelper(private val activity: ComponentActivity) { // Pakai Compo
 
     /**
      * Memeriksa apakah izin notifikasi (POST_NOTIFICATIONS untuk Android 13+) sudah diberikan
-     * atau apakah notifikasi diaktifkan di Settings (untuk versi < 13).
+     * atau apakah notifikasi diaktifkan di SettingsCompose (untuk versi < 13).
      *
      * @return True jika notifikasi diizinkan/aktif, False jika tidak.
      */
@@ -136,7 +136,7 @@ class PermissionHelper(private val activity: ComponentActivity) { // Pakai Compo
             // Untuk Android 13+, cek permission POST_NOTIFICATIONS
             checkPermission(Manifest.permission.POST_NOTIFICATIONS)
         } else {
-            // Untuk versi di bawah 13, cek apakah notifikasi diaktifkan di Settings
+            // Untuk versi di bawah 13, cek apakah notifikasi diaktifkan di SettingsCompose
             NotificationManagerCompat.from(activity).areNotificationsEnabled()
         }
     }
@@ -187,12 +187,12 @@ class PermissionHelper(private val activity: ComponentActivity) { // Pakai Compo
 
     /**
      * Meminta izin notifikasi (POST_NOTIFICATIONS untuk Android 13+) ke pengguna.
-     * Untuk versi < 13, buka Settings notifikasi aplikasi.
+     * Untuk versi < 13, buka SettingsCompose notifikasi aplikasi.
      * Hasil untuk versi >= 13 dilaporkan melalui listener yang diberikan.
      *
      * @param listener Listener untuk menerima hasil (granted/denied) untuk versi >= 13.
      * Untuk versi < 13, callback listener TIDAK dipanggil,
-     * karena user diarahkan ke Settings.
+     * karena user diarahkan ke SettingsCompose.
      */
     fun requestNotificationPermission(listener: PermissionResultListener? = null) { // listener bisa null untuk versi < 13
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -201,10 +201,10 @@ class PermissionHelper(private val activity: ComponentActivity) { // Pakai Compo
                  requestPermission(Manifest.permission.POST_NOTIFICATIONS, listener) // Panggil method requestPermission tunggal
             } else {
                  // Jika listener null tapi dipanggil di Android 13+, request akan jalan tanpa callback
-                 requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                requestSinglePermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
         } else {
-            // Untuk versi di bawah 13, langsung arahkan ke Settings notifikasi aplikasi
+            // Untuk versi di bawah 13, langsung arahkan ke SettingsCompose notifikasi aplikasi
             openAppNotificationSettings()
             // Di sini listener.onPermissionResult atau onPermissionsResult TIDAK dipanggil
         }

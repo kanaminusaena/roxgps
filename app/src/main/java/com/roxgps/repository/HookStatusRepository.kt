@@ -5,11 +5,14 @@ package com.roxgps.repository // Sesuaikan package lo
 // Import Library untuk HookStatusRepository
 // =====================================================================
 
-import kotlinx.coroutines.flow.MutableStateFlow // Untuk StateFlow yang bisa diupdate
-import kotlinx.coroutines.flow.StateFlow // Untuk mengekspos StateFlow
-import kotlinx.coroutines.flow.asStateFlow // Untuk mengonversi MutableStateFlow ke StateFlow
-import javax.inject.Inject // Untuk Inject
-import javax.inject.Singleton // Untuk menandai sebagai Singleton
+import com.roxgps.utils.Relog
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import timber.log.Timber
+import javax.inject.Inject
+import javax.inject.Singleton
 
 // =====================================================================
 // Repository untuk Mengelola Status Hook dan Error dari Xposed Module
@@ -22,6 +25,9 @@ class HookStatusRepository @Inject constructor(
     // Dependencies jika dibutuhkan (misal CoroutineScope jika ada task internal)
     // @ScopeQualifiers private val applicationScope: CoroutineScope // Jika perlu scope aplikasi
 ) {
+    companion object {
+        private const val TAG = "HookStatusRepository"
+    }
 
     // =====================================================================
     // State Hook dan Error (Diekspos sebagai StateFlow)
@@ -35,14 +41,16 @@ class HookStatusRepository @Inject constructor(
     private val _lastHookError = MutableStateFlow<String?>(null) // Nilai awal: null (tidak ada error)
     val lastHookError: StateFlow<String?> = _lastHookError.asStateFlow() // Diekspos sebagai StateFlow (read-only)
 
-
+    // StateFlow untuk status dasar: apakah hook terdeteksi oleh aplikasi (melalui setHookStatus)
+    private val _isHookDetected = MutableStateFlow(false)
+    val isHookDetected: StateFlow<Boolean> = _isHookDetected.asStateFlow()
     // =====================================================================
     // Metode untuk Mengupdate State (Dipanggil oleh RoxGpsService)
     // =====================================================================
 
     /**
      * Updates the hook status based on the value reported by the Xposed module.
-     * Called by [RoxGpsService].
+     * Called by [RoxAidlService].
      *
      * @param hooked True if the module successfully hooked, false otherwise.
      */
@@ -50,11 +58,11 @@ class HookStatusRepository @Inject constructor(
     fun updateHookStatus(hooked: Boolean) {
         // Mengupdate nilai StateFlow internal
         _isModuleHooked.value = hooked
-        Timber.d("HookStatusRepository: isModuleHooked state updated to $hooked")
+        Relog.i("HookStatusRepository: isModuleHooked state updated to $hooked")
          // Jika status berubah jadi true (hooked), clear error
          if (hooked) {
              _lastHookError.value = null
-             Timber.d("HookStatusRepository: lastHookError cleared because hooked is true")
+             Relog.i("HookStatusRepository: lastHookError cleared because hooked is true")
          }
     }
 
@@ -68,18 +76,42 @@ class HookStatusRepository @Inject constructor(
     fun updateHookError(message: String?) {
         // Mengupdate nilai StateFlow internal
         _lastHookError.value = message
-        Timber.d("HookStatusRepository: lastHookError state updated to '$message'")
+        Relog.i("HookStatusRepository: lastHookError state updated to '$message'")
          // Jika ada error, status hooked mungkin false (meskipun setHookStatus juga seharusnya dipanggil dengan false)
          if (message != null) {
               _isModuleHooked.value = false // Pastikan status hooked false jika ada error
          }
     }
 
+    /**
+     * Mengupdate status dasar deteksi Xposed Hook.
+     * Dipanggil oleh [RoxAidlService] ketika menerima panggilan AIDL setHookStatus().
+     *
+     * @param hooked True jika hook melaporkan dirinya aktif/terdeteksi, false sebaliknya.
+     */
+    fun updateSystemHookedStatus(hooked: Boolean) { // <<< METODE YANG DIBUTUHKAN
+        Timber.d("$TAG: Updating system hooked status to: $hooked")
+        Relog.d(TAG, "Updating system hooked status: $hooked")
+        _isHookDetected.update { hooked } // Update StateFlow
+    }
+
+    /**
+     * Menyimpan pesan error terakhir yang dilaporkan oleh Xposed Hook.
+     * Dipanggil oleh [RoxAidlService] ketika menerima panggilan AIDL reportHookError().
+     *
+     * @param message Pesan error dari hook, atau null untuk menghapus error.
+     */
+    fun setLastHookError(message: String?) { // <<< METODE LAIN YANG DIBUTUHKAN
+        Timber.d("$TAG: Setting last hook error: $message")
+        Relog.d(TAG, "Setting last hook error: $message")
+        _lastHookError.update { message } // Update StateFlow
+    }
+
     // =====================================================================
     // Initialization (Opsional)
     // =====================================================================
     init {
-        Timber.d("HookStatusRepository created")
+        Relog.i("HookStatusRepository created")
     }
 
     // =====================================================================

@@ -1,14 +1,11 @@
 package com.roxgps // Pastikan package ini sesuai dengan kelas Application lo
 
-import androidx.appcompat.app.AppCompatDelegate // Untuk tema
-import android.app.Application // Class Application
-import dagger.hilt.android.HiltAndroidApp // Anotasi Hilt Application
-// import com.roxgps.utils.PrefManager // Import PrefManager (sudah dipakai di bawah)
-import kotlinx.coroutines.CoroutineScope // Untuk CoroutineScope
-import kotlinx.coroutines.Dispatchers // Untuk Dispatchers
-import timber.log.Timber // Untuk Timber logging
-import com.roxgps.utils.FileLogger // Import FileLogger (sudah dipakai di bawah)
-import com.roxgps.utils.PrefManager // Import PrefManager
+import android.app.Application
+import com.roxgps.utils.Relog
+import dagger.hilt.android.HiltAndroidApp
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import timber.log.Timber
 
 // =====================================================================
 // Global Instance Aplikasi (Dihapus - Gunakan Hilt Injection)
@@ -45,7 +42,7 @@ class App : Application() { // Nama class 'App' OK
                 Timber.plant(Timber.DebugTree()) // Inisialisasi Timber. BAGUS!
             }
         }
-         // Metode ini bisa dipanggil dari Application.onCreate()
+        // Metode ini bisa dipanggil dari Application.onCreate()
     }
 
     // =====================================================================
@@ -62,12 +59,15 @@ class App : Application() { // Nama class 'App' OK
         // Ini adalah tempat yang TEPAT untuk memanggil FileLogger.init().
         // Dipanggil paling awal di lifecycle aplikasi.
         // Melewati 'this' (instance Application) sebagai Context.
-        FileLogger.init(this) // <-- INI SUDAH BETUL! Logger diinisialisasi di sini.
+        Relog.init(this) // <-- INI SUDAH BETUL! Logger diinisialisasi di sini.
         // -----------------------------
 
         // Set tema default aplikasi berdasarkan setting di PrefManager
         // Membaca nilai dari PrefManager (object singleton)
-        AppCompatDelegate.setDefaultNightMode(PrefManager.darkTheme) // Menggunakan PrefManager. BAGUS!
+        // PERBAIKAN: Menghapus baris yang menyebabkan crash.
+        // Penanganan tema berdasarkan preferensi pengguna seharusnya dilakukan di level UI (Composable/Activity)
+        // dengan mengamati StateFlow dari ViewModel/PrefManager secara asinkron.
+        // AppCompatDelegate.setDefaultNightMode(PrefManager.darkTheme) // <-- BARIS INI DIHAPUS
 
         // Metode inisialisasi lain di sini jika ada
     }

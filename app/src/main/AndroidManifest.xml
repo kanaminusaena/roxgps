@@ -4,56 +4,82 @@
 
     <permission
         android:name="com.roxgps.permission.BIND_LOKALISASI_SERVICE"
-        android:label="Bind Service"
         android:description="@string/roxgps_service_desc"
+        android:label="Bind Service"
         android:protectionLevel="signature" />
 
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
-        android:maxSdkVersion="32"/>
+    <!-- Untuk Android 10 (API level 29) dan di atasnya -->
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
-    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-
+    <permission
+        android:name="com.roxgps.permission.RECEIVE_BACKGROUND_LOCATION"
+        android:protectionLevel="signature" />
     <application
         android:name=".App"
-        android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher"
         android:supportsRtl="true"
         android:theme="@style/Theme.Roxgps"
         tools:targetApi="34">
-
+        <!--<activity
+            android:name=".compose.GoogleMapComposable"
+            android:exported="false"
+            android:label="@string/title_activity_google_map_composable"
+            android:theme="@style/Theme.RoxGps" />
+        <activity
+            android:name=".compose.MapLibreComposable"
+            android:exported="false"
+            android:label="@string/title_activity_map_view_composable"
+            android:theme="@style/Theme.RoxGps" />-->
         <activity
             android:name=".ui.ActivitySettings"
             android:exported="false"
             android:label="@string/title_activity_settings"
             android:launchMode="singleTop" />
-
         <activity
             android:name=".ui.MapActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <receiver
+        android:name=".service.LocationBroadcastReceiver"
+        android:enabled="true"
+        android:exported="true"
+            android:permission="com.roxgps.permission.RECEIVE_BACKGROUND_LOCATION">
+        <intent-filter>
+        <action android:name="com.roxgps.action.PROCESS_LOCATION" />
+        </intent-filter>
+    </receiver>
 
         <service
             android:name=".utils.JoystickService"
             android:exported="false" />
-
         <service
-            android:name=".service.RoxGpsAidlService"
+            android:name=".service.BackgroundTaskService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="location" />
+        <service
+            android:name=".service.RoxAidlService"
             android:enabled="true"
             android:exported="true"
             android:permission="com.roxgps.permission.BIND_LOKALISASI_SERVICE">
             <intent-filter>
-                <action android:name="com.roxgps.ipc.IRoxGpsService" />
+                <action android:name="com.roxgps.IRoxAidlService" />
             </intent-filter>
         </service>
 
@@ -74,4 +100,5 @@
                 android:resource="@xml/provider_paths" />
         </provider>
     </application>
+
 </manifest>

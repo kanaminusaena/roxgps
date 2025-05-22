@@ -4,22 +4,22 @@ package com.roxgps.repository
 // Import Library SearchRepository
 // =====================================================================
 
-import android.content.Context // Untuk Context Aplikasi (dibutuhkan Geocoder)
-import android.location.Geocoder // Untuk Geocoder Android
-import android.location.Address // Untuk hasil dari Geocoder
-import dagger.hilt.android.qualifiers.ApplicationContext // Qualifier untuk Context Aplikasi
-import com.roxgps.helper.SearchProgress // Import Sealed Class SearchProgress
-import com.roxgps.helper.SearchProgress.SearchResultItem // Import Data Class untuk hasil parsial
-import kotlinx.coroutines.Dispatchers // Untuk Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow // Untuk StateFlow
-import kotlinx.coroutines.flow.StateFlow // Untuk StateFlow
-import kotlinx.coroutines.flow.asStateFlow // Untuk expose StateFlow
-import kotlinx.coroutines.withContext // Untuk withContext
-import timber.log.Timber // Untuk logging
-import java.io.IOException // Untuk menangani error I/O (jaringan/Geocoder)
-import java.util.Locale // Untuk Locale Geocoder
-import javax.inject.Inject // Untuk Dependency Injection
-import javax.inject.Singleton // Untuk menandai Repository sebagai Singleton
+import android.content.Context
+import android.location.Address
+import android.location.Geocoder
+import com.roxgps.helper.SearchProgress
+import com.roxgps.helper.SearchProgress.SearchResultItem
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.withContext
+import timber.log.Timber
+import java.io.IOException
+import java.util.Locale
+import javax.inject.Inject
+import javax.inject.Singleton
 
 // =====================================================================
 // Repository untuk Mengelola Proses Pencarian Alamat (Geocoding & Reverse Geocoding)
@@ -32,7 +32,9 @@ class SearchRepository @Inject constructor(
     // TODO: Jika pakai API eksternal, inject API Service/Client di sini
     // private val searchApiService: SearchApiService
 ) {
-
+    companion object{
+        private const val TAG = "SearchRepository"
+    }
     // =====================================================================
     // State yang Diekspos ke ViewModel/UI
     // Menginformasikan status proses search saat ini.
@@ -206,6 +208,46 @@ class SearchRepository @Inject constructor(
          // State Idle TIDAK di-emit di sini.
     }
 
+    /**
+     * Performs a reverse geocoding lookup for given latitude and longitude
+     * and returns the address string directly. Does NOT update the searchState flow.
+     *
+     * @param lat The latitude.
+     * @param lon The longitude.
+     * @return The address string, or null if not found or an error occurred.
+     */
+    suspend fun getAddressStringFromLatLng(lat: Double, lon: Double): String? = withContext(Dispatchers.IO) {
+        Timber.d("$TAG: Performing reverse geocoding for $lat, $lon.")
+        // Geocoder operasi blocking, harus dijalankan di background thread (Dispatchers.IO)
+        // Gunakan Locale default perangkat.
+        val geocoder = Geocoder(context, Locale.getDefault())
+            try {
+                // Lakukan reverse geocoding
+                @Suppress("DEPRECATION") // Supress warning jika pakai Geocoder API lama
+                val results: List<Address> = geocoder.getFromLocation(lat, lon, 1) ?: emptyList()
+
+                // Ambil alamat dari hasil pertama jika ada
+                if (results.isNotEmpty()) {
+                    val address = results[0]
+                    address.getAddressLine(0) // Return address string
+                } else {
+                    null // Tidak ada hasil ditemukan
+                }
+
+            } catch (e: IOException) {
+                // Tangani error I/O (jaringan/service Geocoder)
+                Timber.e(e, "Geocoder reverse geocoding failed to get address string due to IO error.")
+                null // Kembalikan null jika error
+            } catch (e: Exception) {
+                // Tangani error lain
+                Timber.e(e, "An unexpected error occurred getting address string.")
+                null // Kembalikan null jika error
+            }
+    }
+
+// Catatan: Metode getAddressFromLatLng yang lama (mengupdate StateFlow) tetap dipertahankan
+// karena mungkin masih digunakan oleh Activity/Fragment untuk menampilkan status search di UI.
+// Metode baru ini hanya untuk kebutuhan spesifik yang butuh string alamatnya langsung.
     /**
      * Resets the search state back to Idle.
      * Called when the UI should clear the search status display.

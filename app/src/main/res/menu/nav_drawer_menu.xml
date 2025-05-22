@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:tools="http://schemas.android.com/tools"
+        tools:showIn="navigation_view">
+
+    <group android:checkableBehavior="single">
+        <item
+        android:id="@+id/nav_fav"
+        android:title="@string/nav_fav_title" /> <item
+        android:id="@+id/nav_about"
+        android:title="@string/nav_about_title" /> <item
+        android:id="@+id/nav_update"
+        android:title="@string/nav_update_title" /> <item
+        android:id="@+id/nav_clear_log"
+        android:title="@string/nav_clear_log_title" /> <item
+        android:id="@+id/nav_view_log_folder"
+        android:title="@string/nav_view_log_folder_title" /> <item
+        android:id="@+id/nav_token"
+        android:title="@string/nav_token_title" /> <item
+        android:id="@+id/nav_exit"
+        android:title="@string/nav_exit_title" /> </group>
+
+</menu>

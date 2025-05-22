@@ -2,13 +2,10 @@ package com.roxgps.repository
 
 
 // Import yang dibutuhkan
-import androidx.annotation.WorkerThread // Anotasi ini lebih ke info, bukan mandatory kalau sudah suspend Room
-import com.roxgps.room.Favorite // Import kelas Favorite
+import com.roxgps.room.Favorite
 import com.roxgps.room.FavoriteDao
-import kotlinx.coroutines.flow.Flow // Untuk Flow
-import kotlinx.coroutines.Dispatchers // Untuk Dispatchers
-import kotlinx.coroutines.withContext // Untuk withContext
-import javax.inject.Inject // Untuk Inject
+import kotlinx.coroutines.flow.Flow
+import javax.inject.Inject
 
 class FavoriteRepository @Inject constructor(private val favoriteDao: FavoriteDao) {
 
@@ -26,7 +23,7 @@ class FavoriteRepository @Inject constructor(private val favoriteDao: FavoriteDa
     }
 
     // Method untuk menghapus favorit
-    suspend fun deleteFavorite(favorite: Favorite) {
+    suspend fun deleteSingleFavorite(favorite: Favorite) {
       // Memanggil method delete di DAO
       favoriteDao.deleteSingleFavorite(favorite)
     }

@@ -4,21 +4,22 @@ package com.roxgps.helper // Sesuaikan dengan package utility atau fitur search 
 // Import Library untuk SearchHelper
 // =====================================================================
 
-import android.content.Context // Untuk Context
-import android.location.Address // Untuk objek Address dari Geocoder
-import android.location.Geocoder // Untuk Geocoder
-import android.os.Build // Perlu untuk cek versi Geocoder API 33+
-import com.roxgps.R // Import R untuk string resources
-import kotlinx.coroutines.Dispatchers // Untuk pindah Dispatcher (IO)
-import kotlinx.coroutines.cancel // Untuk cancel coroutine di Flow
-import kotlinx.coroutines.delay // Jika delay masih diperlukan (opsional)
-import kotlinx.coroutines.flow.callbackFlow // Untuk membuat Flow dari operasi callback/blocking
-import kotlinx.coroutines.withContext // Untuk berpindah thread (Dispatcher)
-import java.io.IOException // Untuk menangani error I/O dari Geocoder
-import java.util.Locale // Perlu untuk Geocoder (menentukan bahasa/region)
-import java.util.regex.Matcher // Untuk Regex pattern matching
-import java.util.regex.Pattern // Untuk Regex pattern
-import kotlinx.coroutines.channels.awaitClose // Untuk resource cleanup di callbackFlow
+import android.content.Context
+import android.location.Address
+import android.location.Geocoder
+import android.os.Build
+import com.roxgps.R
+import com.roxgps.utils.Relog
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
+import java.io.IOException
+import java.util.Locale
+import java.util.regex.Matcher
+import java.util.regex.Pattern
 
 
 // =====================================================================
@@ -27,16 +28,16 @@ import kotlinx.coroutines.channels.awaitClose // Untuk resource cleanup di callb
 
 // Sealed class untuk merepresentasikan status proses search. BAGUS!
 // Sealed class memastikan semua state proses terdefinisi dengan jelas.
-sealed class SearchProgress {
+/*sealed class SearchProgress {
     // State saat proses search sedang berjalan.
     object Progress : SearchProgress()
     // State saat proses search selesai sukses dan menemukan koordinat.
     // Menyimpan hasil koordinat (latitude dan longitude) bertipe Double.
-    data class Complete(val lat: Double, val lon: Double) : SearchProgress()
+    hook class Complete(val lat: Double, val lon: Double) : SearchProgress()
     // State saat proses search gagal menemukan alamat atau ada error.
     // Menyimpan pesan error (String?) jika ada.
-    data class Fail(val error: String?) : SearchProgress()
-}
+    hook class Fail(val error: String?) : SearchProgress()
+}*/
 
 
 // =====================================================================
@@ -63,138 +64,148 @@ class SearchHelper(private val context: Context) { // Membutuhkan Context. BAGUS
      * @param address String input dari user (bisa alamat atau format "lat,lon").
      * @return Flow<SearchProgress> yang merepresentasikan status dan hasil search.
      */
-    suspend fun getSearchAddress(address: String) = callbackFlow {
-        // Mengirim status Progress ke Flow saat search dimulai. BAGUS!
+    suspend fun getSearchAddress(context: Context, address: String) = callbackFlow {
+        // Mengirim status Progress ke Flow saat search dimulai.
         trySend(SearchProgress.Progress)
 
-        // Menjalankan operasi blocking (Geocoder atau parsing) di Dispatchers.IO. WAJIB!
+        // Menjalankan operasi blocking (Geocoder atau parsing) di Dispatchers.IO.
         withContext(Dispatchers.IO) {
             // Mengecek apakah input address berupa format koordinat "lat,lon"
-            // Menggunakan Regex Pattern matching. BAGUS!
             val matcher: Matcher =
                 Pattern.compile("[-+]?\\d{1,3}([.]\\d+)?, *[-+]?\\d{1,3}([.]\\d+)?").matcher(address)
 
             if (matcher.matches()) {
                 // Jika input sesuai format koordinat "lat,lon"
-                // delay(3000) // Delay asli 3 detik - pastikan apakah ini masih diperlukan atau bisa dihapus
+                // Hapus delay(3000) kecuali Anda benar-benar membutuhkannya.
+                // delay(3000)
 
                 try {
                     // Parsing latitude dan longitude dari input Regex yang cocok
-                    val parts = matcher.group().split(",") // Memisahkan string berdasarkan koma
-                    val lat = parts[0].trim().toDouble() // Ambil bagian pertama (latitude), hilangkan spasi, ubah ke Double. BAGUS!
-                    val lon = parts[1].trim().toDouble() // Ambil bagian kedua (longitude), hililangkan spasi, ubah ke Double. BAGUS!
+                    val parts = matcher.group().split(",")
+                    val lat = parts[0].trim().toDouble()
+                    val lon = parts[1].trim().toDouble()
                     // Mengirim hasil sukses (koordinat) ke Flow
-                    trySend(SearchProgress.Complete(lat, lon)) // Mengirim state Complete dengan data. BAGUS!
+                    trySend(SearchProgress.Complete(lat, lon))
                 } catch (e: NumberFormatException) {
-                    // Jika parsing Double gagal, laporkan error ke Flow
-                    // Menggunakan string resources dari context. BAGUS!
-                    trySend(SearchProgress.Fail(context.getString(R.string.address_not_found)))
+                    // Jika parsing Double gagal
+                    trySend(SearchProgress.Fail(context.getString(R.string.address_not_found))) // Atau pesan lebih spesifik: "Format koordinat tidak valid."
                 } catch (e: Exception) {
                     // Tangani error lain saat parsing
-                    trySend(SearchProgress.Fail("Terjadi kesalahan saat memproses koordinat: ${e.message}"))
+                    trySend(SearchProgress.Fail("Terjadi kesalahan tak terduga saat memproses koordinat: ${e.message}"))
                 }
 
             } else {
                 // Jika input BUKAN format koordinat, gunakan Geocoder untuk mencari alamat
-                // Geocoder constructor bisa membutuhkan Locale. Menggunakan Locale.getDefault(). OK.
                 val geocoder = Geocoder(context, Locale.getDefault())
                 val addressList: List<Address>?
 
                 try {
-                    // Metode getFromLocationName bisa blocking, pastikan dijalankan di Dispatchers.IO (sudah di withContext).
-                    // Mencari hingga 3 hasil teratas.
-                    addressList = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        // Untuk API 33+, gunakan metode baru Geocoder yang asinkron.
-                        // getFromLocationName(address, maxResults) mengembalikan List<Address>.
-                        // Ini adalah metode blocking di API 33+ saat dipanggil dari background thread.
-                         geocoder.getFromLocationName(address, 3) // OK
-                    } else {
-                        // Untuk API < 33, gunakan metode lama blocking yang deprecated.
-                        @Suppress("DEPRECATION")
-                         geocoder.getFromLocationName(address, 3) // OK
-                    }
-
+                    // Panggil getFromLocationName yang blocking, tetapi aman karena di Dispatchers.IO
+                    // Gunakan @Suppress("DEPRECATION") untuk menekan peringatan di API < 33
+                    @Suppress("DEPRECATION")
+                    addressList = geocoder.getFromLocationName(address, 3)
 
                     // Memproses hasil dari Geocoder
                     addressList?.let {
-                        if (it.size >= 1) { // Jika ada 1 atau lebih hasil
-                            // Kita asumsikan hasil pertama paling relevan.
-                            // Opsi lain: jika size > 1, bisa kembalikan daftar pilihan ke user (lebih kompleks).
-                            // Saat ini, hanya mengambil hasil pertama dan menyelesaikannya.
+                        if (it.isNotEmpty()) {
+                            // Mengambil hasil pertama (paling relevan)
                             val firstAddress = it[0]
-                            trySend(SearchProgress.Complete(firstAddress.latitude, firstAddress.longitude)) // Mengirim state Complete dengan koordinat hasil pertama. BAGUS!
-                        } else { // addressList is empty (size == 0)
+                            trySend(SearchProgress.Complete(firstAddress.latitude, firstAddress.longitude))
+                        } else {
                             // Jika tidak ada hasil sama sekali.
-                             trySend(SearchProgress.Fail(context.getString(R.string.address_not_found))) // Mengirim state Fail. BAGUS!
+                            trySend(SearchProgress.Fail(context.getString(R.string.address_not_found)))
                         }
-                    } ?: run { // addressList is null (jarang terjadi tapi possible)
-                        // Jika hasil dari Geocoder null.
-                         trySend(SearchProgress.Fail(context.getString(R.string.address_not_found))) // Mengirim state Fail. BAGUS!
+                    } ?: run {
+                        // Jika hasil dari Geocoder null (jarang terjadi)
+                        trySend(SearchProgress.Fail(context.getString(R.string.address_not_found)))
                     }
                 } catch (io: IOException) {
-                    // Menangani error I/O, misal tidak ada koneksi internet atau Geocoder service tidak tersedia.
-                    // Menggunakan string resources dari context. BAGUS!
-                    trySend(SearchProgress.Fail(context.getString(R.string.no_internet))) // Mengirim state Fail. BAGUS!
+                    // Menangani error I/O (misal tidak ada koneksi internet atau layanan Geocoder tidak tersedia)
+                    trySend(SearchProgress.Fail(context.getString(R.string.no_internet_connection_or_service_unavailable))) // Pesan lebih jelas
                 } catch (e: Exception) {
-                    // Menangani error lain yang mungkin terjadi selama proses geocoding.
-                    trySend(SearchProgress.Fail("Terjadi kesalahan saat mencari alamat: ${e.message}")) // Mengirim state Fail. BAGUS!
+                    // Menangani error lain yang mungkin terjadi
+                    trySend(SearchProgress.Fail("Terjadi kesalahan tak terduga saat mencari alamat: ${e.message}"))
                 }
             }
         }
-        // awaitClose akan dipanggil saat Flow di-collect dibatalkan dari luar (misal Activity/Coroutine Scope onDestroy/Cancelled).
-        // Ini penting untuk cleanup sumber daya atau membatalkan operasi yang sedang berjalan.
+        // awaitClose akan dipanggil saat Flow di-collect dibatalkan
         awaitClose {
-             // Logic cleanup jika diperlukan.
-             // Dalam kasus Geocoder blocking, pembatalan withContext(Dispatchers.IO) sudah cukup.
-             // Jika menggunakan API yang punya listener/callback sendiri, perlu unregister/cancel di sini.
-             this.cancel() // Membatalkan scope coroutine callbackFlow. BAGUS!
+            // Logic cleanup jika diperlukan (misal membatalkan listener jika menggunakan API asinkron dengan listener)
+            // Dalam kasus ini, pembatalan withContext(Dispatchers.IO) sudah cukup.
+            // this.cancel() // Tidak perlu memanggil cancel() secara eksplisit, awaitClose akan melakukannya.
         }
     }
 
     /**
-     * Melakukan proses reverse geocoding (mengubah koordinat jadi alamat).
-     * Fungsi ini adalah suspend function. Menggunakan Geocoder.
-     *
-     * @param lat Latitude (Double).
-     * @param lon Longitude (Double).
-     * @return String alamat atau pesan error jika gagal.
+     * Helper class untuk mendapatkan alamat dari koordinat latitude dan longitude
+     * Menggunakan Coroutines untuk operasi asynchronous
      */
     suspend fun getAddressFromLatLng(lat: Double, lon: Double): String {
-         var result = context.getString(R.string.address_not_found) // Default result
+        return withContext(Dispatchers.IO) {
+            val geocoder = Geocoder(context, Locale.getDefault())
+            val defaultAddress = context.getString(R.string.address_not_found)
 
-         // Menjalankan operasi blocking (Geocoder) di Dispatchers.IO
-         withContext(Dispatchers.IO) {
-             val geocoder = Geocoder(context, Locale.getDefault()) // Menggunakan context dan Locale. OK.
-             val addressList: List<Address>?
+            try {
+                fetchAddressList(geocoder, lat, lon)
+                    ?.firstOrNull()
+                    ?.getAddressLine(0)
+                    ?: defaultAddress
+            } catch (e: IOException) {
+                Relog.e("Geocoder error: ${e.message}")
+                context.getString(R.string.no_internet)
+            } catch (e: Exception) {
+                Relog.e("Unexpected error: ${e.message}")
+                "Error: ${e.message}"
+            }
+        }
+    }
 
-             try {
-                  // Metode getFromLocation bisa blocking, pastikan dijalankan di Dispatchers.IO
-                 addressList = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                      // Untuk API 33+, gunakan metode baru Geocoder yang asinkron.
-                      geocoder.getFromLocation(lat, lon, 1) // Hanya butuh 1 hasil
-                 } else {
-                      // Untuk API < 33, gunakan metode lama blocking yang deprecated.
-                     @Suppress("DEPRECATION")
-                      geocoder.getFromLocation(lat, lon, 1) // Hanya butuh 1 hasil
-                 }
+    /**
+     * Mengambil daftar alamat dari Geocoder dengan timeout
+     * @param geocoder Instance Geocoder
+     * @param lat Latitude
+     * @param lon Longitude
+     * @return List<Address>? atau null jika timeout atau error
+     */
+    private suspend fun fetchAddressList(geocoder: Geocoder, lat: Double, lon: Double): List<Address>? {
+        return withTimeoutOrNull(5000) { // 5 detik timeout
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                suspendCancellableCoroutine { continuation ->
+                    geocoder.getFromLocation(lat, lon, 1, object : Geocoder.GeocodeListener {
+                        override fun onGeocode(addresses: MutableList<Address>) {
+                            if (addresses.isNotEmpty()) {
+                                // Menggunakan resumeWith yang tidak deprecated
+                                continuation.resumeWith(Result.success(addresses))
+                            } else {
+                                continuation.resumeWith(Result.success(null))
+                            }
+                        }
 
-                 addressList?.let {
-                      if (it.isNotEmpty()) {
-                           result = it[0].getAddressLine(0) ?: context.getString(R.string.address_not_found) // Ambil alamat lengkap baris pertama. BAGUS!
-                      }
-                 }
-             } catch (io: IOException) {
-                 // Menangani error I/O, misal tidak ada koneksi internet atau Geocoder service tidak tersedia
-                 result = context.getString(R.string.no_internet) // Menggunakan string resources. BAGUS!
-             } catch (e: Exception) {
-                 // Menangani error lain
-                 result = "Error: ${e.message}"
-             }
-         }
-         return result // Mengembalikan hasil alamat
-     }
+                        override fun onError(errorMessage: String?) {
+                            val error = errorMessage ?: "Geocoder error"
+                            Relog.e("Geocoder error: $error")
+                            continuation.resumeWith(Result.failure(IOException(error)))
+                        }
+                    })
 
-
+                    continuation.invokeOnCancellation { cause ->
+                        Relog.w("Geocoder Coroutine cancelled: ${cause?.message}")
+                    }
+                }
+            } else {
+                @Suppress("DEPRECATION")
+                try {
+                    geocoder.getFromLocation(lat, lon, 1)?.takeIf { it.isNotEmpty() }
+                } catch (e: Exception) {
+                    Relog.e("Legacy Geocoder error: ${e.message}")
+                    null
+                }
+            }
+        } ?: run {
+            Relog.w("Geocoder timeout after 5 seconds")
+            null
+        }
+    }
     // Fungsi utility isNetworkConnected() sudah dipindah ke NetworkUtils.kt
     // Jadi tidak ada di sini. Panggil NetworkUtils.isNetworkConnected(context) atau cek di ViewModel.
     // fun isNetworkConnected(): Boolean { ... }

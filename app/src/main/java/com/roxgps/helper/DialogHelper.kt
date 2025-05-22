@@ -4,27 +4,27 @@ package com.roxgps.helper // Pastikan package ini sesuai dengan struktur folder 
 // Import Library untuk DialogHelper
 // =====================================================================
 
-import android.content.Context // Untuk Context (Activity context)
-import android.content.Intent // Untuk Intent (jika perlu Intent dari dialog, misal buka Settings)
-import android.net.Uri // Untuk Uri (jika perlu dari dialog, misal buka Settings)
-import android.view.LayoutInflater // Untuk meng-inflate layout dialog
-import android.view.View // Untuk View
-import android.widget.EditText // Untuk EditText di layout dialog
-import android.widget.TextView // Untuk TextView di layout dialog
-import androidx.appcompat.app.AlertDialog // Untuk AlertDialog standar
-import androidx.appcompat.widget.AppCompatButton // Untuk Button di layout dialog
-import androidx.recyclerview.widget.LinearLayoutManager // Untuk RecyclerView
-import androidx.recyclerview.widget.RecyclerView // Untuk RecyclerView di layout dialog
-import com.google.android.material.dialog.MaterialAlertDialogBuilder // Untuk dialog style Material
-import com.google.android.material.progressindicator.LinearProgressIndicator // Untuk ProgressBar Material di layout dialog
-import com.roxgps.BuildConfig // Untuk BuildConfig.VERSION_NAME
-import com.roxgps.R // Import R dari project kamu (resources: layout, string, id)
-import com.roxgps.adapter.FavListAdapter // Butuh adapter favorit
-import com.roxgps.room.Favorite // Mengimpor Favorite dari package ROOM (model data favorit)
 // import kotlinx.coroutines.flow.Flow // Jika perlu Flow di helper (opsional, tapi tidak disarankan)
 // import androidx.lifecycle.LifecycleCoroutineScope // Jika perlu Scope di helper (opsional, tapi tidak disarankan)
-
 // Anotasi @Inject constructor() agar Hilt bisa menyediakan instance
+import android.content.Context
+import android.view.LayoutInflater
+import android.view.View
+import android.widget.EditText
+import android.widget.TextView
+import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.widget.AppCompatButton
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.progressindicator.LinearProgressIndicator
+import com.roxgps.BuildConfig
+import com.roxgps.R
+import com.roxgps.adapter.FavListAdapter
+import com.roxgps.room.Favorite
+import dagger.hilt.android.qualifiers.ActivityContext
+import javax.inject.Inject
+
 class DialogHelper @Inject constructor(
     // Hilt bisa menyediakan Context
     @ActivityContext // Scope-nya Activity, jadi pakai @ActivityContext
@@ -118,10 +118,10 @@ class DialogHelper @Inject constructor(
     }
 
     // --- FUNGSI createFavoriteListDialog --- (Nama diubah jadi create)
-    // favList: Terima data sebagai List<Favorite> dari Activity/ViewModel
+    // favList: Terima hook sebagai List<Favorite> dari Activity/ViewModel
     fun createFavoriteListDialog(
         layoutInflater: LayoutInflater, // Menerima LayoutInflater
-        favList: List<Favorite>, // Menerima data
+        favList: List<Favorite>, // Menerima hook
         onItemClick: (Favorite) -> Unit, // Menerima callback
         onItemDelete: (Favorite) -> Unit // Menerima callback
     ): AlertDialog {
@@ -138,7 +138,7 @@ class DialogHelper @Inject constructor(
         }
         favListAdapter.onItemDelete = onItemDelete // Menyetel callback delete
 
-        favListAdapter.submitList(favList) // Menggunakan data list
+        favListAdapter.submitList(favList) // Menggunakan hook list
 
         // Menggunakan MaterialAlertDialogBuilder langsung (tidak lewat showAlertDialog umum) karena ada tombol negatif. Mengembalikan dialog, tidak show()
         val dialog = MaterialAlertDialogBuilder(context) // Menggunakan context dari constructor
@@ -212,6 +212,17 @@ class DialogHelper @Inject constructor(
 
          return dialog // Mengembalikan instance dialog
      }
+    fun createTokenDialog(context: Context, token: String?): AlertDialog { // Menerima Context dan String? token
+        // Menggunakan MaterialAlertDialogBuilder langsung. Mengembalikan dialog, tidak show()
+        val dialog = MaterialAlertDialogBuilder(context) // Menggunakan context dari parameter
+            .setTitle(R.string.token_dialog_title) // Judul dialog (pastikan ada di strings.xml)
+            .setMessage(token ?: context.getString(R.string.token_not_available)) // Tampilkan token atau pesan default
+            .setPositiveButton(context.getString(R.string.dialog_button_ok), null) // Tombol OK
+            .setCancelable(true) // Bisa dicancel
+            .create()
+
+        return dialog // Mengembalikan instance dialog
+    }
 
      // Fungsi helper untuk dismiss dialog (opsional, bisa dilakukan di Activity yang punya referensi dialog)
      // fun dismissDialog(dialog: AlertDialog?) {

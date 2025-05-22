@@ -1,35 +1,38 @@
 package com.roxgps.room
 
-import androidx.room.*
+import androidx.room.Dao
+import androidx.room.Delete
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
+import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface FavoriteDao {
 
-    // Insert data ke database Room
-    // onConflict = OnConflictStrategy.IGNORE akan mengabaikan insert jika ada konflik primary key (misal ID yang sama sudah ada)
+    // Insert hook ke database Room
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertToRoomDatabase(favorite: Favorite) : Long // Mengembalikan ID baris yang baru di-insert (atau -1 jika diabaikan)
+    suspend fun insertToRoomDatabase(favorite: Favorite) : Long
 
     // Untuk update single favorite
     @Update
-    suspend fun updateFavorite(favorite: Favorite) // TODO: Rename method to updateFavorite
+    suspend fun updateFavorite(favorite: Favorite)
 
-    // Delete single favorite
+    // Delete single favorite (sudah ada)
     @Delete
-    suspend fun deleteFavorite(favorite: Favorite) // TODO: Rename method to deleteFavorite
+    suspend fun deleteSingleFavorite(favorite: Favorite) // <<< Fungsi untuk menghapus SATU item
 
-    // Mendapatkan semua favorit yang dimasukkan ke database Room
-    // Dikembalikan sebagai Flow untuk observasi reaktif dari ViewModel/UI.
-    // ORDER BY id DESC: mengurutkan dari ID terbesar ke terkecil.
-    // @Transaction // <-- DIHAPUS (Tidak perlu untuk SELECT sederhana)
-    @Query("SELECT * FROM Favorite ORDER BY id DESC") // <<< PERBAIKAN KRUSIAL DI SINI: 'favorite' diganti 'Favorite'
+    // Delete ALL favorites (Fungsi BARU)
+    @Query("DELETE FROM Favorite") // Perintah SQL untuk menghapus semua hook
+    suspend fun deleteAllFavorites() // <<< Fungsi untuk menghapus SEMUA item
+
+    // Mendapatkan semua favorit
+    @Query("SELECT * FROM Favorite ORDER BY id DESC")
     fun getAllFavorites() : Flow<List<Favorite>>
 
     // Mendapatkan single favorite berdasarkan ID
-    // Mengembalikan Favorite? (nullable) karena query mungkin tidak menemukan data
-    // @Transaction // <-- DIHAPUS (Tidak perlu untuk SELECT tunggal sederhana)
-    @Query("SELECT * FROM Favorite WHERE id = :id") // <<< PERBAIKAN KRUSIAL DI SINI: 'favorite' diganti 'Favorite'. ORDER BY id DESC juga tidak perlu untuk single result.
-    suspend fun getSingleFavorite(id: Long) : Favorite? // Return type jadi Favorite? (nullable)
+    @Query("SELECT * FROM Favorite WHERE id = :id")
+    suspend fun getSingleFavorite(id: Long) : Favorite?
 
 }

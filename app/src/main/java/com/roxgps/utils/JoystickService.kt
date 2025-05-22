@@ -6,9 +6,14 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.PixelFormat
 import android.os.IBinder
-import android.view.*
-import io.github.controlwear.virtual.joystick.android.JoystickView
+import android.view.Gravity
+import android.view.LayoutInflater
+import android.view.MotionEvent
+import android.view.View
+import android.view.ViewGroup
+import android.view.WindowManager
 import com.roxgps.R
+import io.github.controlwear.virtual.joystick.android.JoystickView
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -18,8 +23,8 @@ class JoystickService : Service(),View.OnTouchListener,View.OnClickListener {
     private var mJoystickContainerView: View? = null
     private var mJoystickView: JoystickView? = null
     private var mJoystickLayoutParams: WindowManager.LayoutParams? = null
-    private var lat : Double = PrefManager.getLat
-    private var lon : Double = PrefManager.getLng
+    //private var lat : Double = PrefManager.getLat
+    //private var lon : Double = PrefManager.getLng
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate() {
@@ -31,9 +36,9 @@ class JoystickService : Service(),View.OnTouchListener,View.OnClickListener {
         mJoystickView?.setOnTouchListener { v, event ->
             if (event.action == 1){
                 try {
-                    lat = PrefManager.getLat
-                    lon = PrefManager.getLng
-                    updateLocation(lat, lon)
+                    //lat = PrefManager.getLat
+                    //lon = PrefManager.getLng
+                    //updateLocation(lat, lon)
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
@@ -47,9 +52,9 @@ class JoystickService : Service(),View.OnTouchListener,View.OnClickListener {
             try {
                 val factorX: Double = cos(radians) / 100000.0 * (strength / 30)
                 val factorY: Double = sin(radians) / 100000.0 * (strength / 30)
-                lon = PrefManager.getLng + factorX
-                lat = PrefManager.getLat + factorY
-                updateLocation(lat, lon)
+                //lon = PrefManager.getLng + factorX
+                //lat = PrefManager.getLat + factorY
+                //updateLocation(lat, lon)
 
             }catch (e : Exception){
                 e.printStackTrace()
@@ -90,7 +95,7 @@ class JoystickService : Service(),View.OnTouchListener,View.OnClickListener {
     }
 
     private fun updateLocation(lat : Double,lon : Double){
-        PrefManager.update(start = PrefManager.isStarted, la = lat, ln = lon)
+        //PrefManager.update(start = PrefManager.isStarted, la = lat, ln = lon)
 
     }
 

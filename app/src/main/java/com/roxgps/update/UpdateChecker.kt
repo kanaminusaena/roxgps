@@ -4,16 +4,20 @@ import android.content.Context
 import android.os.Parcelable
 import com.roxgps.BuildConfig
 import com.roxgps.utils.PrefManager
-import kotlinx.android.parcel.Parcelize
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.withContext
+import kotlinx.parcelize.Parcelize
 import java.io.File
 import javax.inject.Inject
 
+//import kotlinx.parcelize
 
-class UpdateChecker @Inject constructor(private val apiResponse : GitHubService) {
+class UpdateChecker @Inject constructor(
+    private val apiResponse : GitHubService,
+    private val prefManager: PrefManager // <<< INJEKSI PrefManager DI SINI
+) {
 
 
     fun getLatestRelease() = callbackFlow {
@@ -21,7 +25,8 @@ class UpdateChecker @Inject constructor(private val apiResponse : GitHubService)
             getReleaseList()?.let { gitHubReleaseResponse ->
                 val currentTag = gitHubReleaseResponse.tagName
 
-                if (currentTag != null && (currentTag != "v" + BuildConfig.TAG_NAME && PrefManager.isUpdateDisabled)) {
+                val isUpdateCheckDisabled = prefManager.isUpdateDisabled.value // <<< Ambil nilai dari StateFlow PrefManager
+                if (currentTag != null && (currentTag != "v" + BuildConfig.TAG_NAME && isUpdateCheckDisabled)) {
                     //New update available!
                     val asset =
                         gitHubReleaseResponse.assets?.firstOrNull { it.name?.endsWith(".apk") == true }
@@ -78,7 +83,13 @@ class UpdateChecker @Inject constructor(private val apiResponse : GitHubService)
     }
 
     @Parcelize
-    data class Update(val name: String, val changelog: String, val timestamp: String, val assetUrl: String, val assetName: String, val releaseUrl: String):
-        Parcelable
+    data class Update(
+        val name: String,      // <<< Properti ini ada
+        val changelog: String, // <<< Properti ini ada
+        val timestamp: String, // <<< Properti ini ada
+        val assetUrl: String,  // <<< Properti ini ada
+        val assetName: String, // <<< Properti ini ada
+        val releaseUrl: String // <<< Properti ini ada
+    ): Parcelable
 }
 

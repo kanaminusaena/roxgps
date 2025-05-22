@@ -1,4 +1,5 @@
 <resources>
+
     <style name="Theme.Roxgps" parent="Theme.Material3.DayNight.NoActionBar">
 
         <item name="colorPrimary">@color/primary</item>
@@ -11,4 +12,6 @@
         <item name="actionOverflowMenuStyle">@style/GPSSetterOverflowMenu</item>
 
     </style>
+
+    <style name="Theme.RoxGps" parent="android:Theme.Material.Light.NoActionBar" />
 </resources>

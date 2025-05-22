@@ -3,6 +3,9 @@
 *.jks
 local.properties
 
+# Gradle files
+.gradle/
+build/
 *.iml
 .gradle
 .kotlin
@@ -20,3 +23,56 @@ local.properties
 .cxx
 *.bak
 *.backup
+
+# IntelliJ IDEA/Android Studio
+.idea/
+misc.xml
+deploymentTargetDropDown.xml
+render.experimental.xml
+
+# Kotlin
+*.hprof
+
+# Android Studio generated
+/*/build/
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# Mac OS
+
+# Windows
+Thumbs.db
+
+# Generated files
+bin/
+gen/
+out/
+
+# Log Files
+*.log
+
+# Android Studio Navigation editor temp files
+.navigation/
+
+# Android Studio captures folder
+captures/
+
+# Keystore files
+*.keystore
+
+# Google Services (e.g. APIs or Firebase)
+google-services.json
+
+# Secrets
+secrets.properties
+apikey.properties
+key.properties
+
+# Release files
+/app/release
+/app/debug
+
+# Room schema
+/app/schemas

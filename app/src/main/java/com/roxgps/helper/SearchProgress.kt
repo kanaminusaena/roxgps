@@ -1,71 +1,66 @@
-// File: com/roxgps/helper/SearchProgress.kt
 package com.roxgps.helper
 
-// Import yang dibutuhkan
-// import android.location.Address // Jika mau pakai Address Android
-// import org.maplibre.android.geometry.LatLng // Jika mau pakai LatLng MapLibre
-// import com.google.android.gms.maps.model.LatLng // Jika mau pakai LatLng Google
+// Atau package lain yang sesuai tempat file ini berada
+
+// =====================================================================
+// Sealed class SearchProgress (Status Proses Search)
+// =====================================================================
 
 /**
- * Sealed class representing the possible states of a search operation.
- * Used by ViewModel to expose search status to the UI.
+ * Sealed class untuk merepresentasikan status proses pencarian (forward geocoding).
+ * Digunakan oleh SearchRepository untuk melaporkan status ke ViewModel.
+ * Mendefinisikan semua kemungkinan state dari proses search.
  */
 sealed class SearchProgress {
-    /**
-     * Initial state when no search is in progress.
-     */
+    // Status idle: Tidak ada proses search yang sedang berjalan. Ini adalah state default.
     object Idle : SearchProgress()
 
-    /**
-     * State indicating a search is currently in progress.
-     */
+    // Status progress: Proses search sedang berjalan.
     object Progress : SearchProgress()
 
-    /**
-     * State indicating a search has completed successfully with a definitive result.
-     *
-     * @param lat The latitude of the search result.
-     * @param lon The longitude of the search result.
-     */
+    // Status complete: Proses search forward geocoding selesai dan menemukan hasil tunggal.
+    // Membawa koordinat hasil (latitude dan longitude).
     data class Complete(val lat: Double, val lon: Double) : SearchProgress()
+    // Catatan: Di SearchRepository, kamu memproses hasil tunggal dan memasukkan koordinatnya ke sini.
 
-    /**
-     * State indicating a search has failed due to an error during the process.
-     *
-     * @param error An optional error message describing the failure.
-     */
-    data class Fail(val error: String? = null) : SearchProgress()
+    // Status partial result: Proses search forward geocoding selesai dan menemukan lebih dari satu hasil.
+    // Membawa daftar item hasil search (SearchResultItem). ViewModel/UI bisa menampilkan daftar ini ke user.
+    data class PartialResult(val results: List<SearchResultItem>) : SearchProgress()
 
-    // =====================================================================
-    // State BARU: Ditambahkan sesuai permintaan
-    // =====================================================================
+    // Status no result found: Proses search forward geocoding selesai tetapi tidak menemukan hasil sama sekali.
+    object NoResultFound : SearchProgress()
 
-    /**
-     * State indicating a search has completed but found no results matching the query.
-     */
-    object NoResultFound : SearchProgress() // <-- State BARU: Tidak ada hasil ditemukan
+    // Status fail: Proses search gagal karena error (misal, tidak ada koneksi internet, Geocoder error).
+    // Membawa pesan error jika ada.
+    data class Fail(val message: String?) : SearchProgress()
 
-    /**
-     * State indicating a search has returned multiple potential results (partial).
-     * The UI might need to display these options to the user for selection.
-     *
-     * @param results A list of potential search results.
-     */
-    data class PartialResult(val results: List<SearchResultItem>) : SearchProgress() // <-- State BARU: Hasil parsial/banyak opsi
+    object Loading : SearchProgress()
+    //hook class Complete(val resultLocation: Location) : SearchProgress() // <<< Nama propertinya 'resultLocation', BUKAN 'location'
+    data class Error(val message: String?) : SearchProgress()
 
+    // TODO: Tambahkan state lain jika diperlukan (misal, Cancelled).
 
     // =====================================================================
-    // Data Class Pembantu (Digunakan oleh PartialResult)
-    // Didefinisikan di dalam file yang sama karena hanya dipakai di sini.
+    // Data class SearchResultItem
     // =====================================================================
+
     /**
-     * Data class representing a single item in a list of potential search results.
-     * Used within the [PartialResult] state.
+     * Data class untuk merepresentasikan satu item dalam daftar hasil search
+     * ketika ada banyak hasil yang ditemukan (PartialResult).
+     * Berisi informasi yang cukup untuk ditampilkan di UI.
      */
     data class SearchResultItem(
-        val address: String, // Alamat hasil parsial
-        val lat: Double, // Latitude hasil parsial
-        val lon: Double // Longitude hasil parsial
-        // Tambahkan properti lain jika perlu (misal: placeId, tipe tempat)
+        val address: String, // Alamat yang diformat untuk ditampilkan (misal, "Jalan Sudirman No. 123, Jakarta")
+        val lat: Double,     // Garis Lintang dari hasil search
+        val lon: Double      // Garis Bujur dari hasil search
+        // TODO: Tambahkan properti lain jika diperlukan (misal, provider, accuracy jika ada)
     )
+
+    // Catatan: Data class SearchResultItem didefinisikan di file yang sama
+    // dengan sealed class SearchProgress agar bisa diakses oleh SearchProgress.PartialResult.
 }
+
+// Catatan: Data class SearchResultItem bisa juga didefinisikan di luar sealed class SearchProgress,
+// tetapi tetap di file yang sama (SearchProgress.kt) atau file terpisah yang diimport,
+// selama bisa diakses oleh SearchProgress dan SearchRepository.
+// Mendefinisikannya di file yang sama adalah cara yang umum.

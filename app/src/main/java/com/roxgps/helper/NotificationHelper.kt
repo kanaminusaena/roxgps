@@ -4,17 +4,20 @@ package com.roxgps.helper // Pastikan package ini sesuai
 // Import Library untuk NotificationHelper
 // =====================================================================
 
-import android.app.Notification // Untuk tipe data Notification (digunakan di setCategory)
-import android.app.PendingIntent // Untuk PendingIntent
-import android.content.BroadcastReceiver // Untuk BroadcastReceiver object
-import android.content.Context // Untuk Context
-import android.content.Intent // Untuk Intent
-import android.content.IntentFilter // Untuk IntentFilter
-import android.os.Build // Untuk cek versi Android (PendingIntent flags, Receiver exported)
-import androidx.core.app.NotificationCompat // Untuk NotificationCompat.Builder (API notifikasi umum)
-import androidx.core.app.NotificationManagerCompat // Untuk membatalkan notifikasi
-import com.roxgps.R // Import R untuk resources (drawable, string)
-import com.roxgps.utils.NotificationsChannel // Import objek NotificationsChannel singleton (asumsi ini pengelola channel dan ID notifikasi)
+import android.app.Notification
+import android.app.PendingIntent
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.Build
+import androidx.core.app.NotificationCompat
+import com.roxgps.R
+import com.roxgps.ui.MapActivity
+import com.roxgps.utils.Relog
+import com.roxgps.utils.NotificationsChannel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import javax.inject.Inject
 
 /**
  * Helper class buat ngurusin logika notifikasi, termasuk menampilkan dan membatalkan notifikasi,
@@ -30,9 +33,12 @@ class NotificationHelper @Inject constructor(
     @ApplicationContext // atau @ActivityContext jika scope-nya Activity
     private val context: Context,
     // Asumsi NotificationsChannel juga disediakan oleh Hilt atau object singleton
-    private val notificationsChannel: NotificationsChannel // Objek singleton channel notifikasi (Asumsi Hilt bisa provide ini)
-) {
+    private val notificationsChannel: NotificationsChannel // Objek singleton channel notifikasi (Asumsi Hilt bisa provide ini)+
 
+) {
+companion object {
+    private const val TAG = "NotificationsHelper"
+}
     // Broadcast Receiver INTERNAL helper untuk menangani aksi dari notifikasi.
     // Dia dideklarasikan di dalam helper dan siklus hidupnya dikelola oleh helper.
     // Callback onReceive AKAN MEMANGGIL lambda yang diberikan di registerReceiver().
@@ -53,7 +59,6 @@ class NotificationHelper @Inject constructor(
      // Properti untuk menyimpan lambda aksi Stop terakhir yang diberikan ke registerReceiver()
      private var onStopActionCallback: (() -> Unit)? = null
 
-
     // =====================================================================
     // Method Publik untuk Mengelola Notifikasi
     // =====================================================================
@@ -64,7 +69,7 @@ class NotificationHelper @Inject constructor(
      *
      * @param address String alamat atau teks lain yang akan ditampilkan di notifikasi.
      */
-    fun showStartNotification(address: String) {
+    fun showStartNotification(address: String): Notification { // <--- Tambahkan ": Notification" di sini
         // Membuat Intent yang akan dikirim saat tombol Stop di notifikasi diklik.
         // Intent ini hanya perlu action string yang unik. Targetnya adalah BroadcastReceiver internal di helper ini.
         val stopIntent = Intent(NotificationsChannel.ACTION_STOP) // Menggunakan konstanta action dari NotificationsChannel. BAGUS!
@@ -74,14 +79,32 @@ class NotificationHelper @Inject constructor(
         // Flags penting untuk keamanan dan update.
         val stopPendingIntent: PendingIntent = PendingIntent.getBroadcast(
             context, // Context (dari constructor helper)
-            0, // Request code (bisa 0 atau angka unik jika perlu membedakan pending intent)
+            111, // Request code (bisa 0 atau angka unik jika perlu membedakan pending intent)
             stopIntent, // Intent yang akan dikirim
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE // FLAG_UPDATE_CURRENT (jika intent berubah) dan FLAG_IMMUTABLE (wajib >= S)
         )
 
+        // === TAMBAHKAN KODE INI UNTUK contentIntent (klik body notifikasi) ===
+        val activityIntent = Intent(context, MapActivity::class.java).apply { // Ganti MapActivity::class.java jika Activity lain
+            // Optional: Tambahkan flags Intent jika diperlukan (misal: clear top, single top)
+            flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            // Optional: Tambahkan hook atau extra jika handleIntent butuh info
+            putExtra("from_notification", true)
+            // Optional: Tambahkan extra lain jika perlu spesifik tab/state
+            // putExtra("target_screen", "map_default")
+        }
+        val activityPendingIntent = PendingIntent.getActivity(
+            context,
+            112, // Request code (harus unik dari PendingIntent lain jika perlu dibedakan)
+            activityIntent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
         // Menggunakan objek NotificationsChannel untuk benar-benar menampilkan notifikasi.
         // Asumsi NotificationsChannel.showNotification(context, builder lambda) yang sebenarnya membuat notifikasi.
-        notificationsChannel.showNotification(context) { builder -> // Memanggil method di objek channel notifikasi. BAGUS!
+        // === Tangkap hasil kembalian Notification dari panggilan ke notificationsChannel ===
+        val notification = notificationsChannel.showNotification(context) { builder -> // <--- Tangkap hasilnya di sini
+            // Menambahkan contentIntent ke builder notifikasi (klik body)
+            builder.setContentIntent(activityPendingIntent) // <--- Tambahkan baris ini
             // Mengatur properti dasar notifikasi menggunakan NotificationCompat.Builder.
             builder.setSmallIcon(R.drawable.ic_stop) // Icon notifikasi (Resource ID OK)
             builder.setContentTitle(context.getString(R.string.location_set)) // Judul notifikasi (Resource ID OK)
@@ -97,11 +120,16 @@ class NotificationHelper @Inject constructor(
                 stopPendingIntent // PendingIntent yang akan dijalankan saat tombol diklik (sudah dibuat di atas)
             )
 
-             // Jika notifikasi perlu content intent (saat notifikasi diklik, buka Activity), tambahkan di sini:
-             // val contentIntent = Intent(context, TargetActivity::class.java)
-             // val contentPendingIntent = PendingIntent.getActivity(context, 0, contentIntent, PendingIntent.FLAG_IMMUTABLE)
-             // builder.setContentIntent(contentPendingIntent)
+            // Jika notifikasi perlu content intent (saat notifikasi diklik, buka Activity), tambahkan di sini:
+            // val contentIntent = Intent(context, TargetActivity::class.java)
+            // val contentPendingIntent = PendingIntent.getActivity(context, 0, contentIntent, PendingIntent.FLAG_IMMUTABLE)
+            // builder.setContentIntent(contentPendingIntent)
         }
+        // ======================================
+
+        // === Kembalikan objek Notification yang didapat ===
+        return notification // <--- Tambahkan baris ini
+        // =================================================
     }
 
     /**
@@ -124,21 +152,31 @@ class NotificationHelper @Inject constructor(
      *
      * @param onStopAction Lambda yang akan dijalankan saat tombol Stop diklik.
      */
-    fun registerReceiver(onStopAction: () -> Unit) { // Lambda dipindahkan ke sini
-        this.onStopActionCallback = onStopAction // Simpan lambda di properti
-        val filter = IntentFilter(NotificationsChannel.ACTION_STOP) // Filter untuk action Stop (OK)
-        // Daftarkan receiver dengan filter
-        // Menggunakan flag Context.RECEIVER_NOT_EXPORTED untuk keamanan (Android 13+).
-        // Receiver ini hanya akan menerima broadcast dari dalam aplikasi lo sendiri.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            context.registerReceiver(stopActionReceiver, filter, Context.RECEIVER_NOT_EXPORTED) // Context (dari constructor)
+    // Di dalam kelas NotificationHelper
+
+    fun registerReceiver(onStopAction: () -> Unit) {
+        this.onStopActionCallback = onStopAction
+        val filter = IntentFilter(NotificationsChannel.ACTION_STOP)
+
+        // === MODIFIKASI BAGIAN INI ===
+        val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            // Untuk Android 13 (API 33) dan di atasnya, harus eksplisit NOT_EXPORTED
+            Context.RECEIVER_NOT_EXPORTED
         } else {
-            context.registerReceiver(stopActionReceiver, filter) // Context (dari constructor)
+            // Untuk API di bawah 33 (API 26-32), flag ini belum ada.
+            // Gunakan overload registerReceiver dengan parameter flags (tersedia sejak API 26)
+            // dan berikan flags 0, yang secara implisit (untuk unprotected broadcast)
+            // di API < 33 berarti receiver ini bisa di-export, tapi ini perilaku API lama.
+            // Linter di versi baru akan puas karena Anda menggunakan overload dengan flags.
+            0
         }
-         // CATATAN: Jika receiver ini perlu menerima broadcast dari process LAIN (misal dari Xposed module),
-         // lo mungkin perlu menggunakan flag Context.RECEIVER_EXPORTED, tapi HATI-HATI dengan keamanan.
-         // Untuk kasus tombol notifikasi yang diklik di SystemUI, broadcastnya akan dikirim ke aplikasi lo,
-         // jadi RECEIVER_NOT_EXPORTED seharusnya CUKUP jika receiver hanya untuk handle tombol notifikasi.
+
+        // Gunakan metode registerReceiver dengan parameter flags (tersedia sejak API 26)
+        // Ini akan digunakan baik di bawah API 33 maupun di atasnya
+        context.registerReceiver(stopActionReceiver, filter, flags)
+        // =============================
+
+        Relog.i(TAG, "BroadcastReceiver for ACTION_STOP registered with flags: $flags") // Opsional untuk logging
     }
 
     /**

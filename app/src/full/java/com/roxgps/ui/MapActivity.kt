@@ -4,34 +4,9 @@ package com.roxgps.ui // Pastikan package ini sesuai
 // Import Library MapActivity (Setelah Refactoring Observasi & Integrasi Token)
 // =====================================================================
 
-import android.Manifest // Untuk permission (jika diperlukan di implementasi listener)
-import android.annotation.SuppressLint // Suppress lint
-import android.content.Context // Context
-import android.content.Intent // Intent (untuk startActivity)
-import android.content.pm.PackageManager // PackageManager (jika diperlukan)
-import android.graphics.Color // Color (jika dipakai spesifik di MapActivity)
-import android.location.Location // Location (dari callback LocationListener)
-import android.os.Bundle // Untuk Bundle di lifecycle methods
-import android.util.Log // Untuk Log
-import android.view.View // Untuk View
-import android.view.LayoutInflater // Import LayoutInflater (dibutuhkan untuk dialogHelper)
-import android.view.inputmethod.EditorInfo // EditorInfo
-import android.widget.EditText // EditText (di dialog)
-import android.widget.TextView // TextView (di dialog)
-import android.widget.Toast // Toast
 // Import dari androidx atau Material yang dibutuhkan di MapActivity
 // import androidx.activity.viewModels // ViewModel di-inject di Base, tidak perlu di sini
-import androidx.appcompat.app.AlertDialog // AlertDialog
-import androidx.appcompat.widget.AppCompatButton // Button (di dialog)
-import androidx.core.app.ActivityCompat // Permission helper (jika diperlukan)
-import androidx.core.app.NotificationCompat // Notifikasi
-import androidx.core.view.* // ViewCompat, WindowInsetsCompat, GravityCompat
-import androidx.lifecycle.Lifecycle // Lifecycle State
-import androidx.lifecycle.lifecycleScope // Coroutine scope
-import androidx.lifecycle.repeatOnLifecycle // RepeatOnLifecycle
 // import androidx.lifecycle.ViewModel // Tidak perlu import tipe ViewModel
-import androidx.recyclerview.widget.LinearLayoutManager // RecyclerView LayoutManager
-import androidx.recyclerview.widget.RecyclerView // RecyclerView (di dialog)
 // Import MapLibre atau Google Maps API spesifik (sesuaikan flavor)
 // import org.maplibre.android.MapLibre // MapLibre
 // import org.maplibre.android.maps.* // MapLibre
@@ -47,45 +22,14 @@ import androidx.recyclerview.widget.RecyclerView // RecyclerView (di dialog)
 // import com.google.android.gms.maps.model.BitmapDescriptorFactory // Google Maps
 
 // Import Hilt untuk Field Injection Helper (Hanya helper spesifik flavor)
-import dagger.hilt.android.AndroidEntryPoint // Anotasi Hilt (Sudah ada di Base)
 // Import resource, binding, viewmodel, utils, dll.
-import com.roxgps.R // Resources
-import com.roxgps.databinding.ActivityMapBinding // View Binding (sama dengan Base)
-import com.roxgps.ui.viewmodel.MainViewModel // ViewModel utama (sama dengan Base)
-import com.roxgps.adapter.FavListAdapter // Adapter favorit
-import com.roxgps.utils.NotificationsChannel // Utility Notifikasi Channel
-import com.roxgps.utils.PrefManager // Preference Manager (Di-inject di Base)
-import com.roxgps.utils.ext.* // Extension functions (getAddress, showToast, isNetworkConnected, dll)
-import kotlinx.coroutines.* // Coroutine basics
-import kotlinx.coroutines.flow.collectLatest // Untuk collect Flow (lebih aman dari collect)
 // Import Material Components (jika dipakai di dialog)
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.android.material.progressindicator.LinearProgressIndicator // ProgressBar Material
-import com.google.android.material.snackbar.Snackbar // Snackbar
 // Import Semua Helper dan Listener (Di-inject di Base atau di MapActivity ini)
-import com.roxgps.helper.ILocationHelper // Import interface helper lokasi (DI-INJECT di MapActivity)
-import com.roxgps.helper.LocationListener // Import listener callback helper lokasi
-import com.roxgps.helper.PermissionHelper // Import PermissionHelper (DI-INJECT di Base)
-import com.roxgps.helper.PermissionResultListener // Import listener callback PermissionHelper
-import com.roxgps.helper.NotificationHelper // Import NotificationHelper (DI-INJECT di Base) - Mungkin perlu diinject di MapActivity jika manage notifikasi
-import com.roxgps.helper.SearchHelper // Import SearchHelper (Bisa diinject di Base atau dipakai internal Repo)
-import com.roxgps.helper.DialogHelper // Import DialogHelper (DI-INJECT di Base)
 // Import Sealed class State dari Repository/Helper BARU
-import com.roxgps.helper.SearchProgress // Import Sealed Class SearchProgress dari package helper
-import com.roxgps.repository.DownloadRepository.DownloadState // Import Sealed Class DownloadState dari Repository Download
-// Import data class YourUpdateModel
-import com.roxgps.update.YourUpdateModel // Import data class YourUpdateModel
+// Import hook class YourUpdateModel
 
 // Import Google Maps spesifik untuk flavor Google, MapLibre spesifik untuk flavor MapLibre
 // Contoh untuk FLAVOR GOOGLE MAPS:
-import com.google.android.gms.maps.GoogleMap // Google Maps
-import com.google.android.gms.maps.OnMapReadyCallback // Google Maps
-import com.google.android.gms.maps.SupportMapFragment // Google Maps
-import com.google.android.gms.maps.CameraUpdateFactory // Google Maps
-import com.google.android.gms.maps.model.LatLng // Google Maps
-import com.google.android.gms.maps.model.Marker // Google Maps
-import com.google.android.gms.maps.model.MarkerOptions // Google Maps
-import com.google.android.gms.maps.model.BitmapDescriptorFactory // Google Maps
 
 // Contoh untuk FLAVOR MAPLIBRE:
 // import org.maplibre.android.MapLibre // MapLibre
@@ -95,10 +39,33 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory // Google Maps
 
 
 // Import Hilt untuk Field Injection (hanya untuk helper spesifik flavor)
-import javax.inject.Inject
 // Import yang mungkin tidak diperlukan di Activity kalau logic di Helper
-import android.net.Uri // Untuk Uri (untuk Intent installer)
-
+import android.annotation.SuppressLint
+import android.content.Intent
+import android.location.Location
+import android.os.Bundle
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.GoogleMap
+import com.google.android.gms.maps.OnMapReadyCallback
+import com.google.android.gms.maps.SupportMapFragment
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
+import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.Marker
+import com.google.android.gms.maps.model.MarkerOptions
+import com.roxgps.R
+import com.roxgps.adapter.FavListAdapter
+import com.roxgps.helper.LocationListener
+import com.roxgps.helper.PermissionResultListener
+import com.roxgps.service.BackgroundTaskService
+import com.roxgps.utils.NotificationsChannel
+import com.roxgps.utils.Relog
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
+import timber.log.Timber
 
 // =====================================================================
 // Class MapActivity (Contoh untuk FLAVOR GOOGLE MAPS - Setelah Refactoring)
@@ -111,8 +78,10 @@ import android.net.Uri // Untuk Uri (untuk Intent installer)
 // DAN listener callback dari Helper (LocationListener, PermissionResultListener)
 class MapActivity : BaseMapActivity(), OnMapReadyCallback, LocationListener, PermissionResultListener { // Implement OnMapReadyCallback Google untuk flavor Google
 
-    // Tag untuk logging di MapActivity
-    private val TAG = "MapActivity"
+    // === Perbaiki TAG ===
+    companion object {
+        private const val TAG = "MapActivity" // Gunakan const val di companion object
+    }
 
     // =====================================================================
     // Properti Spesifik MapActivity (Google Maps Flavor)
@@ -123,11 +92,11 @@ class MapActivity : BaseMapActivity(), OnMapReadyCallback, LocationListener, Per
 
 
     // Variable untuk menyimpan LatLng spesifik flavor lokasi yang sedang aktif/ditampilkan/dipilih user.
-    private var mLatLng: com.google.android.gms.maps.model.LatLng? = null // <-- Menggunakan LatLng Google Maps
+    private var mLatLng: LatLng? = null // <-- Menggunakan LatLng Google Maps
     // Untuk flavor MapLibre: private var mLatLng: org.maplibre.android.geometry.LatLng? = null
 
     // Marker yang sedang aktif di map.
-    private var currentMarker: com.google.android.gms.maps.model.Marker? = null // <-- Menggunakan Marker Google Maps
+    private var currentMarker: Marker? = null // <-- Menggunakan Marker Google Maps
     // Untuk flavor MapLibre (Annotations lama): private var currentMarker: org.maplibre.android.annotations.Marker? = null
     // Untuk flavor MapLibre (Annotations v10+): private var pointAnnotationManager: PointAnnotationManager? = null
 
@@ -138,8 +107,8 @@ class MapActivity : BaseMapActivity(), OnMapReadyCallback, LocationListener, Per
     // Dialog untuk notifikasi Xposed missing (sama dengan MapLibre) - DIPINDAH KE BASE
     // private var xposedDialog: AlertDialog? = null
 
-     // Dialog untuk notifikasi Token Gojek (di-manage di Base, hanya di-trigger dari sini)
-    // private var gojekTokenDialog: AlertDialog? = null // <-- TIDAK PERLU DISIMPAN DI SINI, manage di Base
+     // Dialog untuk notifikasi Token  (di-manage di Base, hanya di-trigger dari sini)
+    // private var TokenDialog: AlertDialog? = null // <-- TIDAK PERLU DISIMPAN DI SINI, manage di Base
 
 
     // Properti Dialog & Adapter (sama dengan MapLibre)
@@ -155,8 +124,8 @@ class MapActivity : BaseMapActivity(), OnMapReadyCallback, LocationListener, Per
     // =====================================================================
     // Helper Lokasi - Tipe Interface ILocationHelper. Implementasi spesifik flavor di-inject DI SINI
     // sesuai dengan @Binds di ActivityModule flavor masing-masing.
-    @Inject // <-- Injeksi Helper Lokasi Spesifik Flavor (ILocationHelper)
-    lateinit var locationHelper: ILocationHelper // Hilt akan meng-inject GoogleLocationHelper atau MapLibreLocationHelper
+    //@Inject // <-- Injeksi Helper Lokasi Spesifik Flavor (ILocationHelper)
+    //lateinit var locationHelper: ILocationHelper // Hilt akan meng-inject GoogleLocationHelper atau MapLibreLocationHelper
 
     // NotificationHelper - Di-inject di Base, akses via super.notificationsChannel
     // DialogHelper - Di-inject di Base, akses via super.dialogHelper
@@ -175,6 +144,7 @@ class MapActivity : BaseMapActivity(), OnMapReadyCallback, LocationListener, Per
     override fun onCreate(savedInstanceState: Bundle?) {
         // super.onCreate() di Base akan menginisialisasi binding, viewModel, dll. DAN MapView.onCreate() jika Base menggunakan MapView.
         super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_map) // Pastikan layout Anda punya ID tombol stop
 
         // Tidak perlu panggil observasi ViewModel di sini lagi!
         // Semua observasi StateFlow, LiveData, dan SharedFlow DILAKUKAN DI BaseMapActivity.observeViewModelState() dan observeViewModelEvents()
@@ -184,7 +154,7 @@ class MapActivity : BaseMapActivity(), OnMapReadyCallback, LocationListener, Per
         // Jika Base menggunakan SupportMapFragment (umumnya lebih disarankan untuk Google Maps):
         // SupportMapFragment lifecycle dikelola oleh FragmentManager.
 
-        // Handle Intent (jika Activity diluncurkan dengan data/action tertentu) - Logic di Base
+        // Handle Intent (jika Activity diluncurkan dengan hook/action tertentu) - Logic di Base
         // handleIntent(intent) // Sudah dipanggil di Base. Bisa di-override di sini kalau perlu logic tambahan.
     }
 
@@ -262,9 +232,9 @@ class MapActivity : BaseMapActivity(), OnMapReadyCallback, LocationListener, Per
     override fun initializeMap() {
         // Untuk flavor Google Maps:
         // Asumsi binding.mapContainer adalah ID dari SupportMapFragment di layout XML
-        val mapFragment = supportFragmentManager.findFragmentById(binding.mapContainer.id) as SupportMapFragment?
+        val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment?
         mapFragment?.getMapAsync(this) // 'this' refers to MapActivity implementing OnMapReadyCallback Google
-        Log.d(TAG, "Initializing GoogleMap async...")
+        Relog.i(TAG, "Initializing GoogleMap async...") // Menggunakan TAG
 
         // Jika binding.mapContainer adalah MapView Google, gunakan: binding.mapContainer.getMapAsync(this)
 
@@ -275,12 +245,13 @@ class MapActivity : BaseMapActivity(), OnMapReadyCallback, LocationListener, Per
 
     // Implementasi dari BaseMapActivity: Pindah kamera map ke lokasi baru
     override fun moveMapToNewLocation(location: Location, moveNewLocation: Boolean) { // Menerima Location objek standar Android
-        Log.d(TAG, "Moving map to location: ${location.latitude}, ${location.longitude}")
-        // Pastikan map sudah siap (sesuaikan pengecekan dengan flavor)
+        Relog.i(TAG, "Moving map to location: ${location.latitude}, ${location.longitude}") // Menggunakan TAG
+// Pastikan map sudah siap (sesuaikan pengecekan dengan flavor)
         // Untuk flavor Google Maps:
         if (::googleMap.isInitialized) {
             // Membuat LatLng spesifik flavor dari Location objek parameter
-            val targetLatLng = com.google.android.gms.maps.model.LatLng(location.latitude, location.longitude) // <-- Menggunakan LatLng Google Maps
+            val targetLatLng =
+                LatLng(location.latitude, location.longitude) // <-- Menggunakan LatLng Google Maps
 
             // Set mLatLng di MapActivity ini (properti di MapActivity, spesifik flavor LatLng)
             mLatLng = targetLatLng
@@ -315,7 +286,7 @@ class MapActivity : BaseMapActivity(), OnMapReadyCallback, LocationListener, Per
     // SAMA PERSIS UNTUK KEDUA FLAVOR (panggil ViewModel, Helper umum, atau method abstract di Activity ini).
     @SuppressLint("ClickableViewAccessibility")
     override fun setupButtons() {
-         Log.d(TAG, "Setting up buttons.")
+        Relog.i(TAG, "Setting up buttons.")
          // Mengakses referensi tombol dari binding Base (binding sama di kedua flavor)
 
         // Listener tombol Start (panggil ViewModel.update)
@@ -327,23 +298,25 @@ class MapActivity : BaseMapActivity(), OnMapReadyCallback, LocationListener, Per
                      latitude = latLng.latitude
                      longitude = latLng.longitude
                  }
-                 // Update ViewModel dengan status mulai (true) dan lokasi yang dipilih (Location standar)
-                 viewModel.update(true, selectedLocation.latitude, selectedLocation.longitude)
-                 Log.d(TAG, "Start button clicked. ViewModel update(true, ...)")
-
+                 Relog.i(TAG, "Start button clicked. Preparing to start service...")
+                 // === LOGIKA UNTUK MEMULAI SERVICE FAKING LOKASI DI SINI ===
+                 // Anda perlu membuat Intent untuk memulai BackgroundTaskService
+                 // dengan action START_SERVICE atau action default
+                 // Dan meneruskan lokasi terpilih ke Service jika Service yang memulai faking
+                 val startServiceIntent = Intent(this, BackgroundTaskService::class.java).apply {
+                     // Optional: Set aksi khusus untuk memulai Service
+                     // action = NotificationsChannel.ACTION_START_SERVICE // Definisikan aksi START_SERVICE jika ada
+                     // Optional: Teruskan lokasi terpilih ke Service
+                     putExtra("latitude", selectedLocation.latitude)
+                     putExtra("longitude", selectedLocation.longitude)
+                 }
+                 // Panggil startService (atau startForegroundService jika target SDK >= 26)
+                 startService(startServiceIntent)
                  // Update marker dengan title khusus (panggil method helper spesifik flavor di Activity ini)
                  updateMarker(latLng, "Harapan Palsu") // Gunakan mLatLng (LatLng spesifik flavor Google)
                  // Gerakkan kamera (API spesifik flavor)
                  // Untuk flavor Google Maps:
-                 googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 15.0f))
-
-
-                 // --- Mengatur Visibilitas Button ---
-                 binding.startButton.visibility = View.GONE
-                 binding.stopButton.visibility = View.VISIBLE
-                 binding.addfavorite.visibility = View.VISIBLE
-                 // ---------------------------------
-
+                 googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 18.0f))
                  // Trigger reverse geocoding untuk alamat dan notifikasi (SAMA seperti MapLibre)
                  // ViewModel yang memicu reverse geocoding, dan alamat akan ditangkap observer searchResult di Base.
                  viewModel.triggerReverseGeocoding(selectedLocation.latitude, selectedLocation.longitude)
@@ -351,25 +324,38 @@ class MapActivity : BaseMapActivity(), OnMapReadyCallback, LocationListener, Per
 
              } ?: run { // Jika mLatLng null
                  // showToast(getString(R.string.invalid_location)) // Ditangani oleh showToastEvent dari ViewModel
-                  viewModel.showToastEvent.emit(getString(R.string.invalid_location)) // Emit Toast via event
+                  viewModel.triggerShowToastEvent(getString(R.string.invalid_location)) // Emit Toast via event
              }
          }
 
         // Listener tombol Stop (panggil performStopButtonClick di Base)
         binding.stopButton.setOnClickListener {
-             Log.d(TAG, "Stop button clicked. Performing stop button click.")
-             performStopButtonClick() // <-- Panggil method di Base yang akan memanggil onStopButtonClicked() di sini
+            Relog.i(TAG, "Stop button clicked in Activity. Sending STOP_SERVICE command...")
+            //Timber.tag("MapActivity").d("Stop button clicked in Activity")
+            // === LOGIKA UNTUK MENGIRIM PERINTAH STOP KE SERVICE DI SINI ===
+            val stopServiceIntent = Intent(this, BackgroundTaskService::class.java).apply {
+                action = NotificationsChannel.ACTION_STOP_SERVICE // Gunakan aksi perintah stop Service
+            }
+            // Panggil startService (atau startForegroundService jika target SDK >= 26)
+            // Jika Service Anda foreground dan menargetkan O+ (API 26+),
+            // lebih baik menggunakan startForegroundService, tapi startService juga bekerja.
+            startService(stopServiceIntent) // Mengirim perintah ke Service
+
+            // Opsi: Tutup Activity ini setelah mengirim perintah stop
+            // finish()
+            // Optional: Jika ingin mencatat LOKASI STOP di ViewModel saat TOMBOL UI diklik:
+            processStopLocationUpdate()
         }
 
         // Listener tombol Add Favorite (panggil addFavoriteDialog)
         binding.addfavorite.setOnClickListener {
-             Log.d(TAG, "Add Favorite button clicked. Showing dialog.")
-             addFavoriteDialog() // <-- Panggil method abstract di MapActivity ini
+           Relog.i(TAG, "Add Favorite button clicked. Showing dialog.")
+           addFavoriteDialog() // <-- Panggil method abstract di MapActivity ini
          }
 
         // Listener tombol "Dapatkan Lokasi Asli/Mock" (Jika ada, panggil locationHelper)
         binding.getlocation.setOnClickListener {
-             Log.d(TAG, "Get Location button clicked. Requesting updates.")
+           Relog.i(TAG, "Get Location button clicked. Requesting updates.")
            locationHelper.requestLocationUpdates(this) // 'this' karena MapActivity mengimplementasikan LocationListener. locationHelper adalah ILocationHelper.
         }
 
@@ -377,162 +363,288 @@ class MapActivity : BaseMapActivity(), OnMapReadyCallback, LocationListener, Per
         // Logic listener ini ada di BaseMapActivity.setupNavView()
         // MapActivity ini akan mengamati Flow searchResult dari ViewModel di observeViewModelState().
     }
+    /*override fun requestLocationUpdates(listener: LocationListener) {
+        // Memanggil metode requestLocationUpdates dari locationHelper yang di-inject
+        // LocationHelper di-inject di BaseMapActivity, dan MapActivity menggunakannya.
+        // Pastikan locationHelper sudah diinisialisasi sebelum dipanggil.
+        // Kamu sudah punya @Inject lateinit var locationHelper: ILocationHelper di BaseMapActivity
+        // Jadi seharusnya sudah tersedia di sini.
+        locationHelper.requestLocationUpdates(this)
+    }
+    override fun stopLocationUpdates() {
+        // Memanggil metode stopLocationUpdates dari locationHelper yang di-inject
+        // LocationHelper di-inject di BaseMapActivity, dan MapActivity menggunakannya.
+        // Pastikan locationHelper sudah diinisialisasi sebelum dipanggil.
+        // Kamu sudah punya @Inject lateinit var locationHelper: ILocationHelper di BaseMapActivity
+        // Jadi seharusnya sudah tersedia di sini.
+        locationHelper.stopLocationUpdates()
+    }
+    // Di dalam file MapActivity.kt, di dalam kelas MapActivity { ... }
+    // Implementasi metode abstrak getLastKnownLocation dari BaseMapActivity
+    override fun getLastKnownLocation(): Location? {
+        // Memanggil metode getLastKnownLocation dari locationHelper yang di-inject
+        // dan mengembalikan hasilnya.
+        // LocationHelper di-inject di BaseMapActivity, dan MapActivity menggunakannya.
+        // Pastikan locationHelper sudah diinisialisasi sebelum dipanggil.
+        // Kamu sudah punya @Inject lateinit var locationHelper: ILocationHelper di BaseMapActivity
+        // Jadi seharusnya sudah tersedia di sini.
+        return locationHelper.getLastKnownLocation()
+    }
+    // Di dalam file MapActivity.kt, di dalam kelas MapActivity { ... }
 
+// ... properti dan metode yang sudah ada ...
 
+    // Implementasi metode abstrak isLocationServiceEnabled dari BaseMapActivity
+    override fun isLocationServiceEnabled(): Boolean {
+        // Memanggil metode isLocationServiceEnabled dari locationHelper yang di-inject
+        // dan mengembalikan hasilnya.
+        // LocationHelper di-inject di BaseMapActivity, dan MapActivity menggunakannya.
+        // Pastikan locationHelper sudah diinisialisasi sebelum dipanggil.
+        // Kamu sudah punya @Inject lateinit var locationHelper: ILocationHelper di BaseMapActivity
+        // Jadi seharusnya sudah tersedia di sini.
+        return locationHelper.isLocationServiceEnabled()
+    }
+    // Di dalam file MapActivity.kt, di dalam kelas MapActivity { ... }
+
+// ... properti dan metode yang sudah ada ...
+
+    // Implementasi metode abstrak checkLocationPermissions dari BaseMapActivity
+    override fun checkLocationPermissions(): Boolean {
+        // Memanggil metode checkLocationPermissions dari locationHelper yang di-inject
+        // dan mengembalikan hasilnya.
+        // LocationHelper di-inject di BaseMapActivity, dan MapActivity menggunakannya.
+        // Pastikan locationHelper sudah diinisialisasi sebelum dipanggil.
+        // Kamu sudah punya @Inject lateinit var locationHelper: ILocationHelper di BaseMapActivity
+        // Jadi seharusnya sudah tersedia di sini.
+        return locationHelper.checkLocationPermissions()
+    }
+    // Di dalam file MapActivity.kt, di dalam kelas MapActivity { ... }
+
+// ... properti dan metode yang sudah ada ...
+
+    // Implementasi metode abstrak openLocationSettings dari BaseMapActivity
+    override fun openLocationSettings(context: Context) {
+        // Memanggil metode openLocationSettings dari locationHelper yang di-inject
+        // LocationHelper di-inject di BaseMapActivity, dan MapActivity menggunakannya.
+        // Pastikan locationHelper sudah diinisialisasi sebelum dipanggil.
+        // Kamu sudah punya @Inject lateinit var locationHelper: ILocationHelper di BaseMapActivity
+        // Jadi seharusnya sudah tersedia di sini.
+        locationHelper.openLocationSettings(context)
+    }
+    // Di dalam file MapActivity.kt, di dalam kelas MapActivity { ... }
+
+// ... properti dan metode yang sudah ada ...
+
+    // Implementasi metode abstrak openAppPermissionSettings dari BaseMapActivity
+    override fun openAppPermissionSettings(context: Context) {
+        // Memanggil metode openAppPermissionSettings dari locationHelper yang di-inject
+        // LocationHelper di-inject di BaseMapActivity, dan MapActivity menggunakannya.
+        // Pastikan locationHelper sudah diinisialisasi sebelum dipanggil.
+        // Kamu sudah punya @Inject lateinit var locationHelper: ILocationHelper di BaseMapActivity
+        // Jadi seharusnya sudah tersedia di sini.
+        locationHelper.openAppPermissionSettings(context)
+    }
+
+    override fun startRealLocationUpdates() {
+        // Memanggil metode startRealLocationUpdates dari locationHelper yang di-inject
+        // LocationHelper di-inject di BaseMapActivity, dan MapActivity menggunakannya.
+        // Pastikan locationHelper sudah diinisialisasi sebelum dipanggil.
+        // Kamu sudah punya @Inject lateinit var locationHelper: ILocationHelper di BaseMapActivity
+        // Jadi seharusnya sudah tersedia di sini.
+        locationHelper.startRealLocationUpdates()
+    }
+    override fun stopRealLocationUpdates() {
+        // Memanggil metode startRealLocationUpdates dari locationHelper yang di-inject
+        // LocationHelper di-inject di BaseMapActivity, dan MapActivity menggunakannya.
+        // Pastikan locationHelper sudah diinisialisasi sebelum dipanggil.
+        // Kamu sudah punya @Inject lateinit var locationHelper: ILocationHelper di BaseMapActivity
+        // Jadi seharusnya sudah tersedia di sini.
+        locationHelper.stopRealLocationUpdates()
+    }
+    override fun startFaking(targetLocation: Location) {
+        // Memanggil metode startFaking dari locationHelper yang di-inject
+        // LocationHelper di-inject di BaseMapActivity, dan MapActivity menggunakannya.
+        // Pastikan locationHelper sudah diinisialisasi sebelum dipanggil.
+        // Kamu sudah punya @Inject lateinit var locationHelper: ILocationHelper di BaseMapActivity
+        // Jadi seharusnya sudah tersedia di sini.
+        locationHelper.startFaking(targetLocation)
+    }
+    override fun stopFaking() {
+        // Memanggil metode stopFaking dari locationHelper yang di-inject
+        // LocationHelper di-inject di BaseMapActivity, dan MapActivity menggunakannya.
+        // Pastikan locationHelper sudah diinisialisasi sebelum dipanggil.
+        // Kamu sudah punya @Inject lateinit var locationHelper: ILocationHelper di BaseMapActivity
+        // Jadi seharusnya sudah tersedia di sini.
+        locationHelper.stopFaking()
+    }
+    override val isFakingActive: StateFlow<Boolean>
+        get() = locationHelper.isFakingActive
+    override val currentFakeLocation: StateFlow<Location?>
+        get() = locationHelper.currentFakeLocation
+    override fun getFakeLocationData(
+        isRandomPositionEnabled: Boolean,
+        accuracy: Float,
+        randomRange: Int,
+        updateIntervalMs: Long,
+        desiredSpeed: Float
+        // ... parameter lain jika ada di BaseMapActivity ...
+    ): FakeLocationData? {
+        // Memanggil metode getFakeLocationData dari locationHelper yang di-inject
+        // dan mengembalikan hasilnya.
+        // LocationHelper di-inject di BaseMapActivity, dan MapActivity menggunakannya.
+        // Pastikan locationHelper sudah diinisialisasi sebelum dipanggil.
+        // Kamu sudah punya @Inject lateinit var locationHelper: ILocationHelper di BaseMapActivity
+        // Jadi seharusnya sudah tersedia di sini.
+        return locationHelper.getFakeLocationData(
+            isRandomPositionEnabled,
+            accuracy,
+            randomRange,
+            updateIntervalMs,
+            desiredSpeed
+            // ... teruskan parameter lain jika ada ...
+        )
+    }
+*/
+// ... properti dan metode lain yang sudah ada ...
+
+// ... properti dan metode lain yang sudah ada ...
     // Implementasi dari BaseMapActivity: Mendapatkan lokasi terakhir (panggil locationHelper)
     // SAMA PERSIS UNTUK KEDUA FLAVOR. locationHelper adalah ILocationHelper.
-    @SuppressLint("MissingPermission") // Suppress karena permission dicek oleh Helper ILocationHelper
+    /*@SuppressLint("MissingPermission") // Suppress karena permission dicek oleh Helper ILocationHelper
     override fun getLastLocation() {
-         Log.d(TAG, "getLastLocation() called. Requesting Location updates via helper.")
+        Relog.i(TAG, "getLastLocation() called. Requesting Location updates via helper.")
          // locationHelper.getLastLocation(this) // Opsi: Panggil getLastLocation di helper
          locationHelper.requestLocationUpdates(this) // Panggil method di ILocationHelper (this = MapActivity implementing LocationListener)
-    }
+    }*/
+    // Di dalam kelas MapActivity atau BaseMapActivity
 
-    // Implementasi dari BaseMapActivity: Menangani kesalahan terkait lokasi (SAMA PERSIS, pakai Snackbar & locationHelper)
-    override fun handleLocationError() {
-        Log.w(TAG, "Handling Location Error.")
-        Snackbar.make(binding.root, "Location services are disabled.", Snackbar.LENGTH_LONG)
-            .setAction("Enable") {
-                locationHelper.openLocationSettings() // Panggil method di ILocationHelper
+    private fun processStopLocationUpdate() {
+        // Metode ini hanya perlu menangani update state ViewModel/PrefManager dengan lokasi saat stop.
+        // Update UI (visibilitas tombol, marker) DITANGANI OLEH observer ViewModel.
+        Relog.i(TAG, "processStopLocationUpdate called. Updating ViewModel state...") // Menggunakan TAG
+        mLatLng?.let { // Pastikan mLatLng (LatLng spesifik flavor) tidak null
+            // Konversi LatLng spesifik flavor ke Location standar Android
+            val stoppedLocation = Location("user_stopped").apply {
+                // Untuk flavor Google Maps (sesuaikan jika flavor lain pakai tipe LatLng berbeda):
+                latitude = it.latitude
+                longitude = it.longitude
             }
-            .show()
+            // Panggil ViewModel dengan Location standar
+            // Ini yang memicu update isStarted = false dan lokasi berhenti di PrefManager
+            // Update state lokasi berhenti di ViewModel/PrefManager
+            // Method ini dipanggil dari UI button listener jika ingin mencatat lokasi stop dari UI.
+            viewModel.setSearchedLocation(stoppedLocation)
+            // Optional: Lakukan aksi lain yang hanya perlu dilakukan saat proses stop berhasil
+            // Misalnya, perbarui UI di Activity bahwa proses sudah berhenti
+            // updateUiToStoppedState()
+        } ?: run { // Jika mLatLng null (seharusnya tidak terjadi kalau tombol Stop visible)
+            Relog.i(TAG, "processStopLocationUpdate called but mLatLng is null. Cannot update stopped location.")
+        }
     }
-
-     // Implementasi dari BaseMapActivity: Method abstract onStopButtonClicked (SAMA PERSIS)
-     override fun onStopButtonClicked() {
-         Log.d(TAG, "onStopButtonClicked() called.")
-         locationHelper.stopLocationUpdates() // Panggil method di ILocationHelper
-         mLatLng?.let { // Pastikan mLatLng (LatLng spesifik flavor) tidak null
-             // Konversi LatLng spesifik flavor ke Location standar Android
-             val stoppedLocation = Location("user_stopped").apply {
-                  // Untuk flavor Google Maps:
-                  latitude = it.latitude
-                  longitude = it.longitude
-             }
-             viewModel.update(false, stoppedLocation.latitude, stoppedLocation.longitude) // Panggil ViewModel dengan Location standar
-         } ?: run { // Jika mLatLng null (seharusnya tidak terjadi kalau tombol Stop visible)
-              Log.w(TAG, "onStopButtonClicked called but mLatLng is null.")
-         }
-
-         removeMarker() // Panggil method helper spesifik flavor di Activity ini (hapus marker)
-         // showToast(getString(R.string.location_unset)) // Ditangani oleh showToastEvent dari ViewModel
-         lifecycleScope.launch { viewModel.showToastEvent.emit(getString(R.string.location_unset)) } // Emit Toast via event
-
-         // --- Mengatur Visibilitas Button ---
-         binding.startButton.visibility = View.VISIBLE
-         binding.stopButton.visibility = View.GONE
-         binding.addfavorite.visibility = View.GONE
-          // Jika ada tombol "Dapatkan Lokasi Asli/Mock", tampilkan lagi:
-          binding.getlocation.visibility = View.VISIBLE // Tampilkan kembali
-         // ---------------------------------
-     }
 
     // Implementasi dari BaseMapActivity: Menampilkan notifikasi "Start" (panggil notificationHelper)
     // SAMA PERSIS UNTUK KEDUA FLAVOR. notificationHelper di-inject di Base.
-    override fun showStartNotification(address: String) {
+    /*override fun showStartNotification(address: String) {
          Log.d(TAG, "showStartNotification() called with address: $address")
          // Panggil method di NotificationHelper dari Base
         notificationsChannel.showStartNotification(address)
-    }
+    }*/
 
     // Implementasi dari BaseMapActivity: Membatalkan notifikasi (panggil notificationHelper)
     // SAMA PERSIS UNTUK KEDUA FLAVOR.
-    override fun cancelNotification() {
+    /*override fun cancelNotification() {
          Log.d(TAG, "cancelNotification() called.")
         // Panggil method di NotificationHelper dari Base
         notificationsChannel.cancelNotification()
-    }
+    }*/
 
     // Implementasi dari BaseMapActivity: Menampilkan dialog tambah favorit (panggil dialogHelper & viewModel)
     // SAMA PERSIS UNTUK KEDUA FLAVOR.
     override fun addFavoriteDialog() {
-        Log.d(TAG, "addFavoriteDialog() called.")
-        dialogHelper.showAddFavoriteDialog(layoutInflater) { favoriteName -> // layoutInflater dari Base
-             if (mLatLng != null) { // mLatLng (LatLng spesifik flavor Google)
-                // Panggil ViewModel.storeFavorite dengan lat/lon dari LatLng spesifik flavor
+        Timber.tag(TAG).d("addFavoriteDialog() called.")
+        // Ubah nama metode dari showAddFavoriteDialog menjadi createAddFavoriteDialog
+        // dan tambahkan .show() di akhir
+        dialogHelper.createAddFavoriteDialog(layoutInflater) { favoriteName ->
+            if (mLatLng != null) {
                 viewModel.storeFavorite(favoriteName, mLatLng!!.latitude, mLatLng!!.longitude)
             } else {
-                 // showToast(getString(R.string.location_not_select)) // Ditangani oleh showToastEvent dari ViewModel
-                  lifecycleScope.launch { viewModel.showToastEvent.emit(getString(R.string.location_not_select)) } // Emit Toast via event
+                lifecycleScope.launch { viewModel.triggerShowToastEvent(getString(R.string.location_not_select)) }
             }
-        }
+        }.show() // <<< Tambahkan .show() di sini
     }
 
     // Implementasi dari BaseMapActivity: Menampilkan dialog daftar favorit (panggil dialogHelper & viewModel)
     // SAMA PERSIS UNTUK KEDUA FLAVOR.
-    override fun showFavoriteListDialog() {
-         Log.d(TAG, "showFavoriteListDialog() called.")
-         // Amati allFavList dari ViewModel DI SINI untuk mendapatkan data list terbaru
-         lifecycleScope.launch {
-             lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                 viewModel.allFavList.collectLatest { favList ->
-                      Log.d(TAG, "Fav list collected, showing dialog with ${favList.size} items.")
-                      dialogHelper.showFavoriteListDialog(
-                         context = this@MapActivity, // Gunakan context Activity Map ini
-                         favList = favList,
-                         onItemClick = { favorite ->
-                             // Buat Location object dari favorit (Location standar Android)
-                             val favLocation = Location("favorite").apply {
-                                 latitude = favorite.lat!!
-                                 longitude = favorite.lng!!
-                             }
-                             // Update lat/lon di Base Activity
-                             this@MapActivity.lat = favLocation.latitude
-                             this@MapActivity.lon = favLocation.longitude
-                             // Pindah map ke lokasi favorit yang dipilih
-                             moveMapToNewLocation(favLocation, true) // Panggil method abstract di MapActivity ini
-                             // Dismiss dialog favorit setelah item diklik
-                             // DialogHelper harus mengurus dismiss dialog-nya sendiri
-                             // atau mengembalikan referensi AlertDialog untuk di-dismiss di sini.
-                             // dialog.dismiss() // Contoh jika dialogHelper mengembalikan AlertDialog
-                         },
-                         onItemDelete = { favorite ->
-                              Log.d(TAG, "Favorite item deleted: ${favorite.address}")
-                             viewModel.deleteFavorite(favorite) // Panggil ViewModel untuk hapus
-                         },
-                         favListAdapter = favListAdapter // Reuse adapter
-                     )
-                     // Karena collectLatest, dialog akan muncul lagi setiap kali favList berubah.
-                     // Mungkin perlu strategi lain kalau dialog tidak boleh muncul otomatis.
-                 }
-             }
-         }
+    fun showFavoriteListDialog() { // <<< HAPUS 'override'
+        Timber.tag(TAG).d("showFavoriteListDialog() called.")
+        lifecycleScope.launch {
+            lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.allFavList.collectLatest { favList ->
+                    Timber.tag(TAG)
+                        .d("Fav list collected, showing dialog with ${favList.size} items.")
+                    // Ubah nama metode dari showFavoriteListDialog menjadi createFavoriteListDialog
+                    // dan tambahkan .show() di akhir
+                    dialogHelper.createFavoriteListDialog( // <<< UBAH NAMA METODE
+                        layoutInflater = layoutInflater, // Tambahkan parameter layoutInflater
+                        favList = favList,
+                        onItemClick = { favorite ->
+                            val favLocation = Location("favorite").apply {
+                                latitude = favorite.lat!!
+                                longitude = favorite.lng!!
+                            }
+                            this@MapActivity.lat = favLocation.latitude
+                            this@MapActivity.lon = favLocation.longitude
+                            moveMapToNewLocation(favLocation, true)
+                            // Logika dismiss dialog setelah klik item tetap di Activity melalui callback
+                        },
+                        onItemDelete = { favorite ->
+                            Timber.tag(TAG).d("Favorite item deleted: ${favorite.address}")
+                            viewModel.deleteSingleFavorite(favorite)
+                        }
+                        // Parameter favListAdapter tidak dibutuhkan di createFavoriteListDialog
+                        // favListAdapter = favListAdapter // <<< HAPUS PARAMETER INI
+                    ).show() // <<< Tambahkan .show() di sini
+                }
+            }
+        }
     }
 
     // Implementasi dari BaseMapActivity: Menampilkan dialog about (panggil dialogHelper)
     // SAMA PERSIS UNTUK KEDUA FLAVOR.
-    override fun showAboutDialog() {
-         Log.d(TAG, "showAboutDialog() called.")
-         dialogHelper.showAboutDialog(this) // Gunakan context Activity Map ini
+    fun showAboutDialog() { // <<< HAPUS 'override'
+        Timber.tag(TAG).d("showAboutDialog() called.")
+        // Ubah nama metode dari showAboutDialog menjadi createAboutDialog
+        // dan tambahkan .show() di akhir.
+        // Pastikan juga memberikan parameter layoutInflater.
+        dialogHelper.createAboutDialog(layoutInflater).show() // <<< UBAH PANGGILAN DAN TAMBAHKAN .show()
     }
 
     // Implementasi dari BaseMapActivity: Menampilkan dialog update utama (panggil dialogHelper & viewModel)
     // SAMA PERSIS UNTUK KEDUA FLAVOR.
-    override fun showUpdateAvailableDialog(updateInfo: YourUpdateModel) {
-        Log.d(TAG, "showUpdateAvailableDialog() called.")
-        dialogHelper.showUpdateDialog(
-            context = this, // Gunakan context Activity Map ini
-            updateInfo = updateInfo.changelog, // Menggunakan data dari YourUpdateModel
+    /*override fun showUpdateAvailableDialog(updateInfo: YourUpdateModel) { // <<< HAPUS 'override'
+        Timber.tag(TAG).d("showUpdateAvailableDialog() called.")
+        // Ubah nama metode dari showUpdateDialog menjadi createUpdateDialog
+        // dan tambahkan .show() di akhir.
+        // Pastikan juga memberikan parameter layoutInflater.
+        dialogHelper.createUpdateDialog( // <<< UBAH NAMA METODE
+            layoutInflater = layoutInflater, // <<< TAMBAHKAN PARAMETER INI
+            updateInfo = updateInfo.changelog,
             onUpdateClicked = {
-                Log.d(TAG, "Update dialog: Update clicked.")
-                viewModel.startDownload(updateInfo) // Panggil ViewModel untuk mulai download
-                // Jika dialog update utama disimpan dan perlu di-dismiss di sini
-                // dialog.dismiss()
+                Timber.tag(TAG).d("Update dialog: Update clicked.")
+                viewModel.startDownload(updateInfo)
             },
             onCancelClicked = {
-                 Log.d(TAG, "Update dialog: Cancel clicked.")
-                viewModel.postponeUpdate() // Panggil ViewModel untuk tunda update
-                 // Jika dialog update utama disimpan dan perlu di-dismiss di sini
-                 // dialog.dismiss()
+                Timber.tag(TAG).d("Update dialog: Cancel clicked.")
+                viewModel.postponeUpdate()
             }
-        )
-    }
+        ).show() // <<< Tambahkan .show() di sini
+    }*/
 
     // Implementasi dari BaseMapActivity: Menampilkan/menyembunyikan dialog Xposed missing (panggil dialogHelper)
     // ViewModel meng-emit event showXposedDialogEvent untuk memicu ini.
     // SAMA PERSIS UNTUK KEDUA FLAVOR.
-    override fun showXposedMissingDialog(isShow: Boolean) {
-         Log.d(TAG, "showXposedMissingDialog() called with isShow=$isShow")
+    fun showXposedMissingDialog(isShow: Boolean) {
+        Timber.tag(TAG).d("showXposedMissingDialog() called with isShow=$isShow")
          // Dialog Xposed Missing di-manage di BaseMapActivity.
          // Method ini dipanggil dari Base untuk memberitahu MapActivity apakah perlu menampilkan dialog.
          // Implementasi di Base sekarang langsung menggunakan dialogHelper dan properti dialog di Base.
@@ -547,15 +659,13 @@ class MapActivity : BaseMapActivity(), OnMapReadyCallback, LocationListener, Per
          // Jika di-manage di Base, method abstract ini tidak perlu.
 
          // Jika dialog Xposed Missing di-manage di MapActivity (bukan di Base):
-         /*
          if (isShow) {
              xposedDialog?.dismiss() // Dismiss yang lama jika ada
-             xposedDialog = dialogHelper.showXposedMissingDialog(this) // Tampilkan yang baru
+             xposedDialog = dialogHelper.createXposedMissingDialog() // Tampilkan yang baru
          } else {
              xposedDialog?.dismiss() // Sembunyikan/Dismiss
              xposedDialog = null
          }
-         */
          // Karena di BaseMapActivity yang baru kita manage properti xposedDialog, method abstract ini
          // di BaseMapActivity HARUS dihapus, dan observasi di Base langsung panggil dialogHelper
          // dan manage properti xposedDialog di Base.
@@ -567,16 +677,14 @@ class MapActivity : BaseMapActivity(), OnMapReadyCallback, LocationListener, Per
          // Jadi, method abstract ini di BaseMapActivity HARUS DIHAPUS.
     }
 
-    // Implementasi dari BaseMapActivity: Menampilkan token Gojek (BARU)
-    // Method ini dipanggil dari Base saat viewModel.gojekToken berubah atau saat menu diklik.
-    override fun showGojekToken(token: String?) { // Menerima token String?
-        Log.d(TAG, "showGojekToken() called with token (first 5 chars): ${token?.take(5)}...")
-        // Implementasi di sini akan menampilkan token di UI MapActivity.
-        // Misalnya, di TextView, atau di dialog. Mari kita tampilkan di dialog.
-         dialogHelper.showGojekTokenDialog(this, token) // Panggil method baru di DialogHelper
+    // Implementasi dari BaseMapActivity: Menampilkan token  (BARU)
+    // Method ini dipanggil dari Base saat viewModel.Token berubah atau saat menu diklik.
+    override fun showToken(token: String?) { // <<< TAMBAHKAN KEMBALI 'override'
+        Timber.tag(TAG).d("showToken() called with token (first 5 chars): ${token?.take(5)}...")
+        // Ubah nama metode dari showTokenDialog menjadi createTokenDialog
+        // dan tambahkan .show() di akhir.
+        dialogHelper.createTokenDialog(this, token).show()
     }
-
-
     // =====================================================================
     // Implementasi Interface LocationListener (Callback dari ILocationHelper)
     // Dipanggil helper saat hasil operasi lokasi (get last, request updates).
@@ -585,14 +693,15 @@ class MapActivity : BaseMapActivity(), OnMapReadyCallback, LocationListener, Per
 
     // Implementasi dari LocationListener: Dipanggil helper saat lokasi berhasil didapatkan
     override fun onLocationResult(location: Location) { // location objek Location standar Android
-        Log.d(TAG, "onLocationResult received: Lat=${location.latitude}, Lon=${location.longitude}")
+        Timber.tag(TAG)
+            .d("onLocationResult received: Lat=${location.latitude}, Lon=${location.longitude}")
         // Lokasi didapat dari helper, update lat/lon di BaseMapActivity
         this@MapActivity.lat = location.latitude // Update lat di Base (Double)
         this@MapActivity.lon = location.longitude // Update lon di Base (Double)
 
         // Update mLatLng di MapActivity ini (untuk marker Map spesifik flavor Google)
         // Konversi Location standar ke LatLng spesifik flavor Google
-        mLatLng = com.google.android.gms.maps.model.LatLng(location.latitude, location.longitude)
+        mLatLng = LatLng(location.latitude, location.longitude)
 
 
         // Perbarui map menggunakan method abstract moveMapToNewLocation() di MapActivity ini
@@ -602,11 +711,11 @@ class MapActivity : BaseMapActivity(), OnMapReadyCallback, LocationListener, Per
         // Tampilkan toast atau update UI lain - DITANGANI OLEH showToastEvent DARI VIEWMODEL
 
         // Update UI tombol Start/Stop dan Favorit (SAMA PERSIS seperti MapLibre)
-         binding.startButton.visibility = View.VISIBLE // Tampilkan tombol Start
+         /*binding.startButton.visibility = View.VISIBLE // Tampilkan tombol Start
          binding.stopButton.visibility = View.GONE // Sembunyikan tombol Stop
          binding.addfavorite.visibility = View.GONE // Sembunyikan tombol Favorit
-          binding.getlocation.visibility = View.VISIBLE // Tampilkan tombol Get Location
-
+         binding.getlocation.visibility = View.VISIBLE // Tampilkan tombol Get Location
+*/
         // Memicu reverse geocoding untuk mendapatkan alamat dari lokasi yang baru didapat
         // ViewModel yang memicu reverse geocoding, dan alamat akan ditangkap observer searchResult di Base.
         // ViewModel sudah punya akses ke Location dari onLocationResult, jadi bisa langsung panggil di sini
@@ -615,24 +724,24 @@ class MapActivity : BaseMapActivity(), OnMapReadyCallback, LocationListener, Per
     }
 
     // Implementasi dari LocationListener: Dipanggil helper saat terjadi error lokasi
-    override fun onLocationError(message: String) { // message String pesan error dari helper
-        Log.e(TAG, "onLocationError received: $message")
+    override fun onLocationError(errorMessage: String) { // message String pesan error dari helper
+        Timber.tag(TAG).e("onLocationError received: $errorMessage")
         // Tampilkan pesan error ke user - DITANGANI OLEH showToastEvent DARI VIEWMODEL
         // ViewModel bisa emit event toast di LocationHelper callback onLocationError jika LocationHelper diinject ViewModel
         // Atau emit di sini:
-        lifecycleScope.launch { viewModel.showToastEvent.emit("Location Error: $message") }
+        lifecycleScope.launch { viewModel.triggerShowToastEvent("Location Error: $errorMessage") }
 
-        Timber.e("Location Error: $message") // Log error
+        Timber.e("Location Error: $errorMessage") // Log error
         // Panggil method abstract handleLocationError() untuk tampilkan Snackbar atau dialog lain (misal Enable Location)
         handleLocationError() // Panggil method abstract di MapActivity ini
     }
 
     // Implementasi dari LocationListener: Dipanggil helper saat izin lokasi berhasil diberikan
     // Callback ini DARI LocationHelper.
-    override fun onPermissionGranted() { // Tidak ada parameter
-        Log.d(TAG, "onPermissionGranted received from LocationHelper.")
+    fun onPermissionGranted() { // Tidak ada parameter
+        Timber.tag(TAG).d("onPermissionGranted received from LocationHelper.")
         // showToast("Izin Lokasi Diberikan") // DITANGANI OLEH showToastEvent DARI VIEWMODEL
-        lifecycleScope.launch { viewModel.showToastEvent.emit("Location Permission Granted.") }
+        lifecycleScope.launch { viewModel.triggerShowToastEvent("Location Permission Granted.") }
 
         Timber.d("Location Permission Granted by Helper")
         // Opsi: Coba request lokasi lagi atau trigger start button click
@@ -642,14 +751,14 @@ class MapActivity : BaseMapActivity(), OnMapReadyCallback, LocationListener, Per
 
     // Implementasi dari LocationListener: Dipanggil helper saat izin lokasi ditolak
     // Callback ini DARI LocationHelper.
-    override fun onPermissionDenied() { // Tidak ada parameter
-        Log.d(TAG, "onPermissionDenied received from LocationHelper.")
+    fun onPermissionDenied() { // Tidak ada parameter
+        Timber.tag(TAG).d("onPermissionDenied received from LocationHelper.")
         // showToast("Izin Lokasi Ditolak. Fitur lokasi tidak akan berfungsi.") // DITANGANI OLEH showToastEvent DARI VIEWMODEL
-        lifecycleScope.launch { viewModel.showToastEvent.emit("Location Permission Denied. Features may be limited.") }
+        lifecycleScope.launch { viewModel.triggerShowToastEvent("Location Permission Denied. Features may be limited.") }
 
         Timber.w("Location Permission Denied by Helper")
         // Opsi: Tampilkan dialog yang menjelaskan mengapa izin lokasi penting
-        handleLocationError() // Bisa pakai method ini untuk tampilkan Snackbar dengan tombol Enable Settings
+        handleLocationError() // Bisa pakai method ini untuk tampilkan Snackbar dengan tombol Enable SettingsCompose
     }
 
 
@@ -661,27 +770,27 @@ class MapActivity : BaseMapActivity(), OnMapReadyCallback, LocationListener, Per
     // =====================================================================
 
     // Implementasi dari PermissionResultListener: Dipanggil helper saat hasil permintaan izin tunggal diterima
-    override fun onPermissionResult(permission: String, isGranted: Boolean) {
-        Log.d(TAG, "onPermissionResult received for $permission: $isGranted")
+    /*override fun onPermissionResult(permission: String, isGranted: Boolean) {
+        Relog.i(TAG, "onPermissionResult received for $permission: $isGranted")
         when(permission) {
             Manifest.permission.POST_NOTIFICATIONS -> {
                 if (isGranted) {
                     // showToast("Izin Notifikasi Diberikan.") // DITANGANI OLEH showToastEvent
-                     lifecycleScope.launch { viewModel.showToastEvent.emit("Notification Permission Granted.") }
+                     lifecycleScope.launch { viewModel.triggerShowToastEvent("Notification Permission Granted.") }
                     Timber.d("Notification Permission Granted")
                     // Logic setelah izin notifikasi diberikan (misal, coba tampilkan notifikasi lagi jika gagal sebelumnya)
                 } else {
                     // showToast("Izin Notifikasi Ditolak.") // DITANGANI OLEH showToastEvent
-                    lifecycleScope.launch { viewModel.showToastEvent.emit("Notification Permission Denied.") }
+                    lifecycleScope.launch { viewModel.triggerShowToastEvent("Notification Permission Denied.") }
                      Timber.w("Notification Permission Denied")
                     // Logic setelah izin notifikasi ditolak (misal, beri tahu user bahwa notifikasi tidak akan tampil)
                 }
             }
             // Handle permission tunggal lainnya jika ada
         }
-    }
+    }*/
 
-    // Implementasi dari PermissionResultListener: Dipanggil helper saat hasil permintaan beberapa izin diterima
+    /*// Implementasi dari PermissionResultListener: Dipanggil helper saat hasil permintaan beberapa izin diterima
     override fun onPermissionsResult(permissions: Map<String, Boolean>) {
        Log.d(TAG, "onPermissionsResult received for multiple permissions.")
        // Handle hasil permission multiple non-lokasi jika ada
@@ -691,7 +800,7 @@ class MapActivity : BaseMapActivity(), OnMapReadyCallback, LocationListener, Per
        // }
     }
 
-
+*/
     // =====================================================================
     // Implementasi Listener Map Callback (Map-spesifik)
     // GOOGLE MAPS IMPLEMENTATION
@@ -720,7 +829,7 @@ class MapActivity : BaseMapActivity(), OnMapReadyCallback, LocationListener, Per
 
         // Pindah kamera ke lokasi awal (misal dari lat/lon di Base)
         // Gunakan lat/lon dari properti Base MapActivity yang diinisialisasi dari PrefManager
-        val initialLatLng = com.google.android.gms.maps.model.LatLng(this@MapActivity.lat, this@MapActivity.lon) // LatLng Google Maps
+        val initialLatLng = LatLng(this@MapActivity.lat, this@MapActivity.lon) // LatLng Google Maps
         val initialCameraUpdate = CameraUpdateFactory.newLatLngZoom(initialLatLng, 15.0f) // API Google
         googleMap.moveCamera(initialCameraUpdate) // Langsung pindah saat awal
 
@@ -731,10 +840,14 @@ class MapActivity : BaseMapActivity(), OnMapReadyCallback, LocationListener, Per
         googleMap.setOnMapClickListener { clickedLatLng -> // Parameter click listener adalah LatLng Google
             // clickedLatLng dari callback ini TIDAK PERNAH null
             mLatLng = clickedLatLng // Set mLatLng di MapActivity ini dengan lokasi klik (LatLng Google). Setelah baris ini, mLatLng TIDAK null.
-            Log.d(TAG, "GoogleMap clicked at: ${clickedLatLng.latitude}, ${clickedLatLng.longitude}")
+            Timber.tag(TAG)
+                .d("GoogleMap clicked at: ${clickedLatLng.latitude}, ${clickedLatLng.longitude}")
 
             // Update posisi marker (method helper spesifik flavor di Activity ini)
-            updateMarker(clickedLatLng) // Gunakan clickedLatLng (LatLng Google Maps)
+            updateMarker(
+                clickedLatLng,
+                title = TODO()
+            ) // Gunakan clickedLatLng (LatLng Google Maps)
 
             // Optional: Gerakkan kamera ke lokasi klik
             // googleMap.animateCamera(CameraUpdateFactory.newLatLng(clickedLatLng))
@@ -764,7 +877,7 @@ class MapActivity : BaseMapActivity(), OnMapReadyCallback, LocationListener, Per
 
     // Update atau tambah marker di map Google Maps
     // Menerima LatLng spesifik flavor Google.
-    override fun updateMarker(latLng: com.google.android.gms.maps.model.LatLng, title: String?) { // Menerima LatLng Google Maps
+    fun updateMarker(latLng: LatLng, title: String?) { // Menerima LatLng Google Maps
         if (!::googleMap.isInitialized) return // Pastikan map sudah siap
 
         if (currentMarker == null) {
@@ -786,7 +899,7 @@ class MapActivity : BaseMapActivity(), OnMapReadyCallback, LocationListener, Per
 
 
     // Hapus marker dari map Google Maps
-    override fun removeMarker() {
+    fun removeMarker() {
          if (!::googleMap.isInitialized) return // Pastikan map sudah siap
         Timber.d("Removing marker")
         currentMarker?.remove()
@@ -805,15 +918,8 @@ class MapActivity : BaseMapActivity(), OnMapReadyCallback, LocationListener, Per
     }
 
     // =====================================================================
-    // Implementasi Method Abstract Baru untuk Menampilkan Token Gojek
+    // Implementasi Method Abstract Baru untuk Menampilkan Token 
     // =====================================================================
     // Implementasi di sini akan menampilkan token di dialog.
-    override fun showGojekToken(token: String?) { // Menerima token String?
-         Log.d(TAG, "Implementing showGojekToken(). Token received: ${token?.take(5)}...")
-         // Panggil DialogHelper untuk menampilkan dialog token
-         // DialogHelper perlu method showGojekTokenDialog
-         dialogHelper.showGojekTokenDialog(this, token) // Gunakan context Activity Map ini, pass token
-         // DialogHelper akan mengurus pembuatan dan tampilan dialognya.
-    }
 
 }
