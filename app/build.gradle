@@ -75,9 +75,9 @@ android {
         includeInBundle = false
     }
     // Specify Gradle home explicitly
-gradle.projectsEvaluated {
+/*gradle.projectsEvaluated {
     System.setProperty("gradle.user.home", "G:\\PEMROGRAMAN\\ANDROID\\Gradle")
-}
+}*/
 
     signingConfigs {
         release {
@@ -146,13 +146,13 @@ gradle.projectsEvaluated {
     productFlavors {
         foss {
             dimension "version"
-            applicationIdSuffix ".foss"
+            //applicationIdSuffix ".foss"
             versionNameSuffix "-foss"
         }
         full {
             dimension "version"
             isDefault true
-            applicationIdSuffix ".full"
+            //applicationIdSuffix ".full"
             versionNameSuffix "-full"
         }
     }
