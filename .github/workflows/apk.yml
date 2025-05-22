@@ -60,7 +60,7 @@ jobs:
           mkdir secrets-base64
           echo "$FS_KEY_PROPERTIES_FILE" > secrets-base64/key.properties.base64
           echo "$FS_KEYSTORE_FILE" > secrets-base64/rocx-keystore.jks.base64
-          base64 --decode secrets-base64/rocx-keystore.jks.base64 > ${{ env.target_path }}/rocx.jks
+          base64 --decode secrets-base64/rocx-keystore.jks.base64 > ${{ env.target_path }}/app/rocx.jks
           base64 --decode secrets-base64/key.properties.base64 > ${{ env.target_path }}/local.properties
           chmod +x ./gradlew
           # Capture output including error details to build_error.log
