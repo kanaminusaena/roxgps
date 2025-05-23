@@ -6,8 +6,10 @@ import de.robv.android.xposed.XC_MethodHook.MethodHookParam
 import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam
 import okhttp3.Interceptor
-import okhttp3.Request
-import okhttp3.Response
+import okhttp3.Response // Ini tetap okhttp3
+import okhttp3.OkHttpClient // Ini tetap okhttp3
+import okhttp3.Request // Ini tetap okhttp3
+import okhttp3.Headers // Jika Anda mengakses headers secara langsung
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Map
