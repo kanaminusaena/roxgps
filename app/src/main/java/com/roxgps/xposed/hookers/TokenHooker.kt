@@ -188,9 +188,9 @@ object TokenHooker {
                             // Dapatkan objek Request dari chain
                             val request = chain.request()
                             // Log ini bisa sangat sering dan besar. Gunakan Level D atau V.
-                            Relog.i(HOOK_TAG, "  --> Req URL: ${request.url()}")
-                            Relog.i(HOOK_TAG, "  --> Req Method: ${request.method()}")
-                            Relog.i(HOOK_TAG, "  --> Req Headers: ${request.headers()}") // Logging headers OkHttp aman di hook
+                            Relog.i(HOOK_TAG, "  --> Req URL: ${request.url}")
+                            Relog.i(HOOK_TAG, "  --> Req Method: ${request.method}")
+                            Relog.i(HOOK_TAG, "  --> Req Headers: ${request.headers}") // Logging headers OkHttp aman di hook
 
                             // Coba ambil Authorization header dari Request
                             val authHeader = request.header("Authorization")
@@ -225,9 +225,9 @@ object TokenHooker {
                          val response = param.result as? Response
 
                          if (response != null) {
-                             Relog.i(HOOK_TAG, "  --> Resp Code: ${response.code()}")
+                             Relog.i(HOOK_TAG, "  --> Resp Code: ${response.code}")
                              // Logging headers OkHttp aman di hook
-                             Relog.i(HOOK_TAG, "  --> Resp Headers: ${response.headers()}")
+                             Relog.i(HOOK_TAG, "  --> Resp Headers: ${response.headers}")
                              // Catatan: Mengambil body response di after hook SANGAT SENSITIF dan bisa menyebabkan error/crash
                              // response.body?.string() // <-- JANGAN LAKUKAN INI KECUALI SANGAT PERLU DAN HATI-HATI!
                          }
