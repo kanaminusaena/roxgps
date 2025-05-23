@@ -1,32 +1,12 @@
+// com/roxgps/module/ActivityModule.kt (Setelah Perubahan)
 package com.roxgps.module
 
-import android.content.Context
-import android.location.LocationManager
-import androidx.core.content.ContextCompat
-import com.roxgps.helper.GoogleLocationHelperImpl
-import com.roxgps.helper.ILocationHelper
-import com.roxgps.helper.PermissionHelper
-import com.roxgps.repository.SettingsRepository
-import com.roxgps.utils.PrefManager
-import com.roxgps.utils.Relog
-import com.roxgps.xposed.IXposedHookManager
-import com.roxgps.xposed.XposedHookManagerImpl
 import dagger.Module
-import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.components.ActivityComponent
-import dagger.hilt.android.qualifiers.ActivityContext
-import dagger.hilt.android.qualifiers.ApplicationContext
-import dagger.hilt.android.scopes.ActivityScoped
-import javax.inject.Named
-import kotlin.random.Random
 
 /**
- * Hilt Module untuk menyediakan dependencies di scope Activity khusus untuk flavor Google.
- *
- * Module ini selalu menyediakan implementasi GoogleLocationHelperImpl.
- *
- * @since 2025-05-23 13:47:28
+ * Hilt Module untuk menyediakan dependencies di scope Activity.
  */
 @Module
 @InstallIn(ActivityComponent::class)
@@ -37,42 +17,19 @@ object ActivityModule {
     /**
      * Menyediakan instance PermissionHelper untuk Activity.
      */
-    @Provides
+    /*@Provides
     @ActivityScoped
     fun providePermissionHelper(
         @ActivityContext context: Context
     ): PermissionHelper {
         Relog.d("$TAG: Providing PermissionHelper")
         return PermissionHelper(context)
-    }
+    }*/
 
-    /**
-     * Menyediakan LocationManager dari system service.
-     */
-    @Provides
-    @ActivityScoped
-    fun provideLocationManager(
-        @ActivityContext context: Context
-    ): LocationManager {
-        Relog.d("$TAG: Providing LocationManager")
-        return ContextCompat.getSystemService(context, LocationManager::class.java)
-            ?: throw IllegalStateException("LocationManager not available")
-    }
+    // CATATAN: provideLocationManager dan provideRandom dipindahkan ke AppModule.kt
 
-    /**
-     * Menyediakan Random number generator.
-     */
-    @Provides
-    @ActivityScoped
-    fun provideRandom(): Random {
-        Relog.d("$TAG: Providing Random")
-        return Random.Default
-    }
-
-    /**
-     * Menyediakan implementasi ILocationHelper untuk flavor Google.
-     * Module ini akan selalu mengembalikan GoogleLocationHelperImpl, terlepas dari ketersediaan Google Play Services.
-     */
+    // HAPUS provideLocationHelper dari sini:
+    /*
     @Provides
     @ActivityScoped
     fun provideLocationHelper(
@@ -94,12 +51,10 @@ object ActivityModule {
             xposedHookManager
         )
     }
+    */
 
-    /**
-     * Menyediakan flag ketersediaan Google Play Services.
-     * Walaupun pada flavor Google implementasi selalu menggunakan GoogleLocationHelperImpl, flag ini tetap disediakan
-     * untuk konsistensi module DI.
-     */
+    // HAPUS provideIsGooglePlayAvailable dari sini:
+    /*
     @Provides
     @Named("isGooglePlayAvailable")
     fun provideIsGooglePlayAvailable(
@@ -115,12 +70,10 @@ object ActivityModule {
         Relog.d("$TAG: Google Play Services availability check: $isGoogleBuild")
         return isGoogleBuild
     }
+    */
 
-    /**
-     * Menyediakan implementasi dari IXposedHookManager dengan menggunakan XposedHookManagerImpl.
-     * Karena XposedHookManagerImpl memiliki parameter context dengan @ApplicationContext,
-     * kita harus menginjeksi context level Aplikasi melalui @ApplicationContext.
-     */
+    // HAPUS provideXposedHookManager dari sini:
+    /*
     @Provides
     @ActivityScoped
     fun provideXposedHookManager(
@@ -129,4 +82,10 @@ object ActivityModule {
         Relog.d("$TAG: Providing XposedHookManagerImpl")
         return XposedHookManagerImpl(context)
     }
+    */
+
+    // Anda mungkin juga perlu memindahkan provideLocationManager dan provideRandom
+    // dari ActivityModule ke AppModule jika mereka dibutuhkan sebagai Singleton.
+    // Jika tidak, biarkan di ActivityModule (tapi error Anda menyiratkan ILocationHelper yang tergantung pada mereka perlu Singleton).
+    // Saya sarankan memindahkan LocationManager dan Random ke AppModule/SingletonComponent juga.
 }

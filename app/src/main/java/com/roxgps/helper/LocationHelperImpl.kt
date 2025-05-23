@@ -3,6 +3,7 @@ package com.roxgps.helper
 import android.content.Context
 import android.location.Location
 import android.location.LocationManager
+import com.google.android.gms.location.FusedLocationProviderClient
 import com.roxgps.data.FakeLocationData
 import com.roxgps.repository.SettingsRepository
 import com.roxgps.utils.PrefManager
@@ -33,7 +34,8 @@ abstract class LocationHelperImpl(
     protected val prefManager: PrefManager,
     protected val locationManager: LocationManager,
     protected val random: Random,
-    protected val xposedHookManager: IXposedHookManager
+    protected val xposedHookManager: IXposedHookManager,
+    fusedLocationProviderClient: FusedLocationProviderClient, // <-- Tambahkan ini jika dibutuhkan GoogleLocationHelperImpl
 ) : ILocationHelper {
 
     companion object {

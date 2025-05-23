@@ -47,14 +47,16 @@ class GoogleLocationHelperImpl @Inject constructor(
     prefManager: PrefManager,
     locationManager: LocationManager,
     random: Random,
-    xposedHookManager: IXposedHookManager
+    xposedHookManager: IXposedHookManager,
+    fusedLocationProviderClient: FusedLocationProviderClient, // <-- Tambahkan ini jika dibutuhkan GoogleLocationHelperImpl
 ) : LocationHelperImpl(
     context,
     settingsRepository,
     prefManager,
     locationManager,
     random,
-    xposedHookManager
+    xposedHookManager,
+    fusedLocationProviderClient
 ) {
     companion object {
         private const val TAG = "GoogleLocationHelper"
