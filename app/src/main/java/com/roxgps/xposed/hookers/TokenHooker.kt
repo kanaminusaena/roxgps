@@ -210,20 +210,25 @@ object TokenHooker {
     private fun shouldLogResponse() = true // Implement your logging logic here
 
     private fun logRequestDetails(request: Request) {
+        @Suppress("DEPRECATION")
         Relog.i(TAG, """
-            --> Request Details:
-            URL: ${request.url}
-            Method: ${request.method}
-            Headers: ${request.headers}
-        """.trimIndent())
+        --> Request Details:
+        URL: ${request.url}           // Menggunakan property url langsung
+        Method: ${request.method}
+        Headers: ${request.headers}
+        Waktu: 2025-05-23 17:10:01
+        User: kanaminusaena
+    """.trimIndent())
     }
 
     private fun logResponseDetails(response: Response, hookTag: String) {
         Relog.i(hookTag, """
-            --> Response Details:
-            Code: ${response.code}
-            Headers: ${response.headers}
-        """.trimIndent())
+        --> Response Details:
+        Code: ${response.code}
+        Headers: ${response.headers}
+        Waktu: 2025-05-23 17:10:01
+        User: kanaminusaena
+    """.trimIndent())
     }
 
     private fun handleHookError(e: Throwable, className: String, methodName: String) {
