@@ -2,9 +2,9 @@ package com.roxgps.module
 
 import android.content.Context
 import android.location.LocationManager
+import com.google.android.gms.location.FusedLocationProviderClient
 import com.roxgps.helper.ILocationHelper
-import com.roxgps.helper.MapLibreLocationHelperImpl // <--- Implementasi spesifik untuk flavor maplibre
-import com.roxgps.helper.PermissionHelper
+import com.roxgps.helper.MapLibreLocationHelperImpl
 import com.roxgps.repository.SettingsRepository
 import com.roxgps.utils.PrefManager
 import com.roxgps.utils.Relog
@@ -12,10 +12,10 @@ import com.roxgps.xposed.IXposedHookManager
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
-import dagger.hilt.components.SingletonComponent
 import dagger.hilt.android.qualifiers.ApplicationContext
-import javax.inject.Singleton
+import dagger.hilt.components.SingletonComponent
 import javax.inject.Named
+import javax.inject.Singleton
 import kotlin.random.Random
 
 @Module
@@ -39,7 +39,7 @@ object FlavorSpecificLocationModule {
         xposedHookManager: IXposedHookManager,
         // MapLibreLocationHelperImpl mungkin TIDAK memerlukan FusedLocationProviderClient.
         // Hapus parameter ini jika konstruktornya tidak menerimanya.
-        // fusedLocationProviderClient: FusedLocationProviderClient,
+        fusedLocationProviderClient: FusedLocationProviderClient,
         @Named("isGooglePlayAvailable") isGooglePlayAvailable: Boolean // Tetap ada untuk konsistensi, meskipun mungkin tidak digunakan oleh MapLibreLocationHelperImpl
     ): ILocationHelper {
         Relog.i("$TAG: Providing MapLibreLocationHelperImpl")
@@ -49,7 +49,8 @@ object FlavorSpecificLocationModule {
             prefManager,
             locationManager,
             random,
-            xposedHookManager
+            xposedHookManager,
+            fusedLocationProviderClient
             // Pastikan Anda meneruskan parameter yang benar sesuai dengan konstruktor MapLibreLocationHelperImpl
             // Jika Anda menghapus fusedLocationProviderClient dari parameter, hapus juga dari konstruktor di bawah.
         )

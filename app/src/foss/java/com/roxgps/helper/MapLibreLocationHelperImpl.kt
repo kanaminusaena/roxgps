@@ -12,6 +12,7 @@ import android.os.Bundle
 import android.os.Looper
 import android.os.SystemClock
 import androidx.core.content.ContextCompat
+import com.google.android.gms.location.FusedLocationProviderClient
 import com.roxgps.data.FakeLocationData
 import com.roxgps.repository.SettingsRepository
 import com.roxgps.service.LocationBroadcastReceiver
@@ -40,14 +41,16 @@ class MapLibreLocationHelperImpl @Inject constructor(
     prefManager: PrefManager,
     locationManager: LocationManager,
     random: Random,
-    xposedHookManager: IXposedHookManager
+    xposedHookManager: IXposedHookManager,
+    fusedLocationProviderClient: FusedLocationProviderClient,
 ) : LocationHelperImpl(
     context,
     settingsRepository,
     prefManager,
     locationManager,
     random,
-    xposedHookManager
+    xposedHookManager,
+    fusedLocationProviderClient
 ) {
     companion object {
         private const val TAG = "MapLibreLocationHelper"
