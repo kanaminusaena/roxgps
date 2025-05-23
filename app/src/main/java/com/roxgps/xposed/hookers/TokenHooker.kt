@@ -1,261 +1,246 @@
-package com.roxgps.xposed.hookers // Pastikan package ini sesuai
+package com.roxgps.xposed.hookers
 
-// =====================================================================
-// Import Library TokenHooker
-// =====================================================================
-
-// import android.util.Log // Tidak diperlukan lagi jika pakai FileLogger
-// import de.robv.android.xposed.IXposedHookLoadPackage // Tidak diperlukan jika dipanggil dari HookEntry
-
-// Imports dari kode kamu (tipe hook spesifik /OkHttp)
-
-// Import untuk thread-safe access ke token
 import com.roxgps.utils.Relog
 import de.robv.android.xposed.XC_MethodHook
+import de.robv.android.xposed.XC_MethodHook.MethodHookParam
 import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam
 import okhttp3.Interceptor
+import okhttp3.Request
 import okhttp3.Response
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.util.Map
 import java.util.concurrent.atomic.AtomicReference
 
-// =====================================================================
-// Object TokenHooker
-// Mengelola hook spesifik  dan penyimpanan token sementara.
-// =====================================================================
-
-// Object singleton atau kelas dengan metode static untuk hook spesifik 
-// Dipanggil dari HookEntry.handleLoadPackage
 object TokenHooker {
+    private const val TAG = "KampretHooker"
+    private const val FILE_LOGGER_TAG = ""
+    private const val HOOK_TAG_C = "HookC"
+    private const val HOOK_TAG_INTERCEPT = "HookIntercept"
+    //private const val CURRENT_TIMESTAMP = "2025-05-23 16:38:50"
+    private const val CURRENT_USER = "kanaminusaena"
+    private val storedToken = AtomicReference<String?>(null)
 
-    // Tag untuk log internal logger ini, dan nama file log di FileLogger
-    private const val TAG = "KampretHooker" // Tag Log spesifik hooker ini
-    private const val FILE_LOGGER_TAG = "" // Nama file log spesifik hook  di FileLogger
+    // Constants for logging
+    private const val DATE_FORMAT = "dd-MM-yyyy HH:mm:ss"
 
-    // =====================================================================
-    // Properti Statis untuk Menyimpan Token Sementara (Thread-Safe)
-    // =====================================================================
-    // Menggunakan AtomicReference untuk akses thread-safe, karena hook bisa dipanggil dari berbagai thread OkHttp
-    private val storedToken = AtomicReference<String?>(null) // Menyimpan token  terakhir
-
-    // =====================================================================
-    // Metode Statis untuk Memasang Hook (Dipanggil dari HookEntry)
-    // =====================================================================
-
-    /**
-     * Metode utama untuk memasang hook spesifik .
-     * Dipanggil dari [com.roxgps.xposed.HookEntry].
-     *
-     * @param lpparam Parameter load package dari Xposed.
-     */
     fun hook(lpparam: LoadPackageParam?) {
-        // Pastikan lpparam tidak null
         if (lpparam == null) {
             Relog.i(TAG, "hook: lpparam is null")
             return
         }
 
-        // Ganti "com..app" dengan package name APLIKASI  yang TEPAT
-        // Ini penting, hooker ini hanya aktif di package 
-        val targetPackageName = "com..app" // <-- UBAH INI SESUAI PACKAGE NAME  ASLI!
+        val targetPackageName = "com..app"
         if (lpparam.packageName != targetPackageName) {
-            // Log ini akan spam kalau tidak di dalam cek package di HookEntry
-            // Relog.i(TAG, "Not target package: ${lpparam.packageName}")
-            return // Tidak melakukan hook jika bukan package target
+            return
         }
 
-        Relog.i(TAG, "Memasang hook spesifik untuk  (${lpparam.packageName})")
+        Relog.i(TAG, """
+            Memasang hook spesifik untuk ${lpparam.packageName}
+            Waktu: $DATE_FORMAT
+            User: $CURRENT_USER
+        """.trimIndent())
 
-        // Panggil metode hook spesifik  kamu di sini
         hookMethodC(lpparam)
         hookMethodIntercept(lpparam)
-
-        // Tambahkan panggilan ke metode hook  lainnya jika ada
-        // hookMetodeLain(lpparam)
     }
 
-    // =====================================================================
-    // Metode Statis untuk Menyediakan Token (Dipanggil dari RoxGPS Service)
-    // =====================================================================
-
-    /**
-     * Metode ini dipanggil dari Service AIDL di aplikasi utama RoxGPS
-     * untuk mendapatkan token  yang tersimpan di Xposed Module.
-     *
-     * @return Token  yang tersimpan, atau null jika belum ada.
-     */
-    @JvmStatic // Penting agar bisa dipanggil dari Java/Kotlin via XposedHelpers.callStaticMethod
+    @JvmStatic
     fun getStoredToken(): String? {
-        // Mengambil nilai token secara thread-safe
-        val token = storedToken.get()
-        Relog.i(TAG, "getStoredToken() dipanggil, mengembalikan token.")
-        return token
+        return storedToken.get()?.also {
+            Relog.i(TAG, """
+                getStoredToken() dipanggil
+                Token: ${it.take(5)}...
+                Waktu: $DATE_FORMAT
+                User: $CURRENT_USER
+            """.trimIndent())
+        }
     }
 
-
-    // =====================================================================
-    // Metode Hook Spesifik 
-    // =====================================================================
-
-    // Metode untuk hook Lo.tmK;->c()
     private fun hookMethodC(lpparam: LoadPackageParam) {
-         // Tag spesifik untuk hook ini
-         val HOOK_TAG = "HookC"
-         val tmK_ClassName = "Lo.tmK;" // <-- VERIFIKASI LAGI NAMA KELAS INI!
-         val c_MethodName = "c" // <-- VERIFIKASI LAGI NAMA METODE INI!
-         try {
+        val tmK_ClassName = "Lo.tmK;"
+        val c_MethodName = "c"
 
+        try {
             XposedHelpers.findAndHookMethod(
-                tmK_ClassName, // Nama kelas
-                lpparam.classLoader, // Class loader package target
-                c_MethodName, // Nama metode
-                object : XC_MethodHook() { // Implementasi hook
-                    // Kode ini dijalankan SETELAH metode target dieksekusi
+                tmK_ClassName,
+                lpparam.classLoader,
+                c_MethodName,
+                object : XC_MethodHook() {
                     override fun afterHookedMethod(param: MethodHookParam) {
-                         // Dapatkan nama kelas dan metode yang di-hook (untuk log)
-                         val className = param.method.declaringClass.name
-                         val methodName = param.method.name
+                        val className = param.method.declaringClass.name
+                        val methodName = param.method.name
 
-                         // Coba ambil hasil metode sebagai Map<String, String> (sesuai logic kode kamu)
-                         val headersMap = param.result as? Map<*, *>
+                        (param.result as? Map<*, *>)?.let { headersMap ->
+                            Relog.i(HOOK_TAG_C, """
+                                Hooked after $className->$methodName()
+                                Hasil Map Header Diterima
+                                Waktu: $DATE_FORMAT
+                                User: $CURRENT_USER
+                            """.trimIndent())
 
-                         if (headersMap != null) {
-                             Relog.i(HOOK_TAG, "Hooked after $className->$methodName(), Hasil Map Header Diterima.") // Menggunakan FileLogger
-
-                             val authHeader = headersMap["Authorization"]
-                             if (authHeader is String && authHeader.startsWith("Bearer ")) {
-                                 // Ambil token setelah "Bearer "
-                                 val token = authHeader.substringAfter("Bearer ")
-                                 Relog.i(HOOK_TAG, "--> TOKEN BEARER DITEMUKAN: $token") // Menggunakan FileLogger (Level S=Secret/Sensitive?)
-
-                                 // --- SIMPAN TOKEN DI VARIABEL STATIS ---
-                                 // Menyimpan token secara thread-safe
-                                 storedToken.set(token)
-                                 Relog.i(HOOK_TAG, "--> TOKEN DISIMPAN SEMENTARA.")
-
-                                 // TODO: Opsi: Laporkan ke Service AIDL bahwa token baru tersedia?
-                                 // Ini butuh mekanisme sinkronisasi tambahan (misal: module panggil method AIDL notifyNewTokenAvailable())
-                                 // Tapi ini lebih kompleks. Metode "Service meminta token" lebih sederhana.
-
-                             } else {
-                                Relog.w(HOOK_TAG, "--> Header Authorization tidak ditemukan atau formatnya beda: $authHeader")
-                             }
-                         } else {
-                            Relog.w(HOOK_TAG, "Hooked after $className->$methodName(), Hasil method BUKAN Map: ${param.result}")
-                         }
+                            processAuthorizationHeader(
+                                headersMap["Authorization"] as? String,
+                                HOOK_TAG_C
+                            )
+                        } ?: Relog.w(HOOK_TAG_C, """
+                            Hooked after $className->$methodName()
+                            Hasil method BUKAN Map: ${param.result}
+                            Waktu: $DATE_FORMAT
+                        """.trimIndent())
                     }
                 }
             )
-             Relog.i(TAG, "Hook $tmK_ClassName->$c_MethodName() terpasang.")
-        } catch (e: XposedHelpers.ClassNotFoundError) {
-             Relog.i(TAG, "GAGAL temukan class $tmK_ClassName: ${e.message}")
-        } catch (e: NoSuchMethodError) {
-             Relog.i(TAG, "GAGAL temukan method $c_MethodName di $tmK_ClassName: ${e.message}")
-        } catch (e: Throwable) { // Tangkap Throwable umum untuk safety
-            Relog.i(TAG, "GAGAL pasang hook $tmK_ClassName->$c_MethodName(): ${e.message}")
-             // Opsional: Laporkan error pasang hook ke Service AIDL (jika Service terhubung saat itu, agak sulit)
-             // runCatching { aidlService?.reportHookError("Error hook $tmK_ClassName->$c_MethodName: ${e.message}") } // aidlService tidak tersedia di sini
+            Relog.i(TAG, "Hook $tmK_ClassName->$c_MethodName() terpasang.")
+        } catch (e: Throwable) {
+            handleHookError(e, tmK_ClassName, c_MethodName)
         }
     }
 
-    // Metode untuk hook intercept() pada interceptor OkHttp
     private fun hookMethodIntercept(lpparam: LoadPackageParam) {
-         // Tag spesifik untuk hook ini
-         val HOOK_TAG = "HookIntercept"
-         val interceptorClassName =
-             "com.scp.login.sso.hook.network.SSOApiFactory\$httpHeaderInterceptor$2$2" // <-- VERIFIKASI LAGI NAMA KELAS INI!
-         val interceptMethodName = "intercept" // Nama metode intercept
-         val chainClass = Interceptor.Chain::class.java // Tipe parameter pertama metode intercept
-         try {
+        val interceptorClassName =
+            "com.scp.login.sso.hook.network.SSOApiFactory\$httpHeaderInterceptor$2$2"
+        val interceptMethodName = "intercept"
 
+        try {
             XposedHelpers.findAndHookMethod(
-                interceptorClassName, // Nama kelas interceptor
-                lpparam.classLoader, // Class loader package target
-                interceptMethodName, // Nama metode
-                chainClass, // Tipe parameter pertama (Interceptor.Chain)
-                object : XC_MethodHook() { // Implementasi hook
-                    // Kode ini dijalankan SEBELUM metode target dieksekusi
+                interceptorClassName,
+                lpparam.classLoader,
+                interceptMethodName,
+                Interceptor.Chain::class.java,
+                object : XC_MethodHook() {
                     override fun beforeHookedMethod(param: MethodHookParam) {
-                        val className = param.method.declaringClass.name
-                        val methodName = param.method.name
-                        // Log ini bisa sangat sering, gunakan Level D atau V jika perlu debug traffic.
-                        Relog.i(HOOK_TAG, "Hooked BEFORE $className->$methodName()")
+                        val chain = param.args.firstOrNull() as? Interceptor.Chain ?: return
 
-                        // Ambil objek Interceptor.Chain dari parameter
-                        val chain = param.args[0] as? Interceptor.Chain
-
-                        if (chain != null) {
-                            // Dapatkan objek Request dari chain
+                        try {
                             val request = chain.request()
-                            // Log ini bisa sangat sering dan besar. Gunakan Level D atau V.
-                            Relog.i(HOOK_TAG, "  --> Req URL: ${request.url}")
-                            Relog.i(HOOK_TAG, "  --> Req Method: ${request.method}")
-                            Relog.i(HOOK_TAG, "  --> Req Headers: ${request.headers}") // Logging headers OkHttp aman di hook
-
-                            // Coba ambil Authorization header dari Request
-                            val authHeader = request.header("Authorization")
-                             if (authHeader != null && authHeader.startsWith("Bearer ")) {
-                                // Ambil token
-                                val token = authHeader.substringAfter("Bearer ")
-                                Relog.i(HOOK_TAG, "  --> Req TOKEN DITEMUKAN: $token") // Menggunakan FileLogger (Level S=Secret/Sensitive?)
-
-                                 // --- SIMPAN TOKEN DI VARIABEL STATIS ---
-                                 // Menyimpan token secara thread-safe
-                                 storedToken.set(token)
-                                 Relog.i(HOOK_TAG, "  --> TOKEN DISIMPAN SEMENTARA.")
-
-                                 // TODO: Opsi: Laporkan ke Service AIDL bahwa token baru tersedia? (Sama seperti di hookMethodC)
-                                 // Ini butuh mekanisme sinkronisasi tambahan (misal: module panggil method AIDL notifyNewTokenAvailable())
-                                 // Tapi ini lebih kompleks. Metode "Service meminta token" lebih sederhana.
-
-                             } else {
-                                Relog.i(HOOK_TAG, "  --> Req Header Authorization tidak ditemukan atau formatnya beda: $authHeader") // Turunkan level log jika tidak penting
-                             }
+                            logRequestDetails(request)
+                            processAuthorizationHeader(
+                                request.header("Authorization"),
+                                HOOK_TAG_INTERCEPT
+                            )
+                        } catch (e: Exception) {
+                            Relog.e(HOOK_TAG_INTERCEPT, """
+                                Error processing request: ${e.message}
+                                Waktu: $DATE_FORMAT
+                            """.trimIndent())
                         }
                     }
 
-                    // Kode ini dijalankan SETELAH metode target dieksekusi
                     override fun afterHookedMethod(param: MethodHookParam) {
-                         val className = param.method.declaringClass.name
-                         val methodName = param.method.name
-                         // Log ini bisa sangat sering
-                         Relog.i(HOOK_TAG, "Hooked AFTER $className->$methodName()")
-
-                         // Ambil objek Response dari hasil metode
-                         val response = param.result as? Response
-
-                         if (response != null) {
-                             Relog.i(HOOK_TAG, "  --> Resp Code: ${response.code}")
-                             // Logging headers OkHttp aman di hook
-                             Relog.i(HOOK_TAG, "  --> Resp Headers: ${response.headers}")
-                             // Catatan: Mengambil body response di after hook SANGAT SENSITIF dan bisa menyebabkan error/crash
-                             // response.body?.string() // <-- JANGAN LAKUKAN INI KECUALI SANGAT PERLU DAN HATI-HATI!
-                         }
+                        (param.result as? Response)?.let { response ->
+                            Relog.i(HOOK_TAG_INTERCEPT, """
+                                --> Response Details:
+                                Code: ${response.code}
+                                Headers: ${response.headers}
+                                Waktu: $DATE_FORMAT
+                            """.trimIndent())
+                        }
                     }
                 }
             )
-             Relog.i(TAG, "Hook $interceptorClassName->$interceptMethodName() terpasang.")
-        } catch (e: XposedHelpers.ClassNotFoundError) {
-             Relog.i(TAG, "GAGAL temukan class $interceptorClassName: ${e.message}")
-        } catch (e: NoSuchMethodError) {
-             Relog.i(TAG, "GAGAL temukan method $interceptMethodName di $interceptorClassName: ${e.message}")
-        } catch (e: Throwable) { // Tangkap Throwable umum untuk safety
-            Relog.i(TAG, "GAGAL pasang hook $interceptorClassName->$interceptMethodName(): ${e.message}")
-             // Opsional: Laporkan error pasang hook ke Service AIDL (jika Service terhubung saat itu, agak sulit)
-             // runCatching { aidlService?.reportHookError("Error hook $interceptorClassName->$interceptMethodName: ${e.message}") } // aidlService tidak tersedia di sini
+            Relog.i(TAG, "Hook $interceptorClassName->$interceptMethodName() terpasang.")
+        } catch (e: Throwable) {
+            handleHookError(e, interceptorClassName, interceptMethodName)
         }
     }
 
-    // Jika ada metode hook lain, tambahkan di sini
-    // private fun hookMetodeLain(lpparam: LoadPackageParam) { ... }
+    private fun processHeaderMap(param: MethodHookParam, hookTag: String) {
+        val className = param.method.declaringClass.name
+        val methodName = param.method.name
 
+        (param.result as? Map<*, *>)?.let { headersMap ->
+            Relog.i(hookTag, "Hooked after $className->$methodName(), Hasil Map Header Diterima.")
 
-    // Catatan Penting:
-    // Nama kelas  Lo.tmK; dan com.scp.login.sso.hook.network.SSOApiFactory$httpHeaderInterceptor$2$2
-    // serta nama metode c dan intercept SANGAT RENTAN BERUBAH saat  melakukan update.
-    // Kamu perlu memverifikasi nama-nama ini setiap  update jika hooknya tidak berfungsi.
-    // Mengambil token dari header Authorization Bearer adalah pendekatan yang umum.
-    // Logik IPC untuk mengirim token ke aplikasi kontrol (RoxGPS) perlu kamu implementasikan.
-    // Implementasi di atas menggunakan metode "Service AIDL meminta token dari Module" via XposedHelpers.callStaticMethod
+            val authHeader = headersMap["Authorization"] as? String
+            processAuthorizationHeader(authHeader, hookTag)
+        } ?: Relog.w(hookTag, "Hooked after $className->$methodName(), Hasil method BUKAN Map: ${param.result}")
+    }
 
+    private fun processInterceptorRequest(param: MethodHookParam, hookTag: String) {
+        val chain = param.args.firstOrNull() as? Interceptor.Chain ?: return
+
+        try {
+            val request = chain.request()
+            if (shouldLogRequest()) {
+                logRequestDetails(request)
+            }
+
+            processAuthorizationHeader(request.header("Authorization"), hookTag)
+        } catch (e: Exception) {
+            Relog.e(hookTag, "Error processing request: ${e.message}")
+        }
+    }
+
+    private fun processInterceptorResponse(param: MethodHookParam, hookTag: String) {
+        val className = param.method.declaringClass.name
+        val methodName = param.method.name
+        Relog.i(hookTag, "Hooked AFTER $className->$methodName()")
+
+        (param.result as? Response)?.let { response ->
+            if (shouldLogResponse()) {
+                logResponseDetails(response, hookTag)
+            }
+        }
+    }
+
+    private fun processAuthorizationHeader(authHeader: String?, hookTag: String) {
+        if (authHeader?.startsWith("Bearer ") == true) {
+            val token = authHeader.substringAfter("Bearer ")
+            if (token != storedToken.get()) {
+                storedToken.set(token)
+                Relog.i(hookTag, """
+                    Token baru ditemukan dan disimpan
+                    Token: ${token.take(5)}...
+                    Waktu: $DATE_FORMAT
+                    User: $CURRENT_USER
+                """.trimIndent())
+                // TODO: Opsi: Laporkan ke Service AIDL bahwa token baru tersedia
+            }
+        } else {
+            Relog.d(hookTag, """
+                Header Authorization tidak valid: ${authHeader?.take(10)}...
+                Waktu: $DATE_FORMAT
+            """.trimIndent())
+        }
+    }
+
+    private fun shouldLogRequest() = true // Implement your logging logic here
+    private fun shouldLogResponse() = true // Implement your logging logic here
+
+    private fun logRequestDetails(request: Request) {
+        Relog.i(TAG, """
+            --> Request Details:
+            URL: ${request.url}
+            Method: ${request.method}
+            Headers: ${request.headers}
+        """.trimIndent())
+    }
+
+    private fun logResponseDetails(response: Response, hookTag: String) {
+        Relog.i(hookTag, """
+            --> Response Details:
+            Code: ${response.code}
+            Headers: ${response.headers}
+        """.trimIndent())
+    }
+
+    private fun handleHookError(e: Throwable, className: String, methodName: String) {
+        val errorMessage = when (e) {
+            is XposedHelpers.ClassNotFoundError -> "GAGAL temukan class"
+            is NoSuchMethodError -> "GAGAL temukan method"
+            else -> "GAGAL pasang hook"
+        }
+        Relog.e(TAG, """
+            $errorMessage $className->$methodName()
+            Error: ${e.message}
+            Waktu: $DATE_FORMAT
+            User: $CURRENT_USER
+        """.trimIndent())
+    }
+
+    private fun getCurrentTimestamp(): String {
+        return LocalDateTime.now().format(DateTimeFormatter.ofPattern(DATE_FORMAT))
+    }
 }
