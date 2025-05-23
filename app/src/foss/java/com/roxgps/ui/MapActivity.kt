@@ -124,7 +124,7 @@ class MapActivity : BaseMapActivity(), OnMapReadyCallback, LocationListener, Per
 
     // === Metode Lifecycle onStart, onResume, onPause, onStop, onSaveInstanceState, onLowMemory, onDestroy ===
     // Implementasi ini mengasumsikan BaseMapActivity menggunakan MapView MapLibre dan memanggil lifecycle-nya.
-    override fun onStart() {
+    /*override fun onStart() {
         super.onStart()
         Timber.tag(TAG).d("onStart()")
         // PERBAIKAN: Panggil lifecycle onStart MapView
@@ -172,7 +172,7 @@ class MapActivity : BaseMapActivity(), OnMapReadyCallback, LocationListener, Per
         Timber.tag(TAG).d("onLowMemory()")
         // PERBAIKAN: Panggil lifecycle onLowMemory MapView
         mapView.onLowMemory() // <<< Panggil lifecycle onLowMemory MapView
-    }
+    }*/
 
     override fun onDestroy() {
         super.onDestroy()
@@ -696,6 +696,7 @@ class MapActivity : BaseMapActivity(), OnMapReadyCallback, LocationListener, Per
         // Implementasi ini tergantung gimana dialogHelper.showPartialSearchResultsDialog bekerja.
         // dialogHelper.dismissPartialSearchResultsDialog() // Asumsi method ini ada di DialogHelper
     }*/
+    /*
     override fun requestLocationUpdates(listener: LocationListener) {
         // Memanggil metode requestLocationUpdates dari locationHelper yang di-inject
         // LocationHelper di-inject di BaseMapActivity, dan MapActivity menggunakannya.
@@ -836,7 +837,7 @@ class MapActivity : BaseMapActivity(), OnMapReadyCallback, LocationListener, Per
             desiredSpeed
             // ... teruskan parameter lain jika ada ...
         )
-    }
+    }*/
     private fun processStopLocationUpdate() {
         // Metode ini hanya perlu menangani update state ViewModel/PrefManager dengan lokasi saat stop.
         // Update UI (visibilitas tombol, marker) DITANGANI OLEH observer ViewModel.
