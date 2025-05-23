@@ -1,651 +1,347 @@
-package com.roxgps.helper // Package spesifik MapLibre
-
-// =====================================================================
-// Import Library untuk MapLibreLocationHelperImpl
-// =====================================================================
-// import androidx.core.location.LocationCompat // Tidak perlu import ini di sini
-//import com.roxgps.helper.LocationListener as CustomLocationListener // <<< Memberi ALIAS "CustomLocationListener"
-// TODO: Import dependency javax.annotation-api jika menggunakan @PreDestroy
-// import javax.annotation.PreDestroy
-
+package com.roxgps.helper
 
 import android.Manifest
 import android.annotation.SuppressLint
-import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationManager
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Looper
 import android.os.SystemClock
-import android.provider.Settings
-import androidx.core.app.ActivityCompat
-import com.google.android.gms.location.FusedLocationProviderClient
-import com.google.android.gms.location.LocationAvailability
-import com.google.android.gms.location.LocationCallback
-import com.google.android.gms.location.LocationRequest
-import com.google.android.gms.location.LocationResult
-import com.google.android.gms.location.LocationServices
-import com.google.android.gms.location.Priority
-import com.google.android.gms.tasks.Tasks
+import androidx.core.content.ContextCompat
 import com.roxgps.data.FakeLocationData
+import com.roxgps.repository.SettingsRepository
 import com.roxgps.service.LocationBroadcastReceiver
 import com.roxgps.utils.PrefManager
+import com.roxgps.utils.Relog
 import com.roxgps.xposed.IXposedHookManager
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
-import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.random.Random
+import android.location.LocationListener as AndroidLocationListener
 
-
-// =====================================================================
-// Class MapLibreLocationHelperImpl (Implementasi ILocationHelper untuk  MapLibre)
-// = Ber-scope Singleton
-// = Menggunakan Android LocationManager untuk lokasi Real
-// = Menampung logika Faking (Xposed) dan interaksi dengan Manager Hook
-// =====================================================================
-@Singleton // Ber-scope Singleton agar bisa di-inject dan state-nya persistent
+/**
+ * Implementasi ILocationHelper menggunakan Android Location API untuk MapLibre.
+ *
+ * @author loserkidz
+ * @since 2025-05-23 13:51:41
+ */
+@Singleton
 class MapLibreLocationHelperImpl @Inject constructor(
-    @ApplicationContext private val context: Context, // Application Context di-inject
-    private val prefManager: PrefManager, // PrefManager di-inject untuk membaca setting faking
-    private val xposedHookManager: IXposedHookManager // Interface Manager Xposed Hook di-inject
-    // TODO: Inject LocationManager jika didefinisikan sebagai Singleton di Hilt Module (biasanya tidak perlu)
-    // private val locationManager: LocationManager // Contoh jika di-inject
-) : ILocationHelper {
-
+    @ApplicationContext context: Context,
+    settingsRepository: SettingsRepository,
+    prefManager: PrefManager,
+    locationManager: LocationManager,
+    random: Random,
+    xposedHookManager: IXposedHookManager
+) : LocationHelperImpl(
+    context,
+    settingsRepository,
+    prefManager,
+    locationManager,
+    random,
+    xposedHookManager
+) {
     companion object {
-        private const val TAG = "MapLibreLocationHelper" // TAG spesifik implementasi
-        // Request Code untuk PendingIntent background location updates (harus unik)
-        private const val BG_LOCATION_REQUEST_CODE = 12346 // Kode unik, beda dari Google  jika ada keduanya
+        private const val TAG = "MapLibreLocationHelper"
+        private const val UPDATE_INTERVAL_MS = 2000L
+        private const val MIN_DISTANCE_M = 1f
+        private const val BG_UPDATE_INTERVAL_MS = 30000L
+        private const val BG_MIN_DISTANCE_M = 5f
+        private const val BG_LOCATION_REQUEST_CODE = 12346
     }
 
-    // === Properti untuk Menyimpan State Faking (Diisi oleh start/stopFakeLocationUpdates) ===
-    // State ini dibaca oleh AIDL Service melalui getFakeLocationData()
-    private var currentFakeLatitude: Double = 0.0
-    private var currentFakeLongitude: Double = 0.0
-    private var isFakingCurrentlyStarted: Boolean = false // Status faking aktif/tidak aktif
-    // =====================================================================================
-    // MutableStateFlow internal untuk menyimpan status faking aktif (default false)
-    private val _isFakingActive = MutableStateFlow(false)
-    // StateFlow publik yang diekspos (read-only)
-    override val isFakingActive: StateFlow<Boolean> = _isFakingActive.asStateFlow()
-
-    // MutableStateFlow internal untuk menyimpan lokasi target palsu (default null)
-    private val _currentFakeLocation = MutableStateFlow<Location?>(null)
-    // StateFlow publik yang diekspos (read-only)
-    override val currentFakeLocation: StateFlow<Location?> = _currentFakeLocation.asStateFlow()
-
-    // === Properti untuk Mengelola Lokasi Real (LocationManager) ===
-    // Inisialisasi LocationManager. Biasanya didapat dari context.getSystemService().
-    private val locationManager: LocationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-    // Menginisialisasi FusedLocationProviderClient. SPESIFIK GOOGLE.
-    private val fusedLocationClient: FusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(context) // Menggunakan context level Aplikasi
-    private var activityLocationListener: LocationListener? = null // Untuk update lokasi REAL di Activity/UI
-    // Listener standar Android LocationListener untuk update lokasi foreground (Activity)
-    // Akan memanggil activityLocationListener saat ada update
-    private val androidLocationListener: android.location.LocationListener = object : android.location.LocationListener {
+    // Rename to avoid conflict with parent's locationListener
+    private val androidSystemListener = object : AndroidLocationListener {
         override fun onLocationChanged(location: Location) {
-            // Logika ini akan berjalan di thread utama (UI thread) karena Looper.getMainLooper() digunakan di requestLocationUpdates.
-            // Aman untuk langsung meneruskan ke listener Activity.
-            Timber.v("$TAG: Received UI location update: ${location.latitude}, ${location.longitude}", "LocationLog") // Log setiap update lokasi real
-            activityLocationListener?.onLocationResult(location) // Kirim lokasi ke listener kustom Activity
-        }
-        // TODO: Implementasikan onProviderEnabled, onProviderDisabled, onStatusChanged jika diperlukan oleh UI melalui listener kustom.
-
-        @Deprecated("Deprecated in API 29")
-        override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {
-            Timber.d("$TAG: Location provider status changed: $provider, status $status")
-            // TODO: Beri tahu Activity/UI jika status provider berubah (jika perlu)
+            Relog.v("$TAG: Location update received: ${location.latitude}, ${location.longitude}")
+            locationListener?.onLocationResult(location)
         }
 
         override fun onProviderEnabled(provider: String) {
-            Timber.d("$TAG: Location provider enabled: $provider")
-            // TODO: Beri tahu Activity/UI jika provider diaktifkan (jika perlu)
+            Relog.d("$TAG: Provider enabled: $provider")
         }
 
         override fun onProviderDisabled(provider: String) {
-            Timber.d("$TAG: Location provider disabled: $provider")
-            // TODO: Beri tahu Activity/UI jika Location Service mati (jika perlu) via listener kustom jika ada methodnya.
-            activityLocationListener?.onLocationError("Location provider disabled: $provider")
+            Relog.w("$TAG: Provider disabled: $provider")
+            locationListener?.onLocationError("Location provider disabled: $provider")
+        }
+
+        @Deprecated("Deprecated in Java")
+        override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {
+            Relog.d("$TAG: Provider status changed: $provider = $status")
         }
     }
 
-    // Callback dari FusedLocationProviderClient saat update lokasi REAL diterima (untuk UI). SPESIFIK GOOGLE.
-    private val activityLocationCallback = object : LocationCallback() {
-        override fun onLocationResult(locationResult: LocationResult) {
-            val lastLocation: Location? = locationResult.lastLocation
-            if (lastLocation != null) {
-                Timber.v("${TAG}: Received UI location update: ${lastLocation.latitude}, ${lastLocation.longitude}", "LocationLog")
-                // Kirim lokasi real ke listener (biasanya Activity/ViewModel yang menampilkan di peta)
-                activityLocationListener?.onLocationResult(lastLocation)
-            } else {
-                Timber.w("${TAG}: Real location update received but lastLocation is null.")
-                activityLocationListener?.onLocationError("No real location available in update.")
-            }
-        }
-
-        override fun onLocationAvailability(p0: LocationAvailability) {
-            Timber.d("${TAG}: Location availability changed: ${p0.isLocationAvailable}")
-            if (!p0.isLocationAvailable) {
-                activityLocationListener?.onLocationError("Layanan lokasi saat ini tidak tersedia.")
-            }
-        }
-    }
-
-    // PendingIntent untuk update lokasi REAL di background.
-    private var bgLocationPendingIntent: PendingIntent? = null
-    
-    // =====================================================================
-    // Implementasi Metode dari Interface ILocationHelper
-    // === Metode Permission & Settings (Kode SAMA di Kedua ) ===
-    // =====================================================================
-    override fun checkLocationPermissions(): Boolean {
-        Timber.d("${TAG}: checkLocationPermissions called.")
-        // Menggunakan context level Aplikasi untuk cek permission.
-        val fineLocationGranted = ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-        val coarseLocationGranted = ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
-        // Kamu hanya mengecek fineLocationGranted? Biasanya butuh keduanya untuk faking.
-        // val permissionsGranted = fineLocationGranted && coarseLocationGranted // <<< Seharusnya cek keduanya?
-        val permissionsGranted = fineLocationGranted // <<< Mengikuti kode kamu, hanya cek fine location
-        Timber.d("${TAG}: Location permissions granted: $permissionsGranted (Fine: $fineLocationGranted, Coarse: $coarseLocationGranted)")
-        return permissionsGranted
-    }
-
-    override fun isLocationServiceEnabled(): Boolean {
-        Timber.d("${TAG}: isLocationServiceEnabled called.")
-        val locationManager: LocationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        val isEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
-                locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
-        Timber.d("${TAG}: Location service enabled: $isEnabled")
-        return isEnabled
-    }
-
-    // TODO: Metode requestLocationPermissions tidak ada di sini. Mungkin ada di Activity/ViewModel yang pakai Activity Result Launcher.
-    // override fun requestLocationPermissions() { ... }
-
-
-    // Membuka pengaturan lokasi di perangkat.
-    // Menggunakan context level Aplikasi dengan flag NEW_TASK.
-    override fun openLocationSettings(context: Context) { // Parameter context ini tidak perlu jika pakai @ApplicationContext
-        Timber.d("${TAG}: openLocationSettings called.")
-        val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
-        try {
-            // Menggunakan context level Aplikasi dari constructor
-            this.context.startActivity(intent) // <<< Gunakan context dari constructor
-            Timber.i("${TAG}: Opened location settings.")
-        } catch (e: Exception) {
-            Timber.e(e, "${TAG}: Failed to open location settings.")
-        }
-    }
-
-    // Membuka pengaturan izin aplikasi spesifik di perangkat.
-    // Menggunakan context level Aplikasi dengan flag NEW_TASK.
-    override fun openAppPermissionSettings(context: Context) { // Parameter context ini tidak perlu jika pakai @ApplicationContext
-        Timber.d("${TAG}: openAppPermissionSettings called.")
-        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            // Menggunakan context level Aplikasi dari constructor dengan label '@'
-            val uri = Uri.fromParts("package", this@MapLibreLocationHelperImpl.context.packageName, null) // <<< PERBAIKI DI SINI
-            setData(uri)
-        }
-        try {
-            // Menggunakan context level Aplikasi dari constructor
-            this.context.startActivity(intent) // Ini sudah benar di luar blok apply
-            Timber.i("${TAG}: Opened app permission settings.")
-        } catch (e: Exception) {
-            Timber.e(e, "${TAG}: Failed to open app permission settings.")
-        }
-    }
-
-    // === Metode Lokasi Real (Implementasi KHUSUS MapLibre ) ===
-
-    /**
-     * Memulai request update lokasi real untuk Activity/UI.
-     * Menggunakan LocationManager.
-     * @param listener Listener kustom yang akan menerima update lokasi.
-     */
-    // Mengimplementasikan requestLocationUpdates dari ILocationHelper (INI UNTUK LOKASI REAL DI UI)
-    // Menerima LocationListener (untuk callback di UI) sebagai parameter.
     @SuppressLint("MissingPermission")
-    override fun requestLocationUpdates(listener: LocationListener) { // <<< Implementasi metode REAL Location Updates
-        Timber.d("${TAG}: requestLocationUpdates (REAL for UI) called.")
-        this.activityLocationListener = listener // Simpan listener UI
-        if (!checkLocationPermissions()) {
-            listener.onLocationError("Location permissions not granted.")
-            Timber.e("${TAG}: Cannot request real location updates, location permissions not granted.")
-            return
-        }
-        if (!isLocationServiceEnabled()) {
-            listener.onLocationError("Location services disabled.")
-            Timber.e("${TAG}: Cannot request real location updates, location service is disabled.")
-            return
-        }
+    override fun requestLocationUpdates(listener: LocationListener) {
+        Relog.d("$TAG: Requesting location updates")
+        this.locationListener = listener
+
         try {
-            val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5000)
-                .setMinUpdateIntervalMillis(2000)
-                .setWaitForAccurateLocation(true)
-                .build()
-            // Menggunakan context level Aplikasi untuk request location updates
-            fusedLocationClient.requestLocationUpdates(
-                locationRequest,
-                activityLocationCallback, // Callback untuk UI
-                Looper.getMainLooper() // Callback di Main Thread
+            // Try GPS provider first
+            locationManager.requestLocationUpdates(
+                LocationManager.GPS_PROVIDER,
+                UPDATE_INTERVAL_MS,
+                MIN_DISTANCE_M,
+                androidSystemListener,
+                Looper.getMainLooper()
             )
-            Timber.i("${TAG}: FusedLocationClient requestLocationUpdates started for UI.")
+
+            // Also request network provider as backup
+            locationManager.requestLocationUpdates(
+                LocationManager.NETWORK_PROVIDER,
+                UPDATE_INTERVAL_MS,
+                MIN_DISTANCE_M,
+                androidSystemListener,
+                Looper.getMainLooper()
+            )
+
+            Relog.i("$TAG: Location updates requested successfully")
         } catch (e: Exception) {
-            Timber.e(e, "${TAG}: Failed to request real location updates.")
-            listener.onLocationError("Failed to request real location updates: ${e.message}")
+            Relog.e(e, "$TAG: Failed to request location updates")
+            listener.onLocationError("Failed to start location updates: ${e.message}")
         }
     }
 
-    /**
-     * Menghentikan update lokasi yang dimulai oleh requestLocationUpdates(listener).
-     * Menggunakan LocationManager.
-     */
-    // Mengimplementasikan stopLocationUpdates dari ILocationHelper (INI UNTUK LOKASI REAL DI UI)
-    override fun stopLocationUpdates() { // <<< Implementasi metode REAL Location Updates
-        Timber.d("${TAG}: stopLocationUpdates (REAL for UI) called.")
-        // Menggunakan context level Aplikasi untuk remove location updates
-        fusedLocationClient.removeLocationUpdates(activityLocationCallback) // Hapus update lokasi REAL untuk UI
-        Timber.d("${TAG}: Stopped real location updates for activity listener.")
-        this.activityLocationListener = null // Hapus listener UI
-    }
-    /**
-     * Mengambil lokasi terakhir yang diketahui (real) sekali saja.
-     * Menggunakan LocationManager.
-     *
-     * @return Location? Lokasi terakhir yang diketahui atau null.
-     */
-    @SuppressLint("MissingPermission") // Suppress karena checkPermission() harus dipanggil oleh pemanggil.
-    override fun getLastKnownLocation(): Location? { // <<< Pastikan signature ini SAMA dengan di interface
-        Timber.d("$TAG: getLastKnownLocation called.")
-        // --- LOGIKA MENDAPATKAN LOKASI REAL TERAKHIR MENGGUNAKAN LOCATIONMANAGER ---
-        // Gunakan LocationManager.getLastKnownLocation(provider)
-        // Ini bersifat blocking tapi bisa mengembalikan null jika lokasi belum tersedia atau provider mati.
-
-        if (!checkLocationPermissions()) {
-            Timber.w("$TAG: Permissions not granted for getLastKnownLocation.")
-            return null // Tidak bisa tanpa izin
+    override fun stopLocationUpdates() {
+        try {
+            locationManager.removeUpdates(androidSystemListener)
+            this.locationListener = null
+            Relog.i("$TAG: Location updates stopped successfully")
+        } catch (e: Exception) {
+            Relog.e(e, "$TAG: Error stopping location updates")
         }
-
-        // Coba dari provider GPS, lalu Network. Ambil yang paling baru jika keduanya ada.
-        var lastGpsLocation: Location? = null
-        var lastNetworkLocation: Location? = null
-
-        val isGpsEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
-        val isNetworkEnabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
-
-        if (isGpsEnabled) {
-            lastGpsLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-            Timber.d("$TAG: Last known GPS location: $lastGpsLocation")
-        } else {
-            Timber.d("$TAG: GPS provider is not enabled.")
-        }
-
-        if (isNetworkEnabled) {
-            lastNetworkLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
-            Timber.d("$TAG: Last known Network location: $lastNetworkLocation")
-        } else {
-            Timber.d("$TAG: Network provider is not enabled.")
-        }
-
-
-        // Kembalikan yang paling baru
-        val lastKnownLocation = when {
-            lastGpsLocation != null && lastNetworkLocation != null -> {
-                // Kedua ada, bandingkan waktu (ambil yang lebih baru)
-                if (lastGpsLocation.time > lastNetworkLocation.time) lastGpsLocation else lastNetworkLocation
-            }
-            lastGpsLocation != null -> lastGpsLocation // Hanya GPS yang ada
-            lastNetworkLocation != null -> lastNetworkLocation // Hanya Network yang ada
-            else -> null // Tidak ada provider yang enabled atau tidak ada last known location sama sekali
-        }
-
-        if (lastKnownLocation != null) {
-            Timber.v("$TAG: Got last known location: ${lastKnownLocation.latitude}, ${lastKnownLocation.longitude}", "LocationLog")
-        } else {
-            Timber.d("$TAG: getLastKnownLocation returned null from all enabled providers.")
-            // TODO: Laporkan ke UI jika tidak bisa mendapatkan last known location (jika diperlukan)
-        }
-
-        return lastKnownLocation
-        // ---------------------------------------------
     }
 
-    /**
-     * Memulai update lokasi real di background menggunakan LocationManager dengan PendingIntent.
-     * Metode ini dipanggil oleh Service atau Helper itu sendiri (saat stop faking).
-     * Hasil update lokasi akan diterima oleh [LocationBroadcastReceiver].
-     */
     @SuppressLint("MissingPermission")
-    override fun startRealLocationUpdates() { // <<< Implementasi Metode REAL Background Updates
-        Timber.d("${TAG}: startRealLocationUpdates (Background) called.")
-        if (!checkLocationPermissions()) {
-            Timber.e("${TAG}: Cannot start background real location updates, location permissions not granted.")
-            return
-        }
-        if (!isLocationServiceEnabled()) {
-            Timber.e("${TAG}: Cannot start background real location updates, location service is disabled.")
-            return
-        }
-        // Cek apakah update background sudah aktif
-        if (bgLocationPendingIntent != null) {
-            Timber.d("${TAG}: Background location updates already seem active, skipping start.")
-            return
-        }
+    override fun getLastKnownLocation(): Location? {
+        try {
+            // Try GPS provider first
+            var location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
 
-        // Buat LocationRequest untuk background (misal akurasi lebih rendah, interval lebih lama)
-        val backgroundLocationRequest = LocationRequest.Builder(Priority.PRIORITY_BALANCED_POWER_ACCURACY, 60000) // 1 menit interval
-            .setMinUpdateIntervalMillis(30000) // Minimal 30 detik antar update
-            .setWaitForAccurateLocation(false) // Tidak perlu tunggu akurat
-            .build()
+            // If GPS location is null, try network provider
+            if (location == null) {
+                location = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+            }
 
-        // Buat Intent dan PendingIntent untuk LocationBroadcastReceiver
-        val intent = Intent(context, LocationBroadcastReceiver::class.java).apply {
-            action = LocationBroadcastReceiver.ACTION_PROCESS_LOCATION
-        }
+            if (location != null) {
+                Relog.v("$TAG: Got last known location: ${location.latitude}, ${location.longitude}")
+            } else {
+                Relog.d("$TAG: No last known location available")
+            }
 
-        // Perlu flag IMMUTABLE untuk PendingIntent di Android 12+
-        val flags = PendingIntent.FLAG_UPDATE_CURRENT or if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_IMMUTABLE else 0
-
-        bgLocationPendingIntent = PendingIntent.getBroadcast(
-            context,
-            BG_LOCATION_REQUEST_CODE,
-            intent,
-            flags // Menggunakan flags yang diperbarui
-        )
-
-        // Request update lokasi background
-        fusedLocationClient.requestLocationUpdates(backgroundLocationRequest, bgLocationPendingIntent!!)
-        Timber.i("${TAG}: FusedLocationClient background location updates started via PendingIntent.")
-    }
-
-    /**
-     * Menghentikan update lokasi real di background menggunakan LocationManager dengan PendingIntent yang sama.
-     * Metode ini dipanggil oleh Service atau Helper itu sendiri (saat start faking).
-     */
-    override fun stopRealLocationUpdates() { // <<< Implementasi Metode REAL Background Updates
-        Timber.d("${TAG}: stopRealLocationUpdates (Background) called.")
-        // Hentikan update hanya jika PendingIntent sudah dibuat
-        if (bgLocationPendingIntent != null) {
-            // Hentikan update menggunakan PendingIntent yang sama dengan yang digunakan saat request.
-            fusedLocationClient.removeLocationUpdates(bgLocationPendingIntent!!)
-            Timber.i("${TAG}: FusedLocationClient background location updates stopped.")
-            // Reset PendingIntent setelah dihentikan
-            bgLocationPendingIntent = null
-        } else {
-            Timber.d("${TAG}: stopRealLocationUpdates called but no background PendingIntent active.")
-        }
-    }
-    // === Implementasi Metode Faking (Sesuai Interface ILocationHelper) ===
-    // Menggabungkan logika dari startFakeLocationUpdates & startFaking lama
-
-    /**
-     * Memulai proses faking lokasi palsu.
-     * Helper akan menyimpan lokasi target ini di StateFlow dan menandai faking aktif.
-     * Memanggil Xposed Hook Manager untuk mengaktifkan mekanisme faking.
-     *
-     * @param targetLocation Objek Location yang menjadi lokasi target palsu.
-     */
-    override fun startFaking(targetLocation: Location) { // <<< Implementasi Metode Faking
-        Timber.d("${TAG}: startFaking called for ${targetLocation.latitude}, ${targetLocation.longitude}.")
-
-        // Hentikan update lokasi REAL di background jika aktif saat faking dimulai
-        stopRealLocationUpdates()
-        Timber.d("${TAG}: Called stopRealLocationUpdates to prevent interference.")
-
-        // Simpan lokasi target di StateFlow
-        _currentFakeLocation.value = targetLocation
-        // Tandai faking aktif di StateFlow
-        _isFakingActive.value = true
-
-        Timber.i("${TAG}: Faking state set to START: ${targetLocation.latitude}, ${targetLocation.longitude}. isFakingActive = true.")
-
-        // Beri tahu Xposed Hook Manager bahwa faking diaktifkan
-        xposedHookManager.enableFakingMechanism(true)
-        Timber.i("${TAG}: Xposed Hook activation triggered via Manager.")
-    }
-
-    /**
-     * Menghentikan proses faking lokasi palsu.
-     * Helper akan menandai faking tidak aktif di StateFlow dan membersihkan lokasi target.
-     * Memanggil Xposed Hook Manager untuk menonaktifkan mekanisme faking.
-     */
-    override fun stopFaking() { // <<< Implementasi Metode Faking
-        Timber.d("${TAG}: stopFaking called.")
-
-        // Bersihkan lokasi target di StateFlow
-        _currentFakeLocation.value = null
-        // Tandai faking tidak aktif di StateFlow
-        _isFakingActive.value = false
-
-        Timber.i("${TAG}: Faking state set to STOP. isFakingActive = false.")
-
-        // Jika perlu, mulai lagi update lokasi REAL di background setelah faking berhenti
-        startRealLocationUpdates()
-        Timber.d("${TAG}: Called startRealLocationUpdates to resume normal behavior.")
-
-        // Beri tahu Xposed Hook Manager bahwa faking dinonaktifkan
-        xposedHookManager.enableFakingMechanism(false)
-        Timber.i("${TAG}: Xposed Hook deactivation triggered via Manager.")
-    }
-
-    /**
-     * Menyediakan hook lokasi palsu dan status faking saat dipanggil oleh AIDL Service.
-     * Metode ini dipanggil oleh RoxAidlService.getLatestFakeLocation().
-     * Helper AKAN MEMBACA status faking dan lokasi target dari state internalnya.
-     * Helper akan menggabungkan hook lokasi dari state internal dengan parameter setting konfigurasi yang diterima
-     * (termasuk desiredSpeed) dan nilai dari lokasi asli terakhir (untuk default natural).
-     *
-     * @param isRandomPositionEnabled Setting random position.
-     * @param accuracy Setting akurasi.
-     * @param randomRange Setting random range.
-     * @param updateIntervalMs Setting update interval.
-     * @param desiredSpeed Setting kecepatan yang diinginkan user (misal untuk simulasi rute/random/joystick).
-     * TODO: Tambahkan parameter setting konfigurasi lain jika ada.
-     *
-     * @return Objek FakeLocationData? yang berisi lokasi palsu dan status isStarted.
-     * Mengembalikan null jika faking tidak aktif.
-     */
-    // Signature Sesuai ILocationHelper yang Baru (parameter setting + desiredSpeed)
-    @SuppressLint("MissingPermission") // Menekan warning karena permission dicek di checkLocationPermissions() jika dipanggil dari luar
-    override fun getFakeLocationData(
-        isRandomPositionEnabled: Boolean, // Setting dari UI/SettingsRepo
-        accuracy: Float, // Akurasi setting (dari UI/SettingsRepo)
-        randomRange: Int, // Random range setting (dari UI/SettingsRepo)
-        updateIntervalMs: Long, // Update interval setting (dari UI/SettingsRepo)
-        desiredSpeed: Float, // <<< Parameter desiredSpeed (dari UI/SettingsRepo)
-        // TODO: Tambahkan parameter setting konfigurasi lain jika ada
-    ): FakeLocationData? {
-
-        // Log ini bisa terlalu banyak jika dipanggil sangat sering. Gunakan level Debug (D) atau Verbose (V).
-        // Timber.v("$TAG: getFakeLocationData() called by AIDL Service with settings: Acc=$accuracy, Random=$isRandomPositionEnabled, Range=$randomRange, Interval=$updateIntervalMs, DesiredSpeed=$desiredSpeed")
-
-        // Ambil status faking internal helper dari StateFlow
-        val isActive = isFakingActive.value // <<< Gunakan StateFlow untuk status faking
-
-        // Jika faking tidak aktif, kembalikan null.
-        if (!isActive) {
-            Timber.d("${TAG}: getFakeLocationData requested, but faking is not active. Returning null.")
-            return null // Mengembalikan null jika tidak sedang faking
-        }
-
-        // === Faking Aktif. Ambil hook lokasi target dan coba lokasi asli terakhir untuk default ===
-
-        // Ambil lokasi target dari StateFlow helper
-        val targetLocation = currentFakeLocation.value // <<< Lokasi target yang disimpan saat startFaking/update
-
-        // Jika lokasi target di helper null saat faking aktif? Ini seharusnya tidak terjadi jika startFaking dipanggil benar. Log warning.
-        if (targetLocation == null) {
-            Timber.w("${TAG}: Faking is active, but targetLocation is null! Returning null.")
+            return location
+        } catch (e: Exception) {
+            Relog.e(e, "$TAG: Failed to get last known location")
             return null
         }
-
-        // Coba ambil lokasi asli terakhir yang diketahui sistem (untuk default natural properti lain)
-        // Perlu cek permission di sini sebelum getLastLocation jika metode ini bisa dipanggil tanpa permission check sebelumnya.
-        // Asumsi permission sudah dicek oleh caller (misal RoxAidlService atau komponen lain), tapi kita cek lagi untuk aman.
-        var lastRealLocation: Location? = null
-        try {
-            // Menggunakan fusedLocationClient (sudah diinisialisasi dengan context)
-            val task = fusedLocationClient.lastLocation
-            // Menggunakan Tasks.await HANYA jika yakin metode ini TIDAK dipanggil di Main Thread!
-            // Jika RoxAidlService memanggil ini di main thread, ini akan ANR!
-            // Idealnya, getLastKnownLocation helper itu asynchronous.
-            // Untuk demo ini, kita gunakan await, tapi hati-hati.
-            // Lebih aman: Buat metode async di LocationHelper dan panggil dari RoxAidlService di coroutine.
-            // Cek permission sebelum panggil getLastLocation task
-            if (checkLocationPermissions()) {
-                // Lakukan await di background thread jika RoxAidlService memanggil ini di coroutine
-                // Untuk saat ini, asumsikan caller handle threading atau hati-hati.
-                lastRealLocation = Tasks.await(task)
-            } else {
-                Timber.w("${TAG}: Permissions not granted for getLastLocation (for natural defaults). Cannot get last real location.")
-            }
-
-            if (lastRealLocation != null) {
-                Timber.v("${TAG}: Got last real location for defaults: ${lastRealLocation.latitude}, ${lastRealLocation.longitude}", "LocationLog")
-            } else {
-                Timber.d("${TAG}: Last real location is null, using hardcoded defaults for speed/bearing/altitude/provider/accuracy (if not set by setting or desired).")
-            }
-        } catch (e: Exception) {
-            Timber.e(e, "${TAG}: Failed to get last real location for defaults: ${e.message}")
-            lastRealLocation = null // Pastikan null jika ada error
-        }
-        // === Buat objek FakeLocationData ===
-        // Gunakan hook dari targetLocation (state internal helper) untuk lat/lon.
-        // Gunakan parameter setting yang diterima.
-        // Gunakan lastRealLocation atau hardcoded default untuk properti lain jika tidak di-set di targetLocation.
-
-        // --- Hitung nilai akhir untuk properti FakeLocationData ---
-        val finalLatitude = targetLocation.latitude
-        val finalLongitude = targetLocation.longitude
-
-        // Akurasi: PRIORITAS setting dari UI/Repo. Jika setting 0 atau negatif (invalid), gunakan akurasi real atau default.
-        val finalAccuracy = if (accuracy > 0) accuracy else lastRealLocation?.accuracy ?: 1.0f // <<< Gunakan setting UI > lastReal > default
-
-        // Speed: PRIORITAS desiredSpeed (jika > 0) > targetLocation > lastReal > default hardcoded
-        // Jika desiredSpeed > 0, user ingin bergerak dengan kecepatan ini.
-        // Jika desiredSpeed <= 0 (atau default), gunakan fallback (targetLocation speed, lastReal speed, default 0).
-        val finalSpeed = if (desiredSpeed > 0) desiredSpeed
-        else targetLocation.speed.takeIf { it != 0.0f && !it.isNaN() }
-            ?: lastRealLocation?.speed?.takeIf { !it.isNaN() } ?: 0.0f // <<< Gunakan desiredSpeed > targetLocation > lastReal > default. Cek juga NaN.
-
-        // Bearing: PRIORTIAS targetLocation > lastReal > default hardcoded (Bearing biasanya dihitung jika speed > 0)
-        // Jika speed > 0, bearing idealnya dihitung berdasarkan pergerakan.
-        // Untuk saat ini, kita gunakan fallback dari targetLocation atau lastRealLocation.
-        val finalBearing = targetLocation.bearing.takeIf { it != 0.0f && !it.isNaN() } ?: lastRealLocation?.bearing?.takeIf { !it.isNaN() } ?: 0.0f // <<< Gunakan targetLocation > lastReal > default. Cek juga NaN.
-        // TODO: Jika mode faking adalah random atau joystick, logika menghitung bearing akan lebih kompleks dan harus diletakkan di sini atau method lain.
-
-        // Altitude: PRIORITAS dari targetLocation > lastReal > default hardcoded
-        val finalAltitude = targetLocation.altitude.takeIf { !it.isNaN() } ?: lastRealLocation?.altitude?.takeIf { !it.isNaN() } ?: 0.0 // <<< Gunakan targetLocation > lastReal > default. Cek juga NaN.
-
-        // Provider: PRIORITAS dari targetLocation > lastReal > "faked"
-        val finalProvider = targetLocation.provider?.takeIf { it.isNotBlank() } ?: lastRealLocation?.provider?.takeIf { it.isNotBlank() } ?: "faked" // <<< Gunakan targetLocation > lastReal > default "faked". Cek blank.
-
-        // Time & Elapsed Realtime: Selalu ambil timestamp sistem saat ini saat FakeLocationData dibuat
-        val finalTime = System.currentTimeMillis() // <<< Timestamp sistem saat ini
-        val finalElapsedRealtimeNanos = SystemClock.elapsedRealtimeNanos() // <<< Timestamp sistem saat ini
-
-
-        // === Buat objek FakeLocationData TANPA NAMED ARGUMENTS ===
-        // Pastikan urutan parameter sesuai dengan konstruktor FakeLocationData
-        val fakeData = FakeLocationData(
-            finalLatitude, // 1. latitude (Double)
-            finalLongitude, // 2. longitude (Double)
-            finalAccuracy, // 3. accuracy (Float) <<< PERBAIKAN: Sekarang mengirim Float di sini
-            finalSpeed, // 4. speed (Float)
-            finalBearing, // 5. bearing (Float)
-            finalAltitude, // 6. altitude (Double)
-            finalTime, // 7. time (Long)
-            finalElapsedRealtimeNanos, // 8. elapsedRealtimeNanos (Long)
-            finalProvider, // 9. provider (String?)
-            isActive, // 10. isStarted (Boolean) <<< PERBAIKAN: Sekarang mengirim Boolean di sini
-            isRandomPositionEnabled, // 11. isRandomPositionEnabled (Boolean)
-            randomRange, // 12. randomRange (Int)
-            updateIntervalMs // 13. updateIntervalMs (Long)
-            // TODO: Isi parameter setting lain sesuai konstruktor FakeLocationData
-        )
-
-        // === Gunakan variabel lokal di log string ===
-        Timber.d("${TAG}: getFakeLocationData requested. Returning FakeLocationData: Lat=${fakeData.latitude}, Lon=${fakeData.longitude}, Started=${fakeData.isStarted}, Acc=${fakeData.accuracy}, Speed=${fakeData.speed}, Bearing=${fakeData.bearing}, Alt=${fakeData.altitude}, Provider=${fakeData.provider}")
-
-        return fakeData // Kembalikan objek FakeLocationData yang sudah lengkap
     }
-    // --- Implementasi getRealLocationUpdates(): Flow<Location> ---
-    // Ini adalah bagian yang hilang dan perlu ditambahkan
+
     @SuppressLint("MissingPermission")
     override fun getRealLocationUpdates(): Flow<Location> = callbackFlow {
-        if (!checkLocationPermissions()) {
-            Timber.e("${TAG}: Location permissions not granted for getRealLocationUpdates flow.")
-            close(IllegalStateException("Location permissions not granted"))
-            return@callbackFlow
-        }
-
-        // Pastikan layanan lokasi aktif
+        // Check location services first
         if (!isLocationServiceEnabled()) {
-            Timber.e("${TAG}: Location services disabled for getRealLocationUpdates flow.")
+            Relog.e("$TAG: Location services disabled")
             close(IllegalStateException("Location services disabled"))
             return@callbackFlow
         }
 
-        val locationRequest =
-            LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5000L) // Update setiap 5 detik
-                .setMinUpdateIntervalMillis(2000L) // Minimal 2 detik antara update
-                .setWaitForAccurateLocation(false) // Tidak perlu terlalu akurat, ini hanya stream background
-                .build()
+        // Check permissions explicitly
+        if (ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED &&
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            Relog.e("$TAG: Location permissions not granted")
+            close(SecurityException("Location permissions not granted"))
+            return@callbackFlow
+        }
 
-        // Gunakan LocationCallback terpisah untuk Flow ini agar bisa dilepas saat Flow ditutup
-        val flowLocationCallback = object : LocationCallback() {
-            override fun onLocationResult(locationResult: LocationResult) {
-                locationResult.lastLocation?.let { location ->
-                    Timber.v("${TAG}: Real Location Flow: ${location.latitude}, ${location.longitude}")
-                    trySend(location) // Memancarkan lokasi ke Flow
-                }
+        val flowLocationListener = object : AndroidLocationListener {
+            override fun onLocationChanged(location: Location) {
+                trySend(location).isSuccess
+                Relog.v("$TAG: Flow received location update: ${location.latitude}, ${location.longitude}")
             }
 
-            override fun onLocationAvailability(locationAvailability: LocationAvailability) {
-                if (!locationAvailability.isLocationAvailable) {
-                    Timber.w("${TAG}: Real Location Flow: Location availability changed to unavailable.")
-                    // Anda bisa memilih untuk menutup Flow di sini atau hanya log peringatan.
-                    // Jika Anda ingin Flow terus mencoba, jangan tutup di sini.
-                }
+            override fun onProviderEnabled(provider: String) {
+                Relog.d("$TAG: Provider enabled in flow: $provider")
+            }
+
+            override fun onProviderDisabled(provider: String) {
+                Relog.w("$TAG: Provider disabled in flow: $provider")
+            }
+
+            @Deprecated("Deprecated in Java")
+            override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {
+                Relog.d("$TAG: Provider status changed in flow: $provider = $status")
             }
         }
+
+        try {
+            // Request GPS updates
+            try {
+                locationManager.requestLocationUpdates(
+                    LocationManager.GPS_PROVIDER,
+                    UPDATE_INTERVAL_MS,
+                    MIN_DISTANCE_M,
+                    flowLocationListener,
+                    Looper.getMainLooper()
+                )
+                Relog.d("$TAG: Requested GPS location updates for flow")
+            } catch (e: IllegalArgumentException) {
+                Relog.w("$TAG: GPS provider not available: ${e.message}")
+            }
+
+            // Request Network updates as backup
+            try {
+                locationManager.requestLocationUpdates(
+                    LocationManager.NETWORK_PROVIDER,
+                    UPDATE_INTERVAL_MS,
+                    MIN_DISTANCE_M,
+                    flowLocationListener,
+                    Looper.getMainLooper()
+                )
+                Relog.d("$TAG: Requested Network location updates for flow")
+            } catch (e: IllegalArgumentException) {
+                Relog.w("$TAG: Network provider not available: ${e.message}")
+            }
+
+            // If neither provider is available, close the flow
+            if (!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) &&
+                !locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+            ) {
+                Relog.e("$TAG: No location providers available")
+                close(IllegalStateException("No location providers available"))
+                return@callbackFlow
+            }
+
+            awaitClose {
+                Relog.d("$TAG: Removing location updates from Flow")
+                locationManager.removeUpdates(flowLocationListener)
+            }
+        } catch (e: SecurityException) {
+            Relog.e(e, "$TAG: Security exception while requesting location updates")
+            close(e)
+        } catch (e: Exception) {
+            Relog.e(e, "$TAG: Error requesting location updates")
+            close(e)
+        }
     }
-    // =====================================================================
-    // Metode Helper Internal & Cleanup
-    // =====================================================================
 
-    // TODO: Tambahkan metode helper internal lain jika dibutuhkan implementasi Anda (misal, untuk pergerakan otomatis).
+    @SuppressLint("MissingPermission")
+    override fun startRealLocationUpdates() {
+        try {
+            val intent = Intent(context, LocationBroadcastReceiver::class.java).apply {
+                action = LocationBroadcastReceiver.ACTION_PROCESS_LOCATION
+            }
 
+            val flags = android.app.PendingIntent.FLAG_UPDATE_CURRENT or
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        android.app.PendingIntent.FLAG_MUTABLE
+                    } else {
+                        0
+                    }
 
-    // Cleanup (Opsional, untuk Singleton yang punya resource)
-    // Menggunakan @PreDestroy jika dependency javax.annotation-api ditambahkan
-    /*
-    // TODO: Tambahkan dependency implementation("javax.annotation:javax.annotation-api:1.3.2") jika belum
-    @PreDestroy
-     fun cleanup() {
-        Timber.d("$TAG: Cleaning up MapLibreLocationHelperImpl resources.")
-        Relog.i("$TAG: Cleaning up resources.", "XposedLog", "I")
-        // Hentikan semua update saat Singleton dihancurkan (biasanya saat app process dimatikan)
-        // Ini penting untuk mencegah memory leaks atau perilaku tidak terduga.
-        stopLocationUpdates() // Hentikan update request Activity
-        stopRealLocationUpdates() // Hentikan update request Service background
-        // Catatan: stopFakeLocationUpdates() hanya mengatur flag internal dan memanggil Hook Manager.
-        // Mekanisme inject nyata dihentikan di sisi Xposed Hook berdasarkan isStarted flag.
-        // Jika ada timer pergerakan otomatis, hentikan di sini juga.
-        // LocationManager tidak perlu dilepas secara eksplisit, tapi listeners dan pending intents harus.
-     }
-    */
+            val pendingIntent = android.app.PendingIntent.getBroadcast(
+                context,
+                BG_LOCATION_REQUEST_CODE,
+                intent,
+                flags
+            )
+
+            // Request updates from both providers
+            locationManager.requestLocationUpdates(
+                LocationManager.GPS_PROVIDER,
+                BG_UPDATE_INTERVAL_MS,
+                BG_MIN_DISTANCE_M,
+                pendingIntent
+            )
+
+            locationManager.requestLocationUpdates(
+                LocationManager.NETWORK_PROVIDER,
+                BG_UPDATE_INTERVAL_MS,
+                BG_MIN_DISTANCE_M,
+                pendingIntent
+            )
+
+            Relog.i("$TAG: Background location updates started")
+        } catch (e: Exception) {
+            Relog.e(e, "$TAG: Failed to start background updates")
+        }
+    }
+
+    override fun stopRealLocationUpdates() {
+        try {
+            val intent = Intent(context, LocationBroadcastReceiver::class.java)
+            val pendingIntent = android.app.PendingIntent.getBroadcast(
+                context,
+                BG_LOCATION_REQUEST_CODE,
+                intent,
+                android.app.PendingIntent.FLAG_UPDATE_CURRENT
+            )
+
+            locationManager.removeUpdates(pendingIntent)
+            Relog.i("$TAG: Background location updates stopped")
+        } catch (e: Exception) {
+            Relog.e(e, "$TAG: Error stopping background updates")
+        }
+    }
+
+    override fun getFakeLocationData(
+        isRandomPositionEnabled: Boolean,
+        accuracy: Float,
+        randomRange: Int,
+        updateIntervalMs: Long,
+        desiredSpeed: Float,
+    ): FakeLocationData? {
+        val targetLocation = currentFakeLocation.value ?: return null
+
+        var lastRealLocation: Location? = null
+        try {
+            lastRealLocation = getLastKnownLocation()
+        } catch (e: Exception) {
+            Relog.e(e, "$TAG: Failed to get last real location for defaults")
+        }
+
+        val (fakeLatitude, fakeLongitude) = if (isRandomPositionEnabled) {
+            calculateRandomOffset(targetLocation.latitude, targetLocation.longitude, randomRange)
+        } else {
+            Pair(targetLocation.latitude, targetLocation.longitude)
+        }
+
+        return FakeLocationData(
+            latitude = fakeLatitude,
+            longitude = fakeLongitude,
+            accuracy = accuracy.takeIf { it > 0 } ?: lastRealLocation?.accuracy ?: 1.0f,
+            speed = desiredSpeed.takeIf { it > 0 }
+                ?: targetLocation.speed.takeIf { !it.isNaN() }
+                ?: lastRealLocation?.speed?.takeIf { !it.isNaN() }
+                ?: 0.0f,
+            bearing = targetLocation.bearing.takeIf { !it.isNaN() }
+                ?: lastRealLocation?.bearing?.takeIf { !it.isNaN() }
+                ?: 0.0f,
+            altitude = targetLocation.altitude.takeIf { !it.isNaN() }
+                ?: lastRealLocation?.altitude?.takeIf { !it.isNaN() }
+                ?: 0.0,
+            time = System.currentTimeMillis(),
+            elapsedRealtimeNanos = SystemClock.elapsedRealtimeNanos(),
+            provider = LocationManager.GPS_PROVIDER,
+            isStarted = isFakingActive.value,
+            isRandomPositionEnabled = isRandomPositionEnabled,
+            randomRange = randomRange,
+            updateIntervalMs = updateIntervalMs
+        )
+    }
 }

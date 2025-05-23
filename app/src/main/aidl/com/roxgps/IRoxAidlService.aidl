@@ -35,13 +35,18 @@ interface IRoxAidlService {
     String getLatestToken();
 
     /**
-         * Mengirim setting konfigurasi terbaru dari aplikasi utama ke Service AIDL.
-         * Service akan menyimpan setting ini dan menyediakannya untuk LocationHook.
-         *
-         * @param config Objek HookConfiguration berisi setting terbaru.
-         */
-
+     * Mengirim setting konfigurasi terbaru dari aplikasi utama ke Service AIDL.
+     * Service akan menyimpan setting ini dan menyediakannya untuk LocationHook.
+     *
+     * @param enabled Status faking yang diinginkan
+     */
     void setFakingEnabled(boolean enabled);
+
+    /**
+     * Update lokasi palsu terbaru ke Service
+     * @param location Data lokasi palsu yang akan digunakan
+     */
+    void updateFakeLocation(in com.roxgps.data.FakeLocationData location);
 
     /**
      * Health check untuk memverifikasi bahwa Service AIDL masih berjalan dan responsif.
@@ -51,5 +56,4 @@ interface IRoxAidlService {
      * @throws RemoteException jika terjadi error komunikasi dengan Service
      */
     boolean ping();
-    // TODO: Tambahkan metode AIDL lain jika diperlukan
 }

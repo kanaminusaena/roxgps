@@ -1,232 +1,233 @@
-package com.roxgps.helper // Pastikan package ini sesuai
-
-// =====================================================================
-// Import Library untuk PermissionHelper
-// =====================================================================
+package com.roxgps.helper
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import dagger.hilt.android.qualifiers.ActivityContext
+import dagger.hilt.android.scopes.ActivityScoped
+import timber.log.Timber
 import javax.inject.Inject
 
-// import com.roxgps.ui.BaseMapActivity // Tidak perlu import BaseMapActivity spesifik jika pakai ComponentActivity
-
-// =====================================================================
-// Callback Interface untuk PermissionHelper
-// =====================================================================
-
-// Interface buat komunikasi balik ke Activity yang menggunakan PermissionHelper
+/**
+ * Interface untuk callback hasil request permission.
+ *
+ * @author loserkidz
+ * @since 2025-05-23 13:44:55
+ */
 interface PermissionResultListener {
-    // Dipanggil saat hasil permintaan izin tunggal diterima
     fun onPermissionResult(permission: String, isGranted: Boolean)
-    // Dipanggil saat hasil permintaan beberapa izin diterima
     fun onPermissionsResult(permissions: Map<String, Boolean>)
-     // Opsi: Tambahin callback untuk show rationale jika diperlukan
-     // fun showPermissionRationale(permission: String)
 }
 
-// =====================================================================
-// Class PermissionHelper
-// =====================================================================
-
 /**
- * Helper class untuk mengelola perizinan (permissions) yang dibutuhkan oleh aplikasi.
- * Menggunakan Activity Result APIs untuk permintaan izin yang modern.
+ * Helper class untuk mengelola permission dan settings di level Activity.
+ * Menangani semua permission checking, requesting, dan settings navigation.
  *
- * @param activity Instance dari [ComponentActivity] yang digunakan untuk memeriksa dan mendaftarkan Activity Result Launcher.
+ * @author loserkidz
+ * @since 2025-05-23 13:44:55
  */
-class PermissionHelper @Inject constructor( // <-- Tambahkan @Inject constructor() di sini
-    private val activity: ComponentActivity
-) { // Pakai ComponentActivity biar lebih fleksibel
+@ActivityScoped
+class PermissionHelper @Inject constructor(
+    @ActivityContext private val context: Context
+) {
+    companion object {
+        private const val TAG = "PermissionHelper"
 
-    // Listener untuk mengirim hasil permission kembali.
-    // Helper perlu tahu listener mana yang aktif saat request terakhir.
-    private var activePermissionResultListener: PermissionResultListener? = null
+        // Permission groups
+        private val LOCATION_PERMISSIONS = arrayOf(
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION
+        )
 
-    // Activity Result Launcher untuk menangani permintaan izin tunggal
-    private val requestSinglePermissionLauncher =
-        activity.registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
-            // Mendapatkan listener yang aktif saat request terakhir
-            val lastUsedListener = this.activePermissionResultListener
-            // Kirim hasil ke listener
-            // Kita perlu tahu permission String mana yang diminta.
-            // Ini bisa disimpan di properti terpisah atau method onPermissionResult perlu parameter permission String.
-            // Mari kita ubah callback onPermissionResult di listener agar punya parameter permission String.
-            // (Interface PermissionResultListener di atas sudah diperbarui)
-
-            // Untuk request SinglePermission, kita perlu menyimpan permission yang diminta
-            val requestedPermission = this.lastRequestedPermission // <- Membutuhkan properti untuk menyimpan permission terakhir
-            if (requestedPermission != null) {
-                lastUsedListener?.onPermissionResult(requestedPermission, isGranted)
+        private val BACKGROUND_LOCATION_PERMISSION =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                arrayOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
             } else {
-                 // Kasus error: callback dipanggil tapi tidak tahu permission apa yang diminta terakhir
-                 // Ini seharusnya tidak terjadi jika alurnya benar.
+                emptyArray()
             }
-             this.activePermissionResultListener = null // Reset listener setelah digunakan
-             this.lastRequestedPermission = null // Reset permission terakhir
-        }
 
-    // Properti untuk menyimpan permission String yang terakhir kali diminta menggunakan requestSinglePermissionLauncher
+        private val NOTIFICATION_PERMISSION =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                arrayOf(Manifest.permission.POST_NOTIFICATIONS)
+            } else {
+                emptyArray()
+            }
+    }
+
+    private val activity: ComponentActivity
+        get() = context as ComponentActivity
+
+    private var activePermissionResultListener: PermissionResultListener? = null
     private var lastRequestedPermission: String? = null
 
-
-    // Activity Result Launcher untuk menangani permintaan beberapa izin
-    private val requestMultiplePermissionsLauncher =
-        activity.registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions: Map<String, Boolean> ->
-            // Mendapatkan listener yang aktif saat request terakhir
-            val lastUsedListener = this.activePermissionResultListener
-            // Kirim hasil ke listener
-            lastUsedListener?.onPermissionsResult(permissions) // Mengirim map hasil permission
-
-            this.activePermissionResultListener = null // Reset listener setelah digunakan
-            // Untuk requestMultiplePermissions, tidak ada properti "permission terakhir" tunggal yang perlu direset.
-        }
-
-
-    // =====================================================================
-    // Method Publik untuk Cek Status Permissions
-    // =====================================================================
+    // === Permission Checking Methods ===
 
     /**
-     * Memeriksa apakah izin tunggal tertentu telah diberikan.
-     *
-     * @param permission String izin yang ingin diperiksa (contoh: Manifest.permission.CAMERA).
-     * @return True jika izin diberikan, False jika tidak.
-     */
-    fun checkPermission(permission: String): Boolean {
-        return ContextCompat.checkSelfPermission(activity, permission) == PackageManager.PERMISSION_GRANTED
-    }
-
-    /**
-     * Memeriksa apakah semua izin dalam daftar telah diberikan.
-     *
-     * @param permissions Array of String izin yang ingin diperiksa.
-     * @return True jika semua izin diberikan, False jika ada yang belum.
-     */
-    fun checkPermissions(permissions: Array<String>): Boolean {
-        return permissions.all { checkPermission(it) }
-    }
-
-    /**
-     * Memeriksa apakah izin lokasi (ACCESS_COARSE_LOCATION dan ACCESS_FINE_LOCATION) sudah diberikan.
-     *
-     * @return True jika kedua izin lokasi diberikan, False jika tidak.
+     * Cek apakah permission lokasi sudah diberikan
      */
     fun checkLocationPermissions(): Boolean {
-        return checkPermissions(arrayOf(
-            Manifest.permission.ACCESS_COARSE_LOCATION,
-            Manifest.permission.ACCESS_FINE_LOCATION
-        ))
+        val fineLocation = checkPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+        val coarseLocation = checkPermission(Manifest.permission.ACCESS_COARSE_LOCATION)
+        val hasLocationPermissions = fineLocation && coarseLocation
+
+        Timber.d("$TAG: Location permissions check - Fine: $fineLocation, Coarse: $coarseLocation")
+        return hasLocationPermissions
     }
 
     /**
-     * Memeriksa apakah izin notifikasi (POST_NOTIFICATIONS untuk Android 13+) sudah diberikan
-     * atau apakah notifikasi diaktifkan di SettingsCompose (untuk versi < 13).
-     *
-     * @return True jika notifikasi diizinkan/aktif, False jika tidak.
+     * Cek apakah permission background location sudah diberikan
+     */
+    fun checkBackgroundLocationPermission(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            checkPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+        } else {
+            true
+        }
+    }
+
+    /**
+     * Cek apakah permission notifikasi sudah diberikan
      */
     fun checkNotificationPermission(): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            // Untuk Android 13+, cek permission POST_NOTIFICATIONS
             checkPermission(Manifest.permission.POST_NOTIFICATIONS)
         } else {
-            // Untuk versi di bawah 13, cek apakah notifikasi diaktifkan di SettingsCompose
-            NotificationManagerCompat.from(activity).areNotificationsEnabled()
+            NotificationManagerCompat.from(context).areNotificationsEnabled()
         }
     }
 
+    /**
+     * Cek status permission spesifik
+     */
+    fun checkPermission(permission: String): Boolean {
+        return ContextCompat.checkSelfPermission(
+            context,
+            permission
+        ) == PackageManager.PERMISSION_GRANTED
+    }
 
-    // =====================================================================
-    // Method Publik untuk Meminta Permissions
-    // =====================================================================
+    // === Permission Request Methods ===
+
+    private val requestSinglePermissionLauncher =
+        activity.registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+            val lastUsedListener = activePermissionResultListener
+            lastRequestedPermission?.let { permission ->
+                lastUsedListener?.onPermissionResult(permission, isGranted)
+                Timber.d("$TAG: Single permission result - $permission: $isGranted")
+            }
+            resetState()
+        }
+
+    private val requestMultiplePermissionsLauncher =
+        activity.registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+            activePermissionResultListener?.onPermissionsResult(permissions)
+            Timber.d("$TAG: Multiple permissions result: $permissions")
+            resetState()
+        }
+
+    private fun resetState() {
+        activePermissionResultListener = null
+        lastRequestedPermission = null
+    }
 
     /**
-     * Meminta izin tunggal ke pengguna.
-     * Hasil dilaporkan melalui listener yang diberikan.
-     *
-     * @param permission String izin yang ingin diminta.
-     * @param listener Listener untuk menerima hasil (granted/denied).
+     * Request single permission
      */
     fun requestPermission(permission: String, listener: PermissionResultListener) {
-        this.activePermissionResultListener = listener // Simpan listener aktif
-        this.lastRequestedPermission = permission // Simpan permission yang diminta
-        requestSinglePermissionLauncher.launch(permission) // Luncurkan permintaan
+        Timber.d("$TAG: Requesting single permission: $permission")
+        activePermissionResultListener = listener
+        lastRequestedPermission = permission
+        requestSinglePermissionLauncher.launch(permission)
     }
 
     /**
-     * Meminta beberapa izin ke pengguna.
-     * Hasil dilaporkan melalui listener yang diberikan.
-     *
-     * @param permissions Array of String izin yang ingin diminta.
-     * @param listener Listener untuk menerima hasil (granted/denied per izin).
+     * Request multiple permissions
      */
     fun requestPermissions(permissions: Array<String>, listener: PermissionResultListener) {
-        this.activePermissionResultListener = listener // Simpan listener aktif
-        // Tidak perlu menyimpan daftar permission yang diminta di properti tunggal
-        requestMultiplePermissionsLauncher.launch(permissions) // Luncurkan permintaan
+        Timber.d("$TAG: Requesting multiple permissions: ${permissions.joinToString()}")
+        activePermissionResultListener = listener
+        requestMultiplePermissionsLauncher.launch(permissions)
     }
 
     /**
-     * Meminta izin lokasi (ACCESS_COARSE_LOCATION dan ACCESS_FINE_LOCATION) ke pengguna.
-     * Hasil dilaporkan melalui listener yang diberikan.
-     *
-     * @param listener Listener untuk menerima hasil (granted/denied per izin).
+     * Request location permissions (termasuk background jika diperlukan)
      */
-    fun requestLocationPermissions(listener: PermissionResultListener) {
-        requestPermissions(arrayOf(
-            Manifest.permission.ACCESS_COARSE_LOCATION,
-            Manifest.permission.ACCESS_FINE_LOCATION
-        ), listener) // Panggil method requestPermissions umum
-    }
-
-    /**
-     * Meminta izin notifikasi (POST_NOTIFICATIONS untuk Android 13+) ke pengguna.
-     * Untuk versi < 13, buka SettingsCompose notifikasi aplikasi.
-     * Hasil untuk versi >= 13 dilaporkan melalui listener yang diberikan.
-     *
-     * @param listener Listener untuk menerima hasil (granted/denied) untuk versi >= 13.
-     * Untuk versi < 13, callback listener TIDAK dipanggil,
-     * karena user diarahkan ke SettingsCompose.
-     */
-    fun requestNotificationPermission(listener: PermissionResultListener? = null) { // listener bisa null untuk versi < 13
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            // Untuk Android 13+, minta permission POST_NOTIFICATIONS pakai launcher
-            if (listener != null) { // Pastikan listener tidak null jika mau pakai callback
-                 requestPermission(Manifest.permission.POST_NOTIFICATIONS, listener) // Panggil method requestPermission tunggal
-            } else {
-                 // Jika listener null tapi dipanggil di Android 13+, request akan jalan tanpa callback
-                requestSinglePermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-            }
+    fun requestLocationPermissions(listener: PermissionResultListener, includeBackground: Boolean = false) {
+        val permissions = if (includeBackground) {
+            LOCATION_PERMISSIONS + BACKGROUND_LOCATION_PERMISSION
         } else {
-            // Untuk versi di bawah 13, langsung arahkan ke SettingsCompose notifikasi aplikasi
+            LOCATION_PERMISSIONS
+        }
+        requestPermissions(permissions, listener)
+    }
+
+    /**
+     * Request notification permission
+     */
+    fun requestNotificationPermission(listener: PermissionResultListener? = null) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            listener?.let {
+                requestPermission(Manifest.permission.POST_NOTIFICATIONS, it)
+            } ?: requestSinglePermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
             openAppNotificationSettings()
-            // Di sini listener.onPermissionResult atau onPermissionsResult TIDAK dipanggil
         }
     }
 
+    // === Settings Navigation Methods ===
 
-    // =====================================================================
-    // Method Helper Internal / Utility (dipanggil dari method publik)
-    // =====================================================================
-
-    // Membuka pengaturan izin aplikasi spesifik di perangkat.
-    // Dipanggil dari requestNotificationPermission untuk versi < 13
-    private fun openAppNotificationSettings() {
-         val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
-         intent.putExtra(Settings.EXTRA_APP_PACKAGE, activity.packageName)
-         activity.startActivity(intent)
+    /**
+     * Buka settings lokasi device
+     */
+    fun openLocationSettings() {
+        try {
+            val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+            Timber.i("$TAG: Opened location settings")
+        } catch (e: Exception) {
+            Timber.e(e, "$TAG: Failed to open location settings")
+        }
     }
 
-    // Opsi: Method untuk menampilkan dialog rasionalisasi
-    // fun shouldShowRequestPermissionRationale(permission: String): Boolean {
-    //     return ActivityCompat.shouldShowRequestPermissionRationale(activity, permission)
-    // }
-    // Logic ini bisa dipakai sebelum requestPermission/requestPermissions untuk menentukan
-    // apakah perlu menampilkan dialog penjelasan custom.
+    /**
+     * Buka settings permission aplikasi
+     */
+    fun openAppSettings() {
+        try {
+            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                data = Uri.fromParts("package", context.packageName, null)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+            Timber.i("$TAG: Opened app settings")
+        } catch (e: Exception) {
+            Timber.e(e, "$TAG: Failed to open app settings")
+        }
+    }
+
+    /**
+     * Buka settings notifikasi aplikasi
+     */
+    private fun openAppNotificationSettings() {
+        try {
+            val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+            Timber.i("$TAG: Opened notification settings")
+        } catch (e: Exception) {
+            Timber.e(e, "$TAG: Failed to open notification settings")
+        }
+    }
 }

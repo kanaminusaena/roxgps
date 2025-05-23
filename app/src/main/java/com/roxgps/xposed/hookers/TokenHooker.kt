@@ -162,7 +162,8 @@ object TokenHooker {
     private fun hookMethodIntercept(lpparam: LoadPackageParam) {
          // Tag spesifik untuk hook ini
          val HOOK_TAG = "HookIntercept"
-         val interceptorClassName = "com.scp.login.sso.hook.network.SSOApiFactory\$httpHeaderInterceptor\$2\$2" // <-- VERIFIKASI LAGI NAMA KELAS INI!
+         val interceptorClassName =
+             "com.scp.login.sso.hook.network.SSOApiFactory\$httpHeaderInterceptor$2$2" // <-- VERIFIKASI LAGI NAMA KELAS INI!
          val interceptMethodName = "intercept" // Nama metode intercept
          val chainClass = Interceptor.Chain::class.java // Tipe parameter pertama metode intercept
          try {

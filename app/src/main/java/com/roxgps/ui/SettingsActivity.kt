@@ -28,23 +28,18 @@ package com.roxgps.ui
 
 // Import Compose related
 // Import CoroutineScope dan launch jika masih ada observasi di Activity (selain di setContent)
+//import com.roxgps.compose.SettingsCompose
+//import com.roxgps.compose.SettingsPreferencesComposable
 import android.annotation.SuppressLint
 import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.SystemBarStyle
-import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import com.roxgps.compose.SettingsCompose
-import com.roxgps.compose.SettingsPreferencesComposable
 import com.roxgps.ui.viewmodel.MainViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -79,7 +74,7 @@ class ActivitySettings : AppCompatActivity() {
         enableEdgeToEdge(navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT))
 
         // Mengganti setContentView(binding.root) dengan setContent untuk Compose UI
-        setContent {
+        /*setContent {
             // Menggunakan tema Material3 dari aplikasi
             MaterialTheme { // Tema Material3 dari Compose
                 // Surface sebagai container utama dengan warna background tema
@@ -105,7 +100,7 @@ class ActivitySettings : AppCompatActivity() {
                     )
                 }
             }
-        }
+        }*/
 
         // Kode lama untuk Fragment dan View XML dihapus
         // setContentView(binding.root) // Hapus ini

@@ -25,6 +25,8 @@ data class FakeLocationData(
     val randomRange: Int = 50, // Range untuk random position (meter) (Menggantikan dari Xshare)
     val updateIntervalMs: Long = 80, // Interval update di hook (ms) (Menggantikan dari Xshare)
     // val ignorePackageList: List<String>? = null // Opsi: kirim ignore list jika perlu di hook
+    val baseLocation: Location? = null,    // Tambahkan default value null
+    val desiredSpeed: Float = 0.0f         // Tambahkan default value 0.0f
 
 ) : Parcelable {
     // Kotlin-Parcelize akan meng-generate implementasi Parcelable
@@ -57,6 +59,7 @@ data class FakeLocationData(
         // Catatan: Properti 'isStarted' dari FakeLocationData TIDAK disalin ke objek android.location.Location.
         // Properti isStarted digunakan oleh logika Xposed Hook untuk memutuskan APAPUN
         // objek Location hasil konversi ini akan disuntikkan atau tidak.
+
 
         return location
     }

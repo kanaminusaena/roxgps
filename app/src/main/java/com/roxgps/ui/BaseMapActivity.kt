@@ -46,8 +46,7 @@ abstract class BaseMapActivity : AppCompatActivity(), PermissionResultListener, 
 		private const val TAG = "BaseMapActivity"
 	}
 
-	@Inject
-	internal lateinit var locationHelper: ILocationHelper
+	@Inject internal lateinit var locationHelper: ILocationHelper
 	// =================== Dependency Injection & Bindings ===================
 	// ActivityMapBinding dihasilkan dari activity_map.xml
 	protected lateinit var binding: ActivityMapBinding
@@ -548,7 +547,7 @@ abstract class BaseMapActivity : AppCompatActivity(), PermissionResultListener, 
 		Relog.i(TAG, "Handling Location Error.")
 		Snackbar.make(binding.root, "Location services are disabled.", Snackbar.LENGTH_LONG)
 			.setAction("Enable") {
-				locationHelper.openLocationSettings(this) // Panggil method di ILocationHelper
+				permissionHelper.openLocationSettings() // Panggil method di ILocationHelper
 			}
 			.show()
 	}

@@ -1,7 +1,6 @@
 // File: com/roxgps/helper/ILocationHelper.kt
 package com.roxgps.helper
 
-import android.content.Context
 import android.location.Location
 import com.roxgps.data.FakeLocationData
 import kotlinx.coroutines.flow.Flow
@@ -16,110 +15,70 @@ import kotlinx.coroutines.flow.StateFlow
 // dan Service (start/stop faking, start/stop real update untuk Service).
 interface ILocationHelper {
 
-    // === Metode untuk Kebutuhan Activity (dan Service jika perlu real update) ===
+    // === State Properties ===
+    /** Status aktif/tidak aktifnya faking lokasi */
+    val isFakingActive: StateFlow<Boolean>
 
-    /** Memulai proses request update lokasi real. Hasilnya dikirim ke listener. */
-    // Parameter: listener - Callback untuk menerima hasil lokasi real.
-    fun requestLocationUpdates(listener: LocationListener) // Pastikan LocationListener sudah diimport dan didefinisikan.
+    /** Lokasi palsu yang sedang digunakan saat ini */
+    val currentFakeLocation: StateFlow<Location?>
 
-    /** Menghentikan update lokasi real yang dimulai oleh requestLocationUpdates(listener). */
+    // === Location Methods ===
+    /**
+     * Request update lokasi real-time
+     * @param listener Callback untuk menerima update lokasi
+     */
+    fun requestLocationUpdates(listener: LocationListener)
+
+    /** Hentikan update lokasi real-time */
     fun stopLocationUpdates()
 
-    /** Mengambil lokasi terakhir yang diketahui (real) sekali saja. */
+    /**
+     * Dapatkan lokasi terakhir yang diketahui
+     * @return Location? atau null jika tidak ada
+     */
     fun getLastKnownLocation(): Location?
 
-    /** Memeriksa apakah layanan lokasi (GPS/Network provider) aktif. */
+    /** @return true jika service lokasi (GPS/Network) aktif */
     fun isLocationServiceEnabled(): Boolean
 
-    /** Memeriksa apakah izin lokasi sudah diberikan. */
-    fun checkLocationPermissions(): Boolean
+    // === Background Location Methods ===
+    /** Mulai update lokasi real di background service */
+    fun startRealLocationUpdates()
 
-    /** Meminta izin lokasi ke pengguna. Terikat pada Activity. */
-    // Deklarasi ini mungkin tidak perlu di interface jika penanganannya spesifik di Activity/ViewModel dengan ActivityResultLauncher.
-    // Kalaupun ada, mungkin butuh Activity atau Fragment sebagai parameter, atau kembalian berupa Flow/LiveData.
-    // fun requestLocationPermissions(activity: Activity) // <-- Jika ini ada, perlu diimplementasikan.
-
-    /** Membuka pengaturan lokasi di perangkat. */
-    fun openLocationSettings(context: Context) // Menggunakan Context
-
-    /** Membuka pengaturan izin aplikasi spesifik. */
-    fun openAppPermissionSettings(context: Context) // Menggunakan Context
-
-
-    // === Metode untuk Mengelola Update Lokasi REAL di Background (Dipanggil oleh Service) ===
-    // Metode-metode ini mungkin ada di Service atau Helper itu sendiri.
-    // Jika ada di interface, perlu diimplementasikan.
-
-    /** Memulai update lokasi real (jika sebelumnya dimatikan saat faking). */
-    fun startRealLocationUpdates() // Jika ini ada di interface kamu
-
-    /** Menghentikan update lokasi real (misal, sebelum memulai faking). */
-    fun stopRealLocationUpdates() // Jika ini ada di interface kamu
-
-
-    // === Metode untuk Mengontrol Faking (Mengelola State Internal Helper) ===
-    /**
-     * Memulai proses faking lokasi palsu.
-     * Helper akan menyimpan lokasi target ini dan menandai faking aktif.
-     *
-     * @param targetLocation Objek Location yang menjadi lokasi target palsu.
-     */
-    fun startFaking(targetLocation: Location) // Mengelola StateFlows helper
+    /** Hentikan update lokasi real di background service */
+    fun stopRealLocationUpdates()
 
     /**
-     * Menghentikan proses faking lokasi palsu.
-     * Helper akan menandai faking tidak aktif dan membersihkan lokasi target.
+     * Dapatkan stream update lokasi real-time sebagai Flow
+     * @return Flow<Location> stream lokasi real-time
      */
-    fun stopFaking() // Mengelola StateFlows helper
+    fun getRealLocationUpdates(): Flow<Location>
 
-    // TODO: Tambahkan metode lain untuk update lokasi target tanpa stop/start faking jika diperlukan.
-    //       fun updateTargetLocation(newLocation: Location) // Mengelola StateFlow currentFakeLocation
-
-
-    // === Properti untuk Mengamati Status Faking dan Lokasi Target (State Internal Helper) ===
+    // === Faking Methods ===
     /**
-     * Mengekspos status aktif/tidak aktifnya faking lokasi palsu.
-     * Komponen lain (ViewModel, UI) bisa mengamati Flow ini.
-     * Sumber hook: StateFlow internal helper.
+     * Mulai faking lokasi
+     * @param targetLocation Lokasi target yang akan di-fake
      */
-    val isFakingActive: StateFlow<Boolean> // StateFlow yang diekspos
+    fun startFaking(targetLocation: Location)
+
+    /** Hentikan faking lokasi */
+    fun stopFaking()
 
     /**
-     * Mengekspos objek Location yang menjadi lokasi target palsu saat ini.
-     * Bernilai null jika faking tidak aktif atau lokasi belum ditetapkan.
-     * Komponen lain (ViewModel, Service AIDL) bisa mengamati/mengambil nilai ini.
-     * Sumber hook: StateFlow internal helper.
+     * Dapatkan data lokasi palsu untuk AIDL service
+     * @param isRandomPositionEnabled Apakah posisi random diaktifkan
+     * @param accuracy Akurasi lokasi (meter)
+     * @param randomRange Jarak random maksimum (meter)
+     * @param updateIntervalMs Interval update (ms)
+     * @param desiredSpeed Kecepatan yang diinginkan (m/s)
+     * @return FakeLocationData? Data lokasi palsu atau null jika faking tidak aktif
      */
-    val currentFakeLocation: StateFlow<Location?> // StateFlow yang diekspos
-
-    // === Metode untuk Dipanggil oleh AIDL Service (Menyediakan Data untuk Hook) ===
-    /**
-     * Menyediakan hook lokasi palsu dan status faking saat dipanggil oleh AIDL Service.
-     * Mengambil hook lokasi dan setting dari PARAMETER yang diterima,
-     * dan status faking dari StateFlow internal helper.
-     *
-     * @return Objek FakeLocationData? yang berisi lokasi palsu dan status isStarted.
-     * Mengembalikan null jika faking tidak aktif (isFakingActive.value == false).
-     */
-    // === Hanya Pertahankan SATU Deklarasi getFakeLocationData yang ini ===
     fun getFakeLocationData(
-        // --- Setting Konfigurasi ---
         isRandomPositionEnabled: Boolean,
         accuracy: Float,
         randomRange: Int,
         updateIntervalMs: Long,
-        desiredSpeed: Float,
-        // TODO: Tambahkan parameter setting atau hook lokasi lain jika ada di implementasi dan perlu di interface
-    ): FakeLocationData? // <<< Tipe kembalian FakeLocationData?
-
-    /**
-     * Menyediakan aliran update lokasi real-time dari perangkat.
-     * Observer (misal, LocationRepository) akan menerima update lokasi melalui Flow ini.
-     * Flow ini harus memancarkan lokasi hanya saat faking tidak aktif.
-     */
-    fun getRealLocationUpdates(): Flow<Location>
-
-
-    // TODO: Tambahkan metode lain jika Helper perlu melaporkan status khusus (selain LocationListener)
+        desiredSpeed: Float
+    ): FakeLocationData?
 
 }

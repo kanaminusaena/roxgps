@@ -1,63 +1,70 @@
+// File: app_settings.proto
+// Author: loserkidz
+// Created: 2025-05-23 09:28:15
+// Description: Proto file untuk settings aplikasi RoxGPS
+
 syntax = "proto3";
 
-// Tentukan package Java/Kotlin untuk kode yang dihasilkan.
-// Pastikan package ini sesuai dengan struktur proyek Anda.
-// Ini akan menjadi package untuk kelas AppSettings.kt yang dihasilkan.
 option java_package = "com.roxgps.datastore";
-option java_multiple_files = true; // Agar setiap pesan top-level menghasilkan file .java/.kt terpisah
-//option kotlin_package = "com.roxgps.datastore";
-// Package Protocol Buffers (nama opsional)
-// package com.roxgps.data; // Anda bisa menghapus baris ini jika java_package sudah cukup
+option java_multiple_files = true;
 
 // =====================================================================
 // Pesan AppSettings
 // Mendefinisikan struktur data untuk SEMUA pengaturan aplikasi.
-// Menggabungkan setting dari PrefManager dan settings.proto sebelumnya.
-// Field numbers (1, 2, 3, dst.) harus unik dalam satu pesan dan tidak boleh diubah
-// setelah aplikasi dirilis jika Anda ingin mempertahankan kompatibilitas data.
+// Field numbers harus unik dan tidak boleh diubah setelah rilis
+// untuk mempertahankan kompatibilitas data.
 // =====================================================================
 
 message AppSettings {
-  // --- Status Faking & Lokasi Utama ---
-  // Dari PrefManager: start, latitude, longitude (field 9, 10, 11 di proto kamu sebelumnya)
-  bool is_faking_started = 1; // Status faking aktif/tidak aktif
-  float current_latitude = 2; // Latitude lokasi faking utama
-  float current_longitude = 3; // Longitude lokasi faking utama
+  // === Status Faking & Lokasi Utama ===
+  bool is_faking_started = 1;      // Status faking aktif/tidak aktif
+  float current_latitude = 2;      // Latitude lokasi faking utama
+  float current_longitude = 3;     // Longitude lokasi faking utama
 
-  // --- Status Hook ---
-  // Dari PrefManager: system_hooked (field 12 di proto kamu sebelumnya)
-  bool is_system_hooked = 4; // Status apakah sistem berhasil di-hook
+  // === Status Hook ===
+  bool is_system_hooked = 4;       // Status apakah sistem berhasil di-hook
 
-  // --- Pengaturan Faking Lanjutan ---
-  // Dari PrefManager: random_position, accuracy_level (String), speed, bearing, altitude, provider
-  // Dari proto lama: is_random_position_enabled (field 1), accuracy_level (field 2 float), random_range (field 3), desired_speed (field 5), provider_name (field 7), default_altitude (field 8 float), update_interval_ms (field 4), is_joystick_mode_enabled (field 6)
-  // Kita konsolidasi dan pilih nama yang paling deskriptif, gunakan tipe data yang paling sesuai (misal double untuk altitude).
-  bool is_random_position_enabled = 5; // Status random position aktif/tidak aktif (gabungan dari PrefManager random_position & proto lama is_random_position_enabled)
-  float accuracy_level_setting = 6; // Tingkat akurasi (String, dari PrefManager accuracy_level)
-  int32 random_position_range_meters = 7; // Range untuk random position (Int, dari proto lama random_range)
-  int64 update_interval_ms = 8; // Interval update di hook (Long, dari proto lama update_interval_ms)
-  float simulated_speed_mps = 9; // Kecepatan simulasi dalam m/s (gabungan dari PrefManager speed & proto lama desired_speed)
-  float simulated_bearing_degrees = 10; // Bearing/Arah Hadap dalam derajat (dari PrefManager bearing)
-  double simulated_altitude_meters = 11; // Ketinggian dalam meter (gabungan dari PrefManager altitude & proto lama default_altitude)
-  string simulated_provider_name = 12; // Nama provider lokasi (gabungan dari PrefManager provider & proto lama provider_name)
+  // === Pengaturan Faking Lanjutan ===
+  bool is_random_position_enabled = 5;      // Status random position aktif/tidak
+  float accuracy_level_setting = 6;         // Tingkat akurasi
+  int32 random_position_range_meters = 7;   // Range untuk random position
+  int64 update_interval_ms = 8;            // Interval update di hook
+  float simulated_speed_mps = 9;           // Kecepatan simulasi dalam m/s
+  float simulated_bearing_degrees = 10;     // Bearing/Arah Hadap dalam derajat
+  double simulated_altitude_meters = 11;    // Ketinggian dalam meter
+  string simulated_provider_name = 12;      // Nama provider lokasi
 
+  // === Pengaturan UI/Tampilan ===
+  int32 map_type = 13;                     // Tipe peta
+  int32 dark_theme_mode = 14;              // Status dark theme
+  bool is_joystick_control_enabled = 15;   // Status joystick diaktifkan
 
-  // --- Pengaturan UI/Tampilan ---
-  // Dari PrefManager: map_type (field 14), dark_theme (field 15), joystick_enabled (field 17)
-  // Dari proto lama: is_joystick_mode_enabled (field 6)
-  int32 map_type = 13; // Tipe peta (Int)
-  int32 dark_theme_mode = 14; // Status dark theme (Int)
-  bool is_joystick_control_enabled = 15; // Status joystick diaktifkan (gabungan dari PrefManager joystick_enabled & proto lama is_joystick_mode_enabled)
+  // === Pengaturan Update ===
+  bool is_update_check_disabled = 16;       // Status cek update dinonaktifkan
 
+  // === Token & Security ===
+  string hooked_app_token = 17;            // Token dari aplikasi yang di-hook (e.g., "bearer xyz...")
+  int64 token_last_updated = 18;           // Timestamp terakhir update token
+  string hooked_package_name = 19;         // Package name aplikasi yang di-hook
+  bool is_token_valid = 20;                // Status validitas token
 
-  // --- Pengaturan Update ---
-  // Dari PrefManager: update_disabled (field 16)
-  bool is_update_check_disabled = 16; // Status apakah cek update dinonaktifkan
+  // === Default Values (comments only) ===
+  // ... (previous default values) ...
+  // hooked_app_token: ""
+  // token_last_updated: 0
+  // hooked_package_name: ""
+  // is_token_valid: false
 
-  // TODO: Tambahkan field lain di sini jika ada pengaturan unik di PrefManager atau proto lama
-  // yang belum tercakup di atas, atau pengaturan baru yang ingin Anda tambahkan.
-  // Pastikan untuk memberikan nomor field yang unik dan berurutan (lanjutkan dari 17).
-  // Contoh: Jika ada pengaturan "simulasi_device_motion" (boolean)
-  // bool simulate_device_motion = 17;
-
+  // === Version History ===
+  // v1.1.0 (2025-05-23 09:28:15) - Added token management
+  // - Added hooked_app_token
+  // - Added token_last_updated
+  // - Added hooked_package_name
+  // - Added is_token_valid
+  // v1.0.0 (2025-05-23) - Initial version
+  // - Basic location faking settings
+  // - UI preferences
+  // - Update configuration
 }
+
+// ... (previous enum definitions) ...

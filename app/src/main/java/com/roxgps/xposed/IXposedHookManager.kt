@@ -1,5 +1,6 @@
 package com.roxgps.xposed
 
+import android.location.Location
 import kotlinx.coroutines.flow.StateFlow
 
 // Import jika ada callback atau status yang perlu dikirim Manager Hook (opsional)
@@ -60,6 +61,11 @@ interface IXposedHookManager {
      * Komponen lain (ViewModel, UI) bisa mengamati Flow ini untuk memperbarui tampilan status.
      */
     val hookStatus: StateFlow<HookStatus> // <<< TAMBAHKAN PROPERTI INI (Sebagai StateFlow<HookStatus>)
+    /**
+     * Update lokasi palsu ke Xposed Module
+     * @param location Lokasi yang akan digunakan sebagai lokasi palsu
+     */
+    fun updateFakeLocation(location: Location)
 
     // TODO: Tambahkan metode lain di sini jika ada komunikasi lain dari hook ke Manager
 

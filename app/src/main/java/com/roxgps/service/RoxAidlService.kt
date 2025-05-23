@@ -19,6 +19,7 @@ import com.roxgps.repository.TokenRepository
 import com.roxgps.utils.Relog
 import com.roxgps.xposed.HookStatus
 import com.roxgps.xposed.IXposedHookManager
+import com.roxgps.xposed.XposedHookManagerImpl
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -72,6 +73,8 @@ class RoxAidlService : Service() {
 
     @Inject lateinit var settingsRepository: SettingsRepository
 
+    @Inject lateinit var xposedHookManagerImpl: XposedHookManagerImpl
+
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     // PrefManager: Hanya jika hook butuh akses setting umum via AIDL. Jika tidak, bisa dihapus.
     // @Inject lateinit var prefManager: PrefManager // Opsional
@@ -80,15 +83,42 @@ class RoxAidlService : Service() {
     // Kelas anonim ini mengimplementasikan IRoxAidlService.Stub
     private val binder = object : IRoxAidlService.Stub() {
 
+        @Throws(RemoteException::class)
+        override fun updateFakeLocation(location: FakeLocationData) {
+            Relog.d("$TAG: updateFakeLocation() called via AIDL")
+            Relog.i(TAG, "AIDL call: updateFakeLocation received")
+
+            serviceScope.launch {
+                try {
+                    // Konversi FakeLocationData ke Location
+                    val androidLocation = location.toAndroidLocation()
+
+                    // Update lokasi di LocationHelper
+                    locationHelper.startFaking(androidLocation)
+
+                    // Update status
+                    xposedHookManager.reportHookStatus(HookStatus.ActiveFaking)
+
+                    Relog.d("$TAG: Fake location updated successfully")
+                    Relog.i(TAG, "Fake location updated successfully")
+                } catch (e: Exception) {
+                    val message = "Failed to update fake location: ${e.message}"
+                    Relog.e(e, "$TAG: $message")
+                    //Relog.e(TAG, message)
+                    xposedHookManager.reportHookStatus(HookStatus.Error(message))
+                }
+            }
+        }
+
         @Throws(RemoteException::class) // Tandai metode ini bisa melempar RemoteException
         override fun setFakingEnabled(enabled: Boolean) { // <<< TAMBAHKAN METODE INI
-            Timber.d("$TAG: setFakingEnabled($enabled) called by AIDL client.")
+            Relog.d("$TAG: setFakingEnabled($enabled) called by AIDL client.")
             Relog.i(TAG, "AIDL call: setFakingEnabled($enabled) received.")
 
             serviceScope.launch { // <<< LUNCURKAN COROUTINE DI SINI
                 if (enabled) {
                     // === Jika perintah AKTIFKAN diterima ===
-                    Timber.i("$TAG: Received command to ENABLE faking.")
+                    Relog.i("$TAG: Received command to ENABLE faking.")
                     Relog.i(TAG, "Received command to ENABLE faking.")
 
                     // TODO: Dapatkan lokasi target yang sebenarnya dari tempat yang sesuai
@@ -100,34 +130,34 @@ class RoxAidlService : Service() {
                     if (targetLocation != null) {
                         // Panggil metode startFaking di ILocationHelper dengan lokasi target
                         locationHelper.startFaking(targetLocation) // <<< PANGGIL startFaking()
-                        Timber.i("$TAG: Calling locationHelper.startFaking() with target: ${targetLocation.latitude}, ${targetLocation.longitude}.")
+                        Relog.i("$TAG: Calling locationHelper.startFaking() with target: ${targetLocation.latitude}, ${targetLocation.longitude}.")
                         Relog.i(TAG, "Calling locationHelper.startFaking() with target.")
                         // Laporkan status awal setelah memanggil start (opsional, status aktual dilaporkan di getFakeLocationData)
                         this@RoxAidlService.xposedHookManager.reportHookStatus(HookStatus.BoundAndReady) // Atau status lain yang sesuai
-                        Timber.i("$TAG: Reporting HookStatus.BoundAndReady after calling startFaking.")
+                        Relog.i("$TAG: Reporting HookStatus.BoundAndReady after calling startFaking.")
                         Relog.i(TAG, "Reporting BoundAndReady after calling startFaking.")
                     } else {
                         // Handle jika lokasi target tidak tersedia
-                        Timber.w("$TAG: Cannot start faking: Target location is not available.")
+                        Relog.w("$TAG: Cannot start faking: Target location is not available.")
                         Relog.i(TAG, "Cannot start faking: Target location is not available.")
                         // Laporkan status jika tidak bisa memulai faking
                         this@RoxAidlService.xposedHookManager.reportHookStatus(HookStatus.BoundAndReady) // Atau status lain yang sesuai
-                        Timber.i("$TAG: Reporting HookStatus.BoundAndReady because target location not available.")
+                        Relog.i("$TAG: Reporting HookStatus.BoundAndReady because target location not available.")
                         Relog.i(TAG, "Reporting BoundAndReady because target location not available.")
                     }
 
                 } else {
                     // === Jika perintah NONAKTIFKAN diterima ===
-                    Timber.i("$TAG: Received command to DISABLE faking.")
+                    Relog.i("$TAG: Received command to DISABLE faking.")
                     Relog.i(TAG, "Received command to DISABLE faking.")
 
                     // Panggil metode stopFaking di ILocationHelper
                     locationHelper.stopFaking() // <<< PANGGIL stopFaking()
-                    Timber.i("$TAG: Calling locationHelper.stopFaking().")
+                    Relog.i("$TAG: Calling locationHelper.stopFaking().")
                     Relog.i(TAG, "Calling locationHelper.stopFaking().")
                     // Laporkan status setelah memanggil stop (opsional, status aktual dilaporkan di getFakeLocationData)
                     this@RoxAidlService.xposedHookManager.reportHookStatus(HookStatus.BoundAndReady) // Atau status lain yang sesuai
-                    Timber.i("$TAG: Reporting HookStatus.BoundAndReady after calling stopFaking.")
+                    Relog.i("$TAG: Reporting HookStatus.BoundAndReady after calling stopFaking.")
                     Relog.i(TAG, "Reporting BoundAndReady after calling stopFaking.")
                 }
             }
@@ -157,7 +187,7 @@ class RoxAidlService : Service() {
         @SuppressLint("TimberArgCount") // Menekan warning jika jumlah argumen Timber tidak sesuai format string
         @Throws(RemoteException::class) // Tandai metode ini bisa melempar RemoteException
         override fun getLatestFakeLocation(): FakeLocationData? {
-            Timber.d("$TAG: getLatestFakeLocation() called by AIDL client.")
+            Relog.d("$TAG: getLatestFakeLocation() called by AIDL client.")
             Relog.i(TAG, "AIDL call: getLatestFakeLocation() received.")
 
             // === Ambil Setting Konfigurasi dari SettingsRepository ===
@@ -212,13 +242,13 @@ class RoxAidlService : Service() {
             // === Kembalikan objek FakeLocationData atau null ===
             if (fakeData != null) {
                 // Log level Debug atau Info agar tidak terlalu banyak log saat faking berjalan
-                Timber.d("$TAG: AIDL call: Returning fake location hook: Lat=${fakeData.latitude}, Lon=${fakeData.longitude}, Started=${fakeData.isStarted}")
+                Relog.d("$TAG: AIDL call: Returning fake location hook: Lat=${fakeData.latitude}, Lon=${fakeData.longitude}, Started=${fakeData.isStarted}")
                 Relog.d(TAG, "Returning fake hook: ${fakeData.latitude}, ${fakeData.longitude}, ${fakeData.isStarted}")
                 return fakeData // Mengembalikan objek FakeLocationData yang didapat dari helper (jika tidak null)
             } else {
                 // Mengembalikan null jika faking tidak aktif atau hook tidak tersedia dari helper
                 // (helper mengembalikan null dari getFakeLocationData jika isFakingActive.value false atau targetLocation null)
-                Timber.d("$TAG: AIDL call: Faking not active or hook not available from helper. Returning null.")
+                Relog.d("$TAG: AIDL call: Faking not active or hook not available from helper. Returning null.")
                 Relog.d(TAG, "Returning null (faking not active).")
                 return null
             }
@@ -233,7 +263,7 @@ class RoxAidlService : Service() {
          */
         @Throws(RemoteException::class)
         override fun setHookStatus(hooked: Boolean) {
-            Timber.d("$TAG: setHookStatus($hooked) called by AIDL client.")
+            Relog.d("$TAG: setHookStatus($hooked) called by AIDL client.")
             // Gunakan this@RoxAidlService.xposedHookManager
             this@RoxAidlService.xposedHookManager.setHookConnected(hooked) // <<< PERBAIKI DI SINI jika metode ini ada di IXposedHookManager
             // TODO: Metode setHookConnected harus ada di IXposedHookManager
@@ -249,7 +279,7 @@ class RoxAidlService : Service() {
 
         @Throws(RemoteException::class)
         override fun notifySystemCheck() {
-            Timber.d("$TAG: notifySystemCheck() called by AIDL client.")
+            Relog.d("$TAG: notifySystemCheck() called by AIDL client.")
             // Gunakan this@RoxAidlService.xposedHookManager
             this@RoxAidlService.xposedHookManager.notifySystemCheckCompleted() // <<< PERBAIKI DI SINI jika metode ini ada di IXposedHookManager
             // TODO: Metode notifySystemCheckCompleted harus ada di IXposedHookManager
@@ -260,14 +290,14 @@ class RoxAidlService : Service() {
          * Dipanggil dari hook untuk mendapatkan token.
          */
         override fun getLatestToken(): String? { // <<< Kembalikan String? karena token bisa null
-            Timber.d("$TAG: AIDL call: getLatestToken called.")
+            Relog.d("$TAG: AIDL call: getLatestToken called.")
             Relog.i(TAG, "AIDL call: getLatestToken called.")
 
             // === Ambil token dari TokenRepository ===
             // Baca nilai SAAT INI dari StateFlow 'token' di TokenRepository menggunakan .value
             val latestToken = tokenRepository.token.value // <<< PERBAIKI DI SINI! Baca dari StateFlow .value
 
-            Timber.i("$TAG: AIDL call: Returning token: ${latestToken?.take(5)}...") // Log beberapa karakter awal
+            Relog.i("$TAG: AIDL call: Returning token: ${latestToken?.take(5)}...") // Log beberapa karakter awal
             Relog.i(TAG, "Returning token: ${latestToken?.take(5)}...")
             return latestToken // Kembalikan token yang dibaca dari StateFlow (bisa null)
             // ======================================
@@ -287,7 +317,7 @@ class RoxAidlService : Service() {
         @Throws(RemoteException::class)
         override fun ping(): Boolean {
             return try {
-                Timber.d("$TAG: ping() called by AIDL client")
+                Relog.d("$TAG: ping() called by AIDL client")
                 Relog.i(TAG, "AIDL call: ping() received.")
 
                 // Menggunakan withTimeout untuk membatasi waktu eksekusi
@@ -311,17 +341,17 @@ class RoxAidlService : Service() {
                         }
                     } catch (e: TimeoutCancellationException) {
                         val message = "Health check timed out after ${HEALTH_CHECK_TIMEOUT}ms"
-                        Timber.w(e, "$TAG: $message") // Log exception dengan message
+                        //Relog.w(e.toString(), "$TAG: $message") // Log exception dengan message
                         Relog.i(TAG, "$message: ${e.message}")
                         false
                     }
                 }
 
                 if (isHealthy) {
-                    Timber.d("$TAG: Health check passed")
+                    Relog.d("$TAG: Health check passed")
                     Relog.i(TAG, "Health check passed")
                 } else {
-                    Timber.w("$TAG: Health check failed")
+                    Relog.w("$TAG: Health check failed")
                     Relog.i(TAG, "Health check failed")
                 }
 
@@ -338,7 +368,7 @@ class RoxAidlService : Service() {
             return try {
                 // Verifikasi bahwa LocationHelper terinisialisasi
                 if (!::locationHelper.isInitialized) {
-                    Timber.w("$TAG: LocationHelper not initialized")
+                    Relog.w("$TAG: LocationHelper not initialized")
                     return false
                 }
 
@@ -357,7 +387,7 @@ class RoxAidlService : Service() {
                 if (!::hookStatusRepository.isInitialized ||
                     !::tokenRepository.isInitialized ||
                     !::settingsRepository.isInitialized) {
-                    Timber.w("$TAG: One or more repositories not initialized")
+                    Relog.w("$TAG: One or more repositories not initialized")
                     return false
                 }
 
@@ -378,7 +408,7 @@ class RoxAidlService : Service() {
             val isMemoryOK = freeMemory > MINIMUM_MEMORY_THRESHOLD
 
             if (!isMemoryOK) {
-                Timber.w("$TAG: Low memory: $freeMemory bytes free")
+                Relog.w("$TAG: Low memory: $freeMemory bytes free")
                 Relog.i(TAG, "Low memory warning: $freeMemory bytes free")
             }
 
@@ -389,7 +419,7 @@ class RoxAidlService : Service() {
             return try {
                 // Verifikasi bahwa XposedHookManager terinisialisasi
                 if (!::xposedHookManager.isInitialized) {
-                    Timber.w("$TAG: XposedHookManager not initialized")
+                    Relog.w("$TAG: XposedHookManager not initialized")
                     return false
                 }
 
@@ -403,7 +433,7 @@ class RoxAidlService : Service() {
                         HookStatus.ActiveFaking -> true
 
                         else -> {
-                            Timber.w("$TAG: Invalid hook status detected: $status")
+                            Relog.w("$TAG: Invalid hook status detected: $status")
                             false
                         }
                     }
@@ -421,7 +451,7 @@ class RoxAidlService : Service() {
     // =====================================================================
 
     override fun onBind(intent: Intent?): IBinder {
-        Timber.d("$TAG: onBind called.")
+        Relog.d("$TAG: onBind called.")
         Relog.i(TAG, "onBind called.")
 
         // === Laporkan status BoundAndReady ke Hook Manager ===
@@ -429,7 +459,7 @@ class RoxAidlService : Service() {
         // menemukan dan mencoba mengikat ke Service ini.
         // Laporkan status BoundAndReady.
         xposedHookManager.reportHookStatus(HookStatus.BoundAndReady) // <<< Laporkan status
-        Timber.i("$TAG: Reporting HookStatus.BoundAndReady via Manager.")
+        Relog.i("$TAG: Reporting HookStatus.BoundAndReady via Manager.")
         Relog.i(TAG, "Reporting BoundAndReady.")
         // =========================================================
 
@@ -438,7 +468,7 @@ class RoxAidlService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        Timber.d("$TAG: onCreate called.")
+        Relog.d("$TAG: onCreate called.")
         Relog.i(TAG, "onCreate called.")
         // TODO: Lakukan inisialisasi yang dibutuhkan service AIDL ini jika ada.
         //       Contoh: Register receiver atau observer jika Service ini punya peran lain selain AIDL.
@@ -447,7 +477,7 @@ class RoxAidlService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-        Timber.d("$TAG: onDestroy called.")
+        Relog.d("$TAG: onDestroy called.")
         Relog.i(TAG, "onDestroy called.")
 
         // === Laporkan status NotActive ke Hook Manager (Fallback) ===
@@ -455,7 +485,7 @@ class RoxAidlService : Service() {
         // Pastikan status NotActive dilaporkan. Cek status saat ini sebelum update.
         if (xposedHookManager.hookStatus.value != HookStatus.NotActive) {
             xposedHookManager.reportHookStatus(HookStatus.NotActive) // <<< Laporkan status
-            Timber.i("$TAG: Reporting HookStatus.NotActive via Manager from onDestroy.")
+            Relog.i("$TAG: Reporting HookStatus.NotActive via Manager from onDestroy.")
             Relog.i(TAG, "Reporting NotActive from onDestroy.")
         }
         serviceScope.cancel()
@@ -472,14 +502,14 @@ class RoxAidlService : Service() {
      * JUGA MELAPORKAN STATUS TIDAK AKTIF KE HOOK MANAGER.
      */
     override fun onUnbind(intent: Intent?): Boolean {
-        Timber.d("$TAG: onUnbind called.")
+        Relog.d("$TAG: onUnbind called.")
         Relog.i(TAG, "onUnbind called.")
 
         // === Laporkan status NotActive ke Hook Manager ===
         // Saat semua klien unbind, Service ini tidak lagi terhubung ke hook.
         // Laporkan status NotActive.
         xposedHookManager.reportHookStatus(HookStatus.NotActive) // <<< Laporkan status
-        Timber.i("$TAG: Reporting HookStatus.NotActive via Manager.")
+        Relog.i("$TAG: Reporting HookStatus.NotActive via Manager.")
         Relog.i(TAG, "Reporting NotActive.")
         // =========================================================
 
@@ -503,7 +533,7 @@ class RoxAidlService : Service() {
     // Biasanya onStartCommand di Service AIDL dibiarkan kosong atau hanya log.
     /*
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        Timber.d("$TAG: onStartCommand called.")
+        Relog.d("$TAG: onStartCommand called.")
         Relog.i(TAG, "onStartCommand called.")
         // Return START_NOT_STICKY jika Service tidak perlu di-restart oleh sistem setelah dimatikan
         return START_NOT_STICKY

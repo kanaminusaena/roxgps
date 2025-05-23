@@ -1,59 +1,96 @@
-// File: com/roxgps/repository/SettingsRepository.kt
 package com.roxgps.repository
 
-// === IMPORT YANG DIPERLUKAN ===
 import com.roxgps.datastore.AppSettings
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 
-// TODO: Hapus import yang tidak digunakan seperti StateFlow, DataStore, dll.
-
-// =====================================================================
-// Interface untuk Repository yang mengelola setting konfigurasi aplikasi.
-// Ini adalah sumber kebenaran untuk setting seperti akurasi, random position, dll.
-// Metode GET bersifat ASINKRONUS (mengembalikan Flow) agar cocok dengan DataStore.
-// =====================================================================
+/**
+ * Repository untuk mengelola settings aplikasi
+ * @author loserkidz
+ * @since 2025-05-23 09:38:29
+ */
 interface SettingsRepository {
-
-    // === Properti Flow untuk Mendapatkan Nilai Setting Konfigurasi (ASINKRONUS) ===
-    // Anggota ini mengembalikan Flow yang memancarkan nilai setting terbaru.
-    // IMPLEMENTASINYA ADA DI SettingsRepositoryImpl MENGGUNAKAN dataStore.hook.map {}
-
-    // Mengembalikan Flow yang memancarkan objek AppSettings lengkap
-    // Opsional, kamu bisa punya ini atau hanya properti Flow individual
+    // Akses ke semua settings
     val appSettingsFlow: Flow<AppSettings>
 
-    // Properti Flow untuk setting individual
-    val isRandomPositionEnabled: Flow<Boolean> // Apakah random position aktif?
-    val accuracyLevel: Flow<Float> // Level akurasi
-    val randomRange: Flow<Int> // Range untuk random position
-    val updateIntervalMs: Flow<Long> // Interval update di hook (ms)
-    // TODO: Tambahkan properti Flow lain sesuai setting di file .proto kamu
-    val desiredSpeed: Flow<Float> // Contoh properti lain jika ada di .proto
+    // Faking Settings Flows
+    val isRandomPositionEnabled: Flow<Boolean>
+    val accuracyLevel: Flow<Float>
+    val randomRange: Flow<Int>
+    val updateIntervalMs: Flow<Long>
+    val desiredSpeed: Flow<Float>
 
-
-    // === Metode Suspend untuk Mengupdate/Mengubah Nilai Setting ===
-    // Metode ini bersifat suspend karena menulis ke DataStore adalah operasi yang memblokir.
-
-    // Metode utama untuk mengupdate seluruh objek setting secara atomic
-    suspend fun updateSettings(transform: suspend (AppSettings) -> AppSettings): AppSettings
-
-    // Metode untuk mengupdate setting individual
-    suspend fun updateIsRandomPositionEnabled(isEnabled: Boolean)
-    suspend fun updateAccuracyLevel(accuracy: Float)
-    suspend fun updateRandomRange(range: Int)
-    suspend fun updateUpdateIntervalMs(interval: Long)
-    // TODO: Tambahkan metode update lain sesuai setting di file .proto kamu
-    suspend fun updateDesiredSpeed(speed: Float) // Contoh metode update lain
-
-    val isRandomPositionEnabledState: StateFlow<Boolean> // <<< TAMBAHKAN INI
-    val accuracyLevelState: StateFlow<Float>             // <<< TAMBAHKAN INI
-    val randomRangeState: StateFlow<Int>                 // <<< TAMBAHKAN INI
-    val updateIntervalMsState: StateFlow<Long>           // <<< TAMBAHKAN INI
+    // Faking Settings StateFlows
+    val isRandomPositionEnabledState: StateFlow<Boolean>
+    val accuracyLevelState: StateFlow<Float>
+    val randomRangeState: StateFlow<Int>
+    val updateIntervalMsState: StateFlow<Long>
     val desiredSpeedState: StateFlow<Float>
 
-    // TODO: Jika ada metode lain di interface (misal delete all), tambahkan di sini.
-}
+    // Token Management Flows
+    val hookedAppTokenFlow: Flow<String>
+    val tokenLastUpdatedFlow: Flow<Long>
+    val hookedPackageNameFlow: Flow<String>
+    val isTokenValidFlow: Flow<Boolean>
 
-// TODO: Implementasi konkret dari SettingsRepository ada di SettingsRepositoryImpl.kt
-//       Pastikan SettingsRepositoryImpl mengimplementasikan SEMUA anggota interface ini.
+    // Token Management StateFlows
+    val hookedAppTokenState: StateFlow<String>
+    val tokenLastUpdatedState: StateFlow<Long>
+    val hookedPackageNameState: StateFlow<String>
+    val isTokenValidState: StateFlow<Boolean>
+
+    // Update Methods
+    /**
+     * Update settings menggunakan transform function
+     * @param transform Function untuk memodifikasi settings
+     * @return AppSettings yang telah diupdate
+     */
+    suspend fun updateSettings(transform: suspend (AppSettings) -> AppSettings): AppSettings
+
+    /**
+     * Update status random position
+     * @param isEnabled Status yang akan diset
+     */
+    suspend fun updateIsRandomPositionEnabled(isEnabled: Boolean)
+
+    /**
+     * Update level akurasi
+     * @param accuracy Nilai akurasi dalam float
+     */
+    suspend fun updateAccuracyLevel(accuracy: Float)
+
+    /**
+     * Update range random position
+     * @param range Range dalam meters
+     */
+    suspend fun updateRandomRange(range: Int)
+
+    /**
+     * Update interval update lokasi
+     * @param interval Interval dalam milliseconds
+     */
+    suspend fun updateUpdateIntervalMs(interval: Long)
+
+    /**
+     * Update kecepatan simulasi
+     * @param speed Kecepatan dalam m/s
+     */
+    suspend fun updateDesiredSpeed(speed: Float)
+
+    /**
+     * Get token info dari aplikasi yang di-hook
+     * @return Triple<token, packageName, lastUpdated>
+     */
+    fun getTokenInfo(): Triple<String, String, Long> = Triple(
+        first = hookedAppTokenState.value,
+        second = hookedPackageNameState.value,
+        third = tokenLastUpdatedState.value
+    )
+
+    /**
+     * Update token dari aplikasi yang di-hook
+     * @param token Token yang diterima dari hook
+     * @param packageName Package name aplikasi yang di-hook
+     */
+    suspend fun updateHookedAppToken(token: String, packageName: String)
+}

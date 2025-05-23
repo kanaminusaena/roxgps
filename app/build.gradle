@@ -40,7 +40,7 @@ android {
 
     defaultConfig {
         applicationId "com.roxgps"
-        minSdk 31
+        minSdk 30
         targetSdk 35
         versionCode gitCommitCount // Otomatis dari jumlah commit
         versionName gitTagName     // Otomatis dari tag Git terbaru

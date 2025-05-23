@@ -1,29 +1,6 @@
 // File: com/roxgps/xposed/LocationHook.kt
 package com.roxgps.xposed // <<< PASTIKAN INI SESUAI DENGAN PACKAGE MODUL XPOSED KAMU <<<
 
-// === Import Library yang Dibutuhkan ===
-// ====================================
-// === Import Interface AIDL dan Data Class AIDL ===
-// PENTING: File .aidl harus sudah DICOPY ke src/main/aidl MODUL Xposed dan dikompilasi!
-
-// === Import Kelas Android yang Dibutuhkan untuk Hooking ===
-// =========================================================
-// Tambahkan import kelas Android lain jika metode yang dihook membutuhkannya (misal LocationRequest, LocationListener, PendingIntent)
-// import android.location.LocationRequest
-// import android.location.LocationListener
-// import android.app.PendingIntent
-// === Import untuk HiddenApiBypass ===
-// PENTING: Pastikan library HiddenApiBypass sudah ditambahkan di build.gradle modul Xposed
-
-// === Import untuk RemoteException ===
-
-// === Import untuk SecurityException ===
-
-// === Import untuk AndroidAppHelper (untuk mendapatkan calling package name dan context) ===
-
-// === Import untuk Random Noise ===
-
-// === Import untuk Thread Management ===
 import android.annotation.SuppressLint
 import android.app.AndroidAppHelper
 import android.content.pm.ApplicationInfo
@@ -99,47 +76,6 @@ import kotlin.repeat
 import kotlin.synchronized
 import kotlin.to
 
-// =====================================================================
-// LocationHook Object - Kode Final Konsolidasi dan Anti-Deteksi
-// Mengambil hook lokasi palsu LENGKAP dari Service AIDL dan menyuntikkannya,
-// dengan implementasi ignorePkg di setiap hook callback dan anti-deteksi.
-// Ditambah hook untuk menyembunyikan keberadaan modul dengan filter yang lebih kuat.
-// Ditambah pencegahan Time Consistency Check.
-// Ditambah bypass getNetworkProvider.
-// Ditambah Provider Consistency dan Random Realistic Satellite Count.
-// Ditambah String Obfuscation (Base64 + XOR).
-// Ditambah System App Check.
-// Ditambah Error Handling yang Lebih Robust.
-// Ditambah Cache Layer untuk efisiensi.
-// Ditambah Thread Safety.
-// Ditambah Integrity Checks dan Anti-Debugging.
-// Ditambah Provider Rotation.
-// Ditambah Network State Masking.
-// Ditambah Random Bearing Changes.
-// Ditambah Refined Location Creation.
-// Ditambah Pattern Detection.
-// Ditambah Stack Trace Check.
-// Ditambah Rate Limiting.
-// Ditambah Input Validation.
-// Ditambah Circuit Breaker for AIDL.
-// Ditambah Failsafe Mechanism.
-// Ditambah Velocity Check.
-// Ditambah Altitude Consistency.
-// Ditambah Realistic Satellite Data.
-// Ditambah System Property Spoofing.
-// Ditambah Random Sleep.
-// Ditambah Thread Management for AIDL Calls.
-// Ditambah Magnetic Field Simulation.
-// Ditambah Network State Consistency.
-// Ditambah Sensor Integration.
-// Ditambah Device Motion Pattern.
-// Ditambah Enhanced Failsafe Mechanism.
-// Ditambah Location Request Interceptor.
-// Ditambah Enhanced Provider Protection.
-// Ditambah GMS Location Protection.
-// Ditambah Location Data Validation.
-// Ditambah Passive Provider Protection.
-// =====================================================================
 object LocationHook {
 
     // === ENHANCEMENT: Tambahkan Salt/Key untuk XOR Encryption ===
