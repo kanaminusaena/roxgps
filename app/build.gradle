@@ -1,39 +1,22 @@
-// File: app/build.gradle (atau modul build.gradle lainnya)
 
 plugins {
     // --- Plugin Android dan Kotlin (HARUS di atas plugin Kotlin lain yang bergantung pada 'android') ---
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android' // Plugin Kotlin untuk Android
-
     // --- Plugin Lain ---
     id 'com.google.android.libraries.mapsplatform.secrets-gradle-plugin'
     id 'com.google.dagger.hilt.android' // ID plugin Hilt yang baru
     id 'org.jetbrains.kotlin.plugin.parcelize' // <<< ID plugin Parcelize yang BENAR
     id 'com.google.devtools.ksp' // KSP (Kotlin Symbol Processing) - Biasanya setelah plugin Kotlin
-    id 'org.jetbrains.kotlin.plugin.compose' // Plugin Kotlin untuk Compose
-    id 'com.google.protobuf' version '0.9.4' // <<< PASTIKAN PLUGIN ID PROTOBUF DI SINI dengan versi plugin Gradle Protobuf yang compatible
+    id 'com.google.protobuf' // <<< PASTIKAN PLUGIN ID PROTOBUF DI SINI dengan versi plugin Gradle Protobuf yang compatible
+    id 'org.jetbrains.kotlin.plugin.compose'
 
-    // --- HAPUS PLUGIN ID LAMA INI ---
-    // id 'kotlin-parcelize' // <<< HAPUS BARIS INI! Ini plugin ID yang LAMA dan deprecated!
-    // 'org.jetbrains.kotlin.plugin.parcelize' di atas sudah menggantikannya.
-
-    // ... plugin lain jika ada ...
 }
 
 // Pastikan Anda mengatur environment variables GIT_DESCRIBE dan GIT_REV_COUNT
 // Sebelum menjalankan build, misalnya di command prompt atau melalui CI:
 //   set GIT_DESCRIBE=git_tag_here
 //   set GIT_REV_COUNT=git_commit_count_here
-
-def gitTagName = System.getenv("GIT_DESCRIBE") ?: "1.0-dev"
-def gitCommitCountStr = System.getenv("GIT_REV_COUNT") ?: "1"
-def gitCommitCount = 1
-try {
-    gitCommitCount = gitCommitCountStr.toInteger()
-} catch (Exception ignored) {
-    logger.warn("Gagal mengkonversi jumlah commit (gitCommitCount): ${gitCommitCountStr}. Menggunakan default 1.")
-    gitCommitCount = 1
-}
 
 android {
     compileSdk 35
@@ -42,14 +25,23 @@ android {
         applicationId "com.roxgps"
         minSdk 30
         targetSdk 35
-        versionCode gitCommitCount // Otomatis dari jumlah commit
-        versionName gitTagName     // Otomatis dari tag Git terbaru
-        buildConfigField "String", "TAG_NAME", "\"${gitTagName}\"" // Menggunakan Git tag
-        buildConfigField "int", "VERSION_CODE", "${gitCommitCount}" // Menggunakan Git commit count
+        /*versionCode gitCommitCount // Otomatis dari jumlah commit
+        versionName gitTagName     // Otomatis dari tag Git terbaru*/
+        
+        // Build Config Fields
+        
         signingConfig signingConfigs.debug
-        applicationIdSuffix defaultApplicationIdSuffix
-        versionNameSuffix defaultVersionNameSuffix
+        //applicationIdSuffix defaultApplicationIdSuffix
+        //versionNameSuffix defaultVersionNameSuffix
         multiDexEnabled true
+
+        // Tambahan untuk debugging
+        buildConfigField "boolean", "DEBUG_BUILD", "true"
+        buildConfigField "String", "BUILD_TYPE", "\"development\""
+        buildConfigField "String", "APP_VERSION", "\"development-build\""
+	    // Build Config Fields dengan fallback values
+        buildConfigField "String", "BUILD_TIMESTAMP", "\"${System.getenv('BUILD_TIMESTAMP') ?: '2025-05-24 11:23:03'}\""
+        buildConfigField "String", "BUILD_USER", "\"${System.getenv('GITHUB_ACTOR') ?: 'kanaminusaena'}\""
     }
 
     splits {
@@ -81,29 +73,51 @@ android {
 
     signingConfigs {
         release {
-            def keystorePropertiesFile = rootProject.file("local.properties")
-            def keystoreProperties = new Properties()
-            keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+            // Coba load dari environment variables dulu
+            if (System.getenv("KEYSTORE_PASSWORD") != null) {
+                storeFile file("rocx.jks")
+                storePassword System.getenv("KEYSTORE_PASSWORD")
+                keyAlias System.getenv("KEY_ALIAS")
+                keyPassword System.getenv("KEY_PASSWORD")
+            }
+            // Jika tidak ada env vars, coba load dari local.properties
+            else {
+                try {
+                    def keystorePropertiesFile = rootProject.file("local.properties")
+                    def keystoreProperties = new Properties()
+                    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 
-            keyAlias keystoreProperties['keyAlias']
-            keyPassword keystoreProperties['keyPassword']
-            storeFile file(keystoreProperties['storeFile'])
-            storePassword keystoreProperties['storePassword']
-
-            enableV1Signing true
-            enableV2Signing true
-            enableV3Signing true // Hanya jika targetSdk >= 28
+                    storeFile file(keystoreProperties['storeFile'])
+                    storePassword keystoreProperties['storePassword']
+                    keyAlias keystoreProperties['keyAlias']
+                    keyPassword keystoreProperties['keyPassword']
+                } catch (Exception e) {
+                    logger.warn('Signing config tidak ditemukan. Release build akan menggunakan debug signing.')
+                    // Tidak perlu throw exception, biarkan build menggunakan debug signing
+                }
+	    }
         }
         debug {
-            def keystorePropertiesFile = rootProject.file("local.properties")
-            def keystoreProperties = new Properties()
-            keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+            try {
+                def keystorePropertiesFile = rootProject.file("local.properties")
+                def keystoreProperties = new Properties()
+                keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 
-            keyAlias keystoreProperties['keyAlias']
-            keyPassword keystoreProperties['keyPassword']
-            storeFile file(keystoreProperties['storeFile'])
-            storePassword keystoreProperties['storePassword']
-        }
+                if (keystoreProperties['debug.storeFile']) {
+                    storeFile file(keystoreProperties['debug.storeFile'])
+                    storePassword keystoreProperties['debug.storePassword']
+                    keyAlias keystoreProperties['debug.keyAlias']
+                    keyPassword keystoreProperties['debug.keyPassword']
+                }
+            } catch (Exception e) {
+                // Gunakan default debug keystore
+                storeFile file('debug.keystore')
+                storePassword 'android'
+                keyAlias 'androiddebugkey'
+                keyPassword 'android'
+            }
+        
+	}
     }
 
     buildTypes {
@@ -113,11 +127,23 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             signingConfig signingConfigs.release
             crunchPngs true
+		// Gunakan release signing jika tersedia, jika tidak gunakan debug
+            signingConfig signingConfigs.release.storeFile != null ? 
+                signingConfigs.release : signingConfigs.debug
         }
         debug {
             minifyEnabled false
             signingConfig signingConfigs.debug
             crunchPngs false
+	        shrinkResources false
+            debuggable true
+            applicationIdSuffix ".debug"
+            versionNameSuffix "-DEBUG"
+            buildConfigField "boolean", "DEBUG_MODE", "true"
+            buildConfigField "String", "BUILD_TYPE", "\"debug\""
+            buildConfigField "String", "BUILD_TIMESTAMP", "\"${System.env.BUILD_TIMESTAMP}\""
+            buildConfigField "String", "BUILD_USER", "\"${System.env.GITHUB_ACTOR}\""
+	    
         }
     }
 
@@ -132,6 +158,10 @@ android {
                 '-Xjvm-default=all',
 
         ]
+    }
+
+    composeOptions {
+        //kotlinCompilerExtensionVersion = "1.5.15"
     }
 
     buildFeatures {
@@ -234,6 +264,12 @@ protobuf {
             }
         }
     }
+}
+
+composeCompiler {
+    includeSourceInformation = true
+    reportsDestination = layout.buildDirectory.dir("compose_compiler")
+    stabilityConfigurationFile = rootProject.layout.projectDirectory.file("stability_config.conf")
 }
 
 dependencies {

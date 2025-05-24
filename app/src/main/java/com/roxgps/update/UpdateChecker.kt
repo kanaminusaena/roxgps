@@ -1,5 +1,6 @@
 package com.roxgps.update
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Parcelable
 import com.roxgps.BuildConfig
@@ -78,8 +79,9 @@ class UpdateChecker @Inject constructor(
         return null
     }
 
-    fun clearCachedDownloads(context: Context){
-        File(context.externalCacheDir, "updates").deleteRecursively()
+    @SuppressLint("ObsoleteSdkInt")
+    fun clearCachedDownloads(context: Context) {
+        context.externalCacheDir?.let { File(it, "updates").deleteRecursively() }
     }
 
     @Parcelize
