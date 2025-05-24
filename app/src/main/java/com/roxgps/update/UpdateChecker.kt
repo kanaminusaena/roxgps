@@ -25,9 +25,10 @@ class UpdateChecker @Inject constructor(
         withContext(Dispatchers.IO){
             getReleaseList()?.let { gitHubReleaseResponse ->
                 val currentTag = gitHubReleaseResponse.tagName
+                val currentVersion = BuildConfig.VERSION_NAME  // Gunakan VERSION_NAME yang sudah ada
 
                 val isUpdateCheckDisabled = prefManager.isUpdateDisabled.value // <<< Ambil nilai dari StateFlow PrefManager
-                if (currentTag != null && (currentTag != "v" + BuildConfig.TAG_NAME && isUpdateCheckDisabled)) {
+                if (currentTag != null && (currentTag != "v$currentVersion" && isUpdateCheckDisabled)) {
                     //New update available!
                     val asset =
                         gitHubReleaseResponse.assets?.firstOrNull { it.name?.endsWith(".apk") == true }

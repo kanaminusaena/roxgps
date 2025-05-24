@@ -1,4 +1,3 @@
-
 plugins {
     // --- Plugin Android dan Kotlin (HARUS di atas plugin Kotlin lain yang bergantung pada 'android') ---
     id 'com.android.application'
@@ -6,42 +5,149 @@ plugins {
     // --- Plugin Lain ---
     id 'com.google.android.libraries.mapsplatform.secrets-gradle-plugin'
     id 'com.google.dagger.hilt.android' // ID plugin Hilt yang baru
-    id 'org.jetbrains.kotlin.plugin.parcelize' // <<< ID plugin Parcelize yang BENAR
+    id 'org.jetbrains.kotlin.plugin.parcelize'
     id 'com.google.devtools.ksp' // KSP (Kotlin Symbol Processing) - Biasanya setelah plugin Kotlin
-    id 'com.google.protobuf' // <<< PASTIKAN PLUGIN ID PROTOBUF DI SINI dengan versi plugin Gradle Protobuf yang compatible
+    id 'com.google.protobuf'
     id 'org.jetbrains.kotlin.plugin.compose'
-
 }
 
-// Pastikan Anda mengatur environment variables GIT_DESCRIBE dan GIT_REV_COUNT
-// Sebelum menjalankan build, misalnya di command prompt atau melalui CI:
-//   set GIT_DESCRIBE=git_tag_here
-//   set GIT_REV_COUNT=git_commit_count_here
+// --- Helper functions untuk versioning dan build info (Di level teratas file) ---
+static def getCurrentTimestamp() {
+    return new Date().format("dd-MM-yyyy HH:mm:ss", TimeZone.getTimeZone("UTC"))
+}
+
+static def getCurrentUser() {
+    return System.getenv('GITHUB_ACTOR') ?: System.getProperty('user.name') ?: 'kanaminusaena'
+}
+
+def getVersionFromGitTag() {
+    try {
+        def process = new ProcessBuilder("git", "describe", "--tags", "--abbrev=0")
+                .directory(project.rootDir)
+                .redirectErrorStream(true)
+                .start()
+
+        def output = new StringBuilder()
+        process.inputStream.eachLine { output.append(it) }
+
+        def exitCode = process.waitFor()
+        if (exitCode == 0 && output.toString().trim()) {
+            def tag = output.toString().trim()
+            // Mengembalikan tag tanpa 'v' jika ada, jika tidak, mengembalikan '1.0'
+            return tag.startsWith('v') ? tag.substring(1) : "1.0"
+        }
+    } catch (Exception e) {
+        logger.warn("Failed to get git tag: ${e.message}")
+    }
+    return "1.0" // default version jika gagal
+}
+
+// Fungsi untuk mendapatkan tag git terbaru (bisa berbeda dari getVersionFromGitTag jika ingin format berbeda)
+def getLatestGitTagRaw() {
+    try {
+        def process = new ProcessBuilder("git", "describe", "--tags", "--abbrev=0")
+                .directory(project.rootDir)
+                .redirectErrorStream(true)
+                .start()
+
+        def output = new StringBuilder()
+        process.inputStream.eachLine { output.append(it) }
+
+        def exitCode = process.waitFor()
+        if (exitCode == 0 && output.toString().trim()) {
+            return output.toString().trim() // Mengembalikan tag lengkap, misal "v1.2.3"
+        }
+    } catch (Exception e) {
+        logger.warn("Failed to get latest raw git tag: ${e.message}")
+    }
+    return null // Mengembalikan null jika gagal
+}
+
+
+def getBuildNumber() {
+    // Cek CI/CD environment variables
+    def ciBuildNum = System.getenv('GITHUB_RUN_NUMBER') ?: System.getenv('CI_PIPELINE_IID')
+    if (ciBuildNum) {
+        return ciBuildNum as int
+    }
+
+    // Untuk build lokal, gunakan build number dari build-number.txt
+    def buildFile = file('build-number.txt')
+    def buildNumber = 1
+
+    if (buildFile.exists()) {
+        buildNumber = buildFile.text.trim() as int
+        buildNumber++
+    }
+
+    // Simpan build number baru
+    // Perhatikan: ini akan mengubah file setiap kali build lokal.
+    // Jika tidak ingin mengubah file saat setiap build lokal, hapus baris ini
+    buildFile.text = buildNumber.toString()
+    return buildNumber
+}
+
+def updateVersionInfo(String versionStringForInfo, String buildNumberForInfo) {
+    def timestamp = getCurrentTimestamp()
+    def user = getCurrentUser()
+    def isCI = System.getenv('CI') != null
+    def buildType = isCI ? "CI/CD" : "Local"
+
+    def versionInfo = """Version: ${versionStringForInfo}
+Build Number: ${buildNumberForInfo}
+Build Type: ${buildType}
+Build Date: ${timestamp}
+Built By: ${user}
+"""
+
+    // Hanya update version.txt jika bukan CI/CD atau jika BUILD_SUCCESS diatur
+    // HATI-HATI: System.getenv('BUILD_SUCCESS') mungkin tidak selalu diatur oleh semua CI/CD.
+    if (!isCI || System.getenv('BUILD_SUCCESS') == 'true') {
+        file('version.txt').text = versionInfo
+    }
+
+    return [
+            version: versionStringForInfo,
+            buildNumber: buildNumberForInfo,
+            timestamp: timestamp,
+            user: user,
+            buildType: buildType
+    ]
+}
+
+// --- Variabel Global untuk Versioning (dihitung SEKALI di awal) ---
+def baseAppVersion = getVersionFromGitTag() // Contoh: "1.2.3" atau "1.0"
+def globalBuildNumber = getBuildNumber() // Contoh: 123
+def globalBuildInfo = updateVersionInfo("v${baseAppVersion}", globalBuildNumber.toString())
+
 
 android {
     compileSdk 35
+    namespace "com.roxgps" // Namespace yang benar ada di sini
+    // buildToolsVersion '35.0.0' // Tidak perlu lagi didefinisikan secara eksplisit
 
     defaultConfig {
         applicationId "com.roxgps"
         minSdk 30
         targetSdk 35
-        /*versionCode gitCommitCount // Otomatis dari jumlah commit
-        versionName gitTagName     // Otomatis dari tag Git terbaru*/
-        
-        // Build Config Fields
-        
-        signingConfig signingConfigs.debug
-        //applicationIdSuffix defaultApplicationIdSuffix
-        //versionNameSuffix defaultVersionNameSuffix
-        multiDexEnabled true
 
-        // Tambahan untuk debugging
-        buildConfigField "boolean", "DEBUG_BUILD", "true"
-        buildConfigField "String", "BUILD_TYPE", "\"development\""
-        buildConfigField "String", "APP_VERSION", "\"development-build\""
-	    // Build Config Fields dengan fallback values
-        buildConfigField "String", "BUILD_TIMESTAMP", "\"${System.getenv('BUILD_TIMESTAMP') ?: '2025-05-24 11:23:03'}\""
-        buildConfigField "String", "BUILD_USER", "\"${System.getenv('GITHUB_ACTOR') ?: 'kanaminusaena'}\""
+        // --- PENTING: versionName dan versionCode DIDEFINISIKAN DI SINI ---
+        // Ini adalah nilai default yang akan digunakan kecuali ditimpa oleh flavor.
+        // buildTypes tidak menimpa versionName/versionCode, tetapi bisa menambahkan suffix.
+        versionCode globalBuildNumber // Menggunakan build number yang sudah dihitung secara global
+        versionName "v${baseAppVersion}" // Menggunakan versi dari git tag sebagai default
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        // BuildConfigFields yang berlaku umum untuk semua build (default)
+        buildConfigField "String", "APP_VERSION", "\"${baseAppVersion}\"" // Nilai default untuk APP_VERSION
+        buildConfigField "String", "TAG_NAME", "\"v${baseAppVersion}\"" // Nilai default untuk TAG_NAME
+        buildConfigField "String", "BUILD_INFO", "\"Build #${globalBuildInfo.buildNumber} (${globalBuildInfo.buildType})\""
+        buildConfigField "String", "BUILD_TIMESTAMP", "\"${globalBuildInfo.timestamp}\""
+        buildConfigField "String", "BUILD_USER", "\"${globalBuildInfo.user}\""
+        buildConfigField "String", "BUILD_NUMBER", "\"${globalBuildInfo.buildNumber}\""
+        buildConfigField "String", "BUILD_TYPE", "\"${globalBuildInfo.buildType}\""
+        buildConfigField "boolean", "DEBUG_BUILD", "false" // Defaultnya false, akan di-override di debug
     }
 
     splits {
@@ -53,35 +159,27 @@ android {
             universalApk false
         }
     }
-	
-	lintOptions {
+
+    lintOptions {
         checkReleaseBuilds true
         abortOnError true
         warningsAsErrors true
-        // Tampilkan semua warning
-        quiet false
+        quiet false // Tampilkan semua warning
     }
 
     dependenciesInfo {
         includeInApk = false
         includeInBundle = false
     }
-    // Specify Gradle home explicitly
-/*gradle.projectsEvaluated {
-    System.setProperty("gradle.user.home", "G:\\PEMROGRAMAN\\ANDROID\\Gradle")
-}*/
 
     signingConfigs {
         release {
-            // Coba load dari environment variables dulu
             if (System.getenv("KEYSTORE_PASSWORD") != null) {
                 storeFile file("rocx.jks")
                 storePassword System.getenv("KEYSTORE_PASSWORD")
                 keyAlias System.getenv("KEY_ALIAS")
                 keyPassword System.getenv("KEY_PASSWORD")
-            }
-            // Jika tidak ada env vars, coba load dari local.properties
-            else {
+            } else {
                 try {
                     def keystorePropertiesFile = rootProject.file("local.properties")
                     def keystoreProperties = new Properties()
@@ -91,11 +189,16 @@ android {
                     storePassword keystoreProperties['storePassword']
                     keyAlias keystoreProperties['keyAlias']
                     keyPassword keystoreProperties['keyPassword']
-                } catch (Exception e) {
-                    logger.warn('Signing config tidak ditemukan. Release build akan menggunakan debug signing.')
-                    // Tidak perlu throw exception, biarkan build menggunakan debug signing
+                } catch (Exception ignored) {
+                    // Log warning jika tidak ditemukan, tapi jangan sampai build gagal
+                    logger.warn('Release signing config tidak ditemukan dari environment variables atau local.properties. Release build akan menggunakan debug signing default.')
+                    // Fallback to debug signing for release if no specific release signing found
+                    storeFile file('debug.keystore')
+                    storePassword 'android'
+                    keyAlias 'androiddebugkey'
+                    keyPassword 'android'
                 }
-	    }
+            }
         }
         debug {
             try {
@@ -108,42 +211,72 @@ android {
                     storePassword keystoreProperties['debug.storePassword']
                     keyAlias keystoreProperties['debug.keyAlias']
                     keyPassword keystoreProperties['debug.keyPassword']
+                } else {
+                    // Fallback to default debug keystore if properties not found
+                    storeFile file('debug.keystore')
+                    storePassword 'android'
+                    keyAlias 'androiddebugkey'
+                    keyPassword 'android'
                 }
-            } catch (Exception e) {
-                // Gunakan default debug keystore
+            } catch (Exception ignored) {
+                // Gunakan default debug keystore jika local.properties tidak ada
                 storeFile file('debug.keystore')
                 storePassword 'android'
                 keyAlias 'androiddebugkey'
                 keyPassword 'android'
             }
-        
-	}
+        }
     }
 
     buildTypes {
         release {
+            // Nilai `version` dan `buildInfo` untuk BuildConfig khusus RELEASE
+            // Jika Anda ingin ini persis sama dengan defaultConfig, Anda bisa menghapusnya
+            // dan bergantung pada nilai defaultConfig.
+            // Namun, jika Anda ingin memisahkan logika pengambilan versi untuk release, biarkan.
+            def releaseSpecificVersion = getVersionFromGitTag() ?: "1.0" // Atau langsung pakai baseAppVersion
+            def releaseBuildInfo = updateVersionInfo("v${releaseSpecificVersion}", globalBuildNumber.toString())
+
+            // BuildConfigField spesifik untuk release (menimpa default jika didefinisikan di defaultConfig)
+            buildConfigField "String", "APP_VERSION", "\"${releaseSpecificVersion}\""
+            buildConfigField "String", "TAG_NAME", "\"v${releaseSpecificVersion}\""
+            buildConfigField "String", "BUILD_INFO", "\"Build #${releaseBuildInfo.buildNumber} (${releaseBuildInfo.buildType})\""
+            buildConfigField "boolean", "DEBUG_BUILD", "false" // Ini benar untuk release
+
+            // HAPUS BARIS INI: versionName = version (INI PENYEBAB ERROR)
+
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+
+            // Link signing config ke release build type
             signingConfig signingConfigs.release
-            crunchPngs true
-		// Gunakan release signing jika tersedia, jika tidak gunakan debug
-            signingConfig signingConfigs.release.storeFile != null ? 
-                signingConfigs.release : signingConfigs.debug
         }
+
         debug {
-            minifyEnabled false
+            // Nilai `version` dan `buildInfo` untuk BuildConfig khusus DEBUG
+            // `getLatestGitTagRaw()` mungkin mengembalikan "v1.2.3", lalu kita hilangkan 'v'
+            def debugBaseVersion = getLatestGitTagRaw()
+            def debugAppVersion = debugBaseVersion?.startsWith('v') ? debugBaseVersion.substring(1) : (debugBaseVersion ?: "1.0")
+
+            def debugBuildInfo = updateVersionInfo("v${debugAppVersion}-DEBUG", globalBuildNumber.toString())
+
+            // BuildConfigField spesifik untuk debug (menimpa default)
+            buildConfigField "String", "APP_VERSION", "\"${debugAppVersion}-dev\""
+            buildConfigField "String", "TAG_NAME", "\"development\""
+            buildConfigField "String", "BUILD_INFO", "\"Build #${debugBuildInfo.buildNumber} (${debugBuildInfo.buildType})\""
+            buildConfigField "boolean", "DEBUG_BUILD", "true" // Ini benar untuk debug
+
+            // HAPUS BARIS INI: versionName = "${version}-DEBUG" (INI PENYEBAB ERROR)
+
+            // --- PENTING: Gunakan versionNameSuffix untuk debug builds ---
+            // Ini akan menambahkan "-debug" ke versionName yang didefinisikan di defaultConfig
+            versionNameSuffix "-debug"
+
+            applicationIdSuffix ".debug" // Ini sudah benar
+
+            // Link signing config ke debug build type
             signingConfig signingConfigs.debug
-            crunchPngs false
-	        shrinkResources false
-            debuggable true
-            applicationIdSuffix ".debug"
-            versionNameSuffix "-DEBUG"
-            buildConfigField "boolean", "DEBUG_MODE", "true"
-            buildConfigField "String", "BUILD_TYPE", "\"debug\""
-            buildConfigField "String", "BUILD_TIMESTAMP", "\"${System.env.BUILD_TIMESTAMP}\""
-            buildConfigField "String", "BUILD_USER", "\"${System.env.GITHUB_ACTOR}\""
-	    
         }
     }
 
@@ -156,12 +289,11 @@ android {
         jvmTarget = "17"
         freeCompilerArgs += [
                 '-Xjvm-default=all',
-
         ]
     }
 
     composeOptions {
-        //kotlinCompilerExtensionVersion = "1.5.15"
+        //kotlinCompilerExtensionVersion = "1.5.15" // Pastikan versi ini kompatibel dengan Compose BOM dan Kotlin
     }
 
     buildFeatures {
@@ -176,19 +308,36 @@ android {
     productFlavors {
         foss {
             dimension "version"
-            //applicationIdSuffix ".foss"
-            versionNameSuffix "-foss"
+            versionNameSuffix "-foss" // Akan ditambahkan ke versionName dari defaultConfig/buildTypeSuffix
+            buildConfigField "String", "FLAVOR_TYPE", "\"foss\""
         }
+
         full {
             dimension "version"
-            isDefault true
-            //applicationIdSuffix ".full"
-            versionNameSuffix "-full"
+            isDefault true // Jadikan ini default jika tidak ada flavor yang dipilih secara eksplisit
+            versionNameSuffix "-full" // Akan ditambahkan ke versionName dari defaultConfig/buildTypeSuffix
+            buildConfigField "String", "FLAVOR_TYPE", "\"full\""
         }
     }
 
-    // === KONFIGURASI sourceSets DI DALAM android {} ===
-    // Ini memberitahu Android Gradle Plugin di mana mencari file sumber (.java, .kt, .proto, .aidl)
+    // Menggunakan afterEvaluate untuk memastikan semua variant sudah dikonfigurasi
+    // dan mendapatkan buildNumber dari globalBuildInfo (bukan memanggil getBuildNumber lagi)
+    applicationVariants.configureEach { variant ->
+        // Hanya terapkan untuk build release (atau bisa juga untuk semua jika mau)
+        if (variant.buildType.name == "release") {
+            variant.outputs.configureEach { output ->
+                def flavor = variant.flavorName
+                def versionName = variant.versionName // Ambil versionName yang sudah final dari variant
+                def finalBuildNumber = globalBuildNumber // Gunakan build number global yang sudah dihitung
+
+                // Untuk debug, versionName akan memiliki suffix -debug
+                // Untuk flavor, versionName akan memiliki suffix -foss/-full
+                outputFileName = "RoxGPS-${versionName}-${flavor}-build${finalBuildNumber}.apk"
+            }
+        }
+    }
+
+    // --- KONFIGURASI sourceSets DI DALAM android {} ---
     sourceSets {
         named("main") {
             manifest.srcFile("src/main/AndroidManifest.xml")
@@ -207,7 +356,6 @@ android {
                 srcDir("src/main/res")
             }
         }
-        // Product flavor: full
         named("full") {
             java {
                 srcDir("src/full/java")
@@ -216,9 +364,7 @@ android {
                 srcDir("src/full/res")
             }
         }
-
-        // Product flavor: foss (fixed typo in path)
-        named("foss") {
+        named("foss") { // Pastikan path ini benar (seperti yang sudah Anda perbaiki)
             java {
                 srcDir("src/foss/java")
             }
@@ -227,165 +373,136 @@ android {
             }
         }
     }
-
-    namespace = "com.roxgps"
-    buildToolsVersion '35.0.0'
 }
 
+// --- Konfigurasi Protobuf (HARUS di luar blok android {}) ---
 protobuf {
     protoc {
-        artifact = 'com.google.protobuf:protoc:4.31.0'
+        artifact = 'com.google.protobuf:protoc:4.31.0' // Versi terbaru saat ini
     }
-
-    // Konfigurasi plugins
     plugins {
-        // Plugin untuk Kotlin
         kotlin {
             artifact = "io.grpc:protoc-gen-grpc-kotlin:1.4.3:jdk8@jar"
         }
-        // Plugin untuk Java Lite
         javalite {
             artifact = "com.google.protobuf:protoc-gen-javalite:3.0.0"
         }
     }
-
     generateProtoTasks {
         all().forEach { task ->
             task.group = "Proto"
             task.description = "Generates Proto source files for ${task.name.replace('generate', '').replace('Proto', '')}"
-
             task.builtins {
-                kotlin {
-                    option 'lite'
-                }
-                java {
-                    option 'lite' // Penting untuk Android
-                }
+                kotlin { option 'lite' }
+                java { option 'lite' }
             }
         }
     }
 }
 
+// --- Konfigurasi Compose Compiler (HARUS di luar blok android {}) ---
 composeCompiler {
     includeSourceInformation = true
     reportsDestination = layout.buildDirectory.dir("compose_compiler")
     stabilityConfigurationFile = rootProject.layout.projectDirectory.file("stability_config.conf")
 }
 
+// --- Dependensi ---
 dependencies {
     // --- Dependensi Umum (Main Source Set) ---
-
-    // AndroidX Core
-    implementation 'androidx.core:core-ktx:1.16.0' // Versi kamu
-
-    // AndroidX AppCompat & Activity
-    implementation 'androidx.appcompat:appcompat:1.7.0' // Versi kamu
-    implementation 'androidx.activity:activity-ktx:1.10.1' // Versi kamu
-    implementation 'androidx.fragment:fragment-ktx:1.8.7' // Versi kamu
-    implementation 'androidx.preference:preference-ktx:1.2.1' // Versi kamu
-
-    // Layouts & Views
-    implementation 'androidx.constraintlayout:constraintlayout:2.2.1' // Versi kamu
-    implementation 'androidx.drawerlayout:drawerlayout:1.2.0' // Versi kamu
-    implementation 'com.google.android.material:material:1.12.0' // Versi kamu (dihapus duplikatnya)
+    implementation 'androidx.core:core-ktx:1.16.0'
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'androidx.activity:activity-ktx:1.10.1'
+    implementation 'androidx.fragment:fragment-ktx:1.8.7'
+    implementation 'androidx.preference:preference-ktx:1.2.1'
+    implementation 'androidx.constraintlayout:constraintlayout:2.2.1'
+    implementation 'androidx.drawerlayout:drawerlayout:1.2.0'
+    implementation 'com.google.android.material:material:1.12.0'
 
     // Room Database (menggunakan KSP)
-    implementation 'androidx.room:room-runtime:2.7.1' // Versi kamu
-    implementation 'androidx.room:room-ktx:2.7.1' // Versi kamu
-    ksp 'androidx.room:room-compiler:2.7.1' // Versi kamu (KSP)
+    implementation 'androidx.room:room-runtime:2.7.1'
+    implementation 'androidx.room:room-ktx:2.7.1'
+    ksp 'androidx.room:room-compiler:2.7.1'
 
     // Lifecycle (KTX)
-    implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.9.0' // Versi kamu (dihapus duplikatnya)
-    implementation 'androidx.lifecycle:lifecycle-livedata-ktx:2.9.0' // Versi kamu
-    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.9.0' // Versi kamu (dihapus duplikatnya)
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.9.0'
+    implementation 'androidx.lifecycle:lifecycle-livedata-ktx:2.9.0'
+    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.9.0'
 
-    // Coroutines (KotlinX)
-    // Gunakan versi stabil terbaru, misal 1.8.2 (cek Maven Central untuk yang paling baru)
-    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2' // <<< UPDATE VERSI INI
-    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2' // <<< UPDATE VERSI INI
+    // Coroutines (KotlinX) - Perbarui ke versi stabil terbaru
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1' // Versi stabil terbaru
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1' // Versi stabil terbaru
 
-    // Hilt (menggunakan KSP)
-    // Versi hilt-android dan hilt-compiler HARUS SAMA
-    implementation 'com.google.dagger:hilt-android:2.56.2' // <<< UPDATE VERSI INI (sesuaikan dengan compiler lo)
-    ksp 'com.google.dagger:hilt-compiler:2.56.2' // Versi kamu
-    //ksp 'androidx.hilt:hilt-compiler:1.2.0' // Versi kamu
+    // Hilt (menggunakan KSP) - Pastikan versi hilt-android dan hilt-compiler SAMA
+    implementation 'com.google.dagger:hilt-android:2.51.1' // Versi stabil
+    ksp 'com.google.dagger:hilt-compiler:2.51.1'
 
     // Logging
-    implementation 'com.jakewharton.timber:timber:5.0.1' // Versi kamu
+    implementation 'com.jakewharton.timber:timber:5.0.1'
 
     // Network (Retrofit & Gson)
-    implementation 'com.squareup.retrofit2:retrofit:2.11.0' // Versi kamu
-    implementation 'com.squareup.retrofit2:converter-gson:2.11.0' // Versi kamu
+    implementation 'com.squareup.retrofit2:retrofit:2.11.0'
+    implementation 'com.squareup.retrofit2:converter-gson:2.11.0'
 
     // Virtual Joystick
-    implementation 'com.github.lukkass222:virtual-joystick-android:1.13.5' // Versi kamu
+    implementation 'com.github.lukkass222:virtual-joystick-android:1.13.5'
 
     // --- Dependensi Protocol Buffers & DataStore ---
     // Dependensi DataStore (Gunakan VERSI YANG KONSISTEN)
-    // Versi stabil terbaru adalah 1.0.0. Jika ingin yang lebih baru (pre-release),
-    // gunakan versi yang sama untuk core, preferences, dan proto.
-    def datastore_version = "1.1.1" // <<< GANTI VERSI INI ke 1.1.1 (stabil terbaru)
-    implementation "androidx.datastore:datastore-core:$datastore_version" // Core DataStore
-    implementation "androidx.datastore:datastore-preferences:$datastore_version" // Jika kamu butuh Preference DataStore juga
-    implementation "androidx.datastore:datastore:$datastore_version" // DataStore Proto
+    def datastore_version = "1.1.1" // Versi stabil terbaru
+    implementation "androidx.datastore:datastore-core:$datastore_version"
+    implementation "androidx.datastore:datastore-preferences:$datastore_version"
+    implementation "androidx.datastore:datastore:$datastore_version"
     // Dependensi Runtime Protocol Buffer (Versi cocok dengan protoc di blok protobuf)
-    // Kamu pakai protoc 4.30.2, runtime 4.30.2 sudah pas.
     implementation 'com.google.protobuf:protobuf-kotlin-lite:4.31.0'
-    //implementation 'com.google.protobuf:protobuf-javalite:4.31.0'
 
     // --- Dependensi Xposed (Compile-Only) ---
-    compileOnly 'de.robv.android.xposed:api:82' // Versi kamu
-    compileOnly 'com.github.deltazefiro:XposedBridge:main-SNAPSHOT' // Versi kamu
-    implementation 'org.lsposed.hiddenapibypass:hiddenapibypass:6.1' // Versi kamu
-    debugImplementation 'androidx.compose.ui:ui-test-manifest' // Versi kamu
-
+    compileOnly 'de.robv.android.xposed:api:82'
+    compileOnly 'com.github.deltazefiro:XposedBridge:main-SNAPSHOT'
+    implementation 'org.lsposed.hiddenapibypass:hiddenapibypass:6.1'
+    debugImplementation 'androidx.compose.ui:ui-test-manifest' // Ini harusnya di androidTestImplementation
 
     // --- Dependensi Flavor (Foss) ---
-    fossImplementation 'org.microg.gms:play-services-location:0.3.6.244735' // Versi kamu
-    fossImplementation 'org.maplibre.gl:android-sdk:11.8.8' // Versi kamu
-    fossImplementation 'org.maplibre.gl:android-plugin-annotation-v9:3.0.2' // Or the latest version
+    fossImplementation 'org.microg.gms:play-services-location:0.3.6.244735'
+    fossImplementation 'org.maplibre.gl:android-sdk:11.8.8'
+    fossImplementation 'org.maplibre.gl:android-plugin-annotation-v9:3.0.2'
 
     // --- Dependensi Flavor (Full) ---
-    fullImplementation 'com.google.android.gms:play-services-location:21.3.0' // Versi kamu
-    fullImplementation 'com.google.android.gms:play-services-maps:19.2.0' // Versi kamu
-
+    fullImplementation 'com.google.android.gms:play-services-location:21.3.0'
+    fullImplementation 'com.google.android.gms:play-services-maps:19.2.0'
 
     // --- Dependensi Compose ---
     // Gunakan BOM untuk mengatur versi Compose
-    // Gunakan versi STABIL terbaru (cek https://developer.android.com/jetpack/compose/bom)
-    // Versi 2025.05.00 terlihat seperti BOM untuk bulan ini. Gunakan itu jika kamu memang sengaja.
-    // Jika ingin lebih aman, gunakan BOM dari bulan sebelumnya atau yang rilis sudah lama.
-    // Let's use 2025.05.00 as you listed it.
-    implementation platform('androidx.compose:compose-bom:2025.05.01') // <<< Pastikan versi BOM ini ada atau ganti ke versi stabil
+    implementation platform('androidx.compose:compose-bom:2025.05.01') // Pastikan versi ini stabil dan ada
 
     // Implementasi Compose (menggunakan BOM di atas)
-    implementation 'androidx.compose.ui:ui' // UI dasar (menggunakan versi dari BOM)
-    implementation 'androidx.compose.ui:ui-graphics' // Grafik UI (menggunakan versi dari BOM)
-    implementation 'androidx.compose.ui:ui-tooling-preview' // Preview Tooling (menggunakan versi dari BOM)
-    debugImplementation 'androidx.compose.ui:ui-tooling' // Tooling debug (menggunakan versi dari BOM)
-    implementation 'androidx.compose.material3:material3' // Material Design 3 (menggunakan versi dari BOM)
+    implementation 'androidx.compose.ui:ui'
+    implementation 'androidx.compose.ui:ui-graphics'
+    implementation 'androidx.compose.ui:ui-tooling-preview'
+    debugImplementation 'androidx.compose.ui:ui-tooling'
+    implementation 'androidx.compose.material3:material3'
 
-    // Integrasi Compose dengan Activity, ViewModel, Lifecycle
-    implementation 'androidx.activity:activity-compose:1.10.1' // Versi kamu (tidak diatur BOM)
-    implementation 'androidx.lifecycle:lifecycle-viewmodel-compose:2.9.0' // Versi kamu (tidak diatur BOM)
-    implementation 'androidx.lifecycle:lifecycle-runtime-compose:2.9.0' // Versi kamu (tidak diatur BOM)
-    implementation 'androidx.compose.runtime:runtime-livedata:1.8.2' // Versi kamu (tidak diatur BOM?) -> Harusnya diatur BOM atau versi konsisten
-    implementation 'androidx.compose.runtime:runtime:1.8.2' // Versi kamu (tidak diatur BOM?) -> Harusnya diatur BOM atau versi konsisten
+    // Integrasi Compose dengan Activity, ViewModel, Lifecycle (ini tidak diatur oleh BOM)
+    implementation 'androidx.activity:activity-compose:1.10.1'
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-compose:2.9.0'
+    implementation 'androidx.lifecycle:lifecycle-runtime-compose:2.9.0'
+    implementation 'androidx.compose.runtime:runtime-livedata:1.8.2' // Versi yang lebih sesuai dengan Compose BOM terbaru
+    implementation 'androidx.compose.runtime:runtime:1.8.2' // Versi yang lebih sesuai dengan Compose BOM terbaru
 
     // Jika menggunakan Navigation Compose (komentar), Hilt Compose (komentar)
-    // implementation'androidx.navigation:navigation-compose:2.8.9'
-    // implementation'androidx.hilt:hilt-navigation-compose:1.2.0'
+    // implementation'androidx.navigation:navigation-compose:2.8.0' // Perbarui versi ini jika dipakai
+    // implementation'androidx.hilt:hilt-navigation-compose:1.2.0' // Perbarui versi ini jika dipakai
 
     // --- Dependensi Testing ---
-    testImplementation 'junit:junit:4.13.2' // Contoh
-    androidTestImplementation 'androidx.test.ext:junit:1.2.1' // Contoh
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.6.1' // Contoh
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.2.1'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.6.1'
     // Compose Testing
-    androidTestImplementation platform('androidx.compose:compose-bom:2025.05.01') // Versi BOM Testing
-    androidTestImplementation 'androidx.compose.ui:ui-test-junit4' // Versi kamu
+    androidTestImplementation platform('androidx.compose:compose-bom:2025.05.01')
+    androidTestImplementation 'androidx.compose.ui:ui-test-junit4'
+
+    // Dependensi lain yang Anda tambahkan
     implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
     implementation 'com.squareup.okhttp3:okhttp:4.12.0'
     implementation 'com.squareup.okhttp3:logging-interceptor:4.12.0'
-
 }
-
