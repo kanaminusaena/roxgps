@@ -83,6 +83,12 @@ jobs:
             echo "version=$latest_tag" >> $GITHUB_OUTPUT
           fi
 
+      - name: Set ENV
+        run: |
+          echo "DATE_TODAY=$(date +'%d-%m-%Y')" >> $GITHUB_ENV
+          echo "REPOSITORY_NAME=$(echo '${{ github.repository }}' | awk -F '/' '{print $2}')" >> $GITHUB_ENV
+          echo "BUILD_TIMESTAMP=$(date -u +'%Y-%m-%d %H:%M:%S')" >> $GITHUB_ENV
+
       - name: Setup Debug Keystore
         run: |
           if [ ! -f "$ANDROID_HOME/debug.keystore" ]; then
@@ -194,7 +200,7 @@ jobs:
         if: env.DEBUG_BUILD_SUCCESS == 'true'
         uses: actions/upload-artifact@v4
         with:
-            name: ${{ env.repository_name }}-debug-${{ env.date_today }}
+            name: ${{ env.REPOSITORY_NAME }}-debug-${{ env.DATE_TODAY }}
             path: |
               ${{ env.main_project_module }}/build/outputs/apk/foss/debug/*.apk
               ${{ env.main_project_module }}/build/outputs/apk/full/debug/*.apk
@@ -205,7 +211,7 @@ jobs:
         #  if: env.RELEASE_BUILD_SUCCESS == 'true'
         #  uses: actions/upload-artifact@v4
         #  with:
-        #      name: ${{ env.repository_name }}-release-${{ env.date_today }}-apks
+        #      name: ${{ env.REPOSITORY_NAME }}-release-${{ env.DATE_TODAY }}-apks
         #      path: |
         #        ${{ env.main_project_module }}/build/outputs/apk/foss/release/*.apk
         #        ${{ env.main_project_module }}/build/outputs/apk/full/release/*.apk
