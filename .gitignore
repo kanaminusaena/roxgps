@@ -76,3 +76,5 @@ key.properties
 
 # Room schema
 /app/schemas
+
+stability_config.conf

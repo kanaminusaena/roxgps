@@ -4,7 +4,7 @@ buildscript {
     ext {
         // Versi yang digunakan seluruh project
         kotlin_version = '2.1.21'
-        agp_version = '8.10.0' // Gunakan yang stabil, 8.10.0 belum rilis per Mei 2025
+        agp_version = '8.9.0' // Gunakan yang stabil, 8.10.0 belum rilis per Mei 2025
         hilt_version = '2.56.2'
         protobuf_plugin_version = '0.9.5'
         // Versi KSP HARUS kompatibel dengan Kotlin, gunakan yang ini:
@@ -36,9 +36,65 @@ plugins {
     id 'org.jetbrains.kotlin.plugin.compose' version "$kotlin_version" apply false
     id 'org.jetbrains.kotlin.plugin.parcelize' version "$kotlin_version" apply false
     id 'com.google.dagger.hilt.android' version "$hilt_version" apply false
+    // Tambahkan plugin untuk dependency management
+    //id 'com.github.ben-manes.versions' version '0.50.0'  // Dependency updates checker
+    id 'nl.littlerobots.version-catalog-update' version '1.0.0' apply false  // Version catalog updater
+    id 'com.autonomousapps.dependency-analysis' version '2.17.0' // Dependency analysis
 
 }
 
 tasks.register('clean', Delete) {
     delete rootProject.layout.buildDirectory
+}
+// Tambahkan task untuk membersihkan generated sources
+tasks.register('cleanGeneratedSources') {
+    doLast {
+        delete fileTree('build/generated/ksp')
+        delete fileTree('build/generated/source')
+    }
+}
+// Konfigurasi dependencyAnalysis
+dependencyAnalysis {
+    issues {
+        all {
+            onAny {
+                severity('warn')
+                exclude(
+                        'androidx.annotation:annotation',
+                        'com.google.dagger:hilt-android-compiler',
+                        'org.jetbrains.kotlinx:kotlinx-coroutines-core'
+                )
+            }
+            onUnusedDependencies {
+                severity('warn')
+            }
+            onUsedTransitiveDependencies {
+                severity('warn')
+            }
+            onIncorrectConfiguration {
+                severity('warn')
+            }
+            onUnusedAnnotationProcessors {
+                severity('warn')
+            }
+            onRedundantPlugins {
+                severity('warn')
+            }
+        }
+        //ignoreSourceSet('testFixtures')
+        project(':app') { // Sesuaikan jika nama modul Anda berbeda
+            onAny {
+                severity('fail')
+            }
+            onUnusedDependencies {
+                severity('fail')
+            }
+        }
+    }
+    // --- Konfigurasi Tambahan (Opsional, di luar blok issues) ---
+    // Plugin ini juga bisa memiliki konfigurasi lain di luar blok 'issues'.
+    // Misalnya, untuk menonaktifkan analisis untuk subproyek tertentu atau fitur tertentu.
+    // Contoh (cek dokumentasi plugin untuk opsi lengkap):
+    // disableFor(project(':some-legacy-module'))
+    // shouldAnalyzeKapt(false) // Jika Anda ingin menonaktifkan analisis Kapt
 }

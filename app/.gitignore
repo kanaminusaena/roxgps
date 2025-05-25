@@ -1,3 +1,5 @@
 /build
 /google-services.json
 *.bak
+build-number.txt
+version.txt
