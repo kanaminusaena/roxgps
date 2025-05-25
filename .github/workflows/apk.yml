@@ -83,11 +83,43 @@ jobs:
             echo "version=$latest_tag" >> $GITHUB_OUTPUT
           fi
 
+      - name: Setup Debug Keystore
+        run: |
+          if [ ! -f "$ANDROID_HOME/debug.keystore" ]; then
+            echo "Creating debug keystore..."
+            keytool -genkey -v \
+              -keystore app/debug.keystore \
+              -alias androiddebugkey \
+              -storepass android \
+              -keypass android \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -dname "CN=Android Debug,O=Android,C=US" \
+              -noprompt
+            echo "Debug keystore created successfully"
+          else
+            echo "Debug keystore already exists"
+            cp "$ANDROID_HOME/debug.keystore" app/debug.keystore
+          fi
+          
+          # Verify keystore exists
+          if [ -f "app/debug.keystore" ]; then
+            echo "Debug keystore is ready"
+          else
+            echo "Failed to setup debug keystore"
+            exit 1
+          fi
+
       - name: Create local.properties
         run: |
           echo "sdk.dir=$ANDROID_HOME" > local.properties
           echo "BUILD_TIMESTAMP=${{ env.BUILD_TIMESTAMP }}" >> local.properties
           echo "BUILD_USER=${{ env.BUILD_USER }}" >> local.properties
+          echo "debug.storeFile=debug.keystore" >> local.properties
+          echo "debug.storePassword=android" >> local.properties
+          echo "debug.keyAlias=androiddebugkey" >> local.properties
+          echo "debug.keyPassword=android" >> local.properties
 
       - name: Setup Keystore
         if: github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
