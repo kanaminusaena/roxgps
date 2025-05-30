@@ -146,7 +146,7 @@ jobs:
       - name: Build Debug APK
         id: debug_build
         run: |
-          ./gradlew assembleFossDebug assembleFullDebug --stacktrace --debug \
+          ./gradlew assembleFossDebug assembleFullDebug --stacktrace \
             -Dorg.gradle.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=512m" \
             -Pkotlin.incremental=false \
             -Pksp.incremental=false
